@@ -230,13 +230,20 @@
 }
 
 .dish-media {
+  position: relative;
   height: 160px;
   background: var(--border);
   display: grid;
   place-items: center;
+  overflow: hidden;
 }
 
+/* Absolut position i stället för height: 100% — procenthöjd på ett
+   grid-item med place-items: center löses inte mot radhöjden, och bilden
+   svämmade då över kortet i sitt naturliga bildförhållande. */
 .dish-media img {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
