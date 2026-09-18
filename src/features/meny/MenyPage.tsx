@@ -1,20 +1,17 @@
 import { useEffect, useState } from 'react'
 import { isApiConfigured } from '../../shared/api'
 import { isLocationConfigured, LOCATION_ID } from '../../shared/config'
+import { useCart } from '../../shared/useCart'
 import {
   CATEGORY_LABEL,
+  CATEGORY_ORDER,
   formatPrice,
   getPublicMenu,
-  groupByCategory,
   menuImageUrl,
 } from './menuApi'
-import type { PublicMenuItem } from './menuApi'
+import type { MenuCategory, PublicMenuItem } from './menuApi'
 
-/**
- * Rättens bild med platshållare som reserv — samma mönster som admin:
- * svarar CDN:et fel (eller saknas bas-URL:en) visas platshållaren i stället
- * för en trasig bildikon.
- */
+/** Rättens bild med platshållare som reserv — samma mönster som admin. */
 function DishImage({ src, alt }: { src: string | null; alt: string }) {
   const [failed, setFailed] = useState(false)
   if (!src || failed) {
@@ -28,15 +25,18 @@ function DishImage({ src, alt }: { src: string | null; alt: string }) {
 }
 
 /**
- * Menysidan: hämtar den publika menyn (bara aktiva rätter, ingen inloggning)
- * och visar den grupperad per kategori. Utan konfigurerat API/plats-ID visas
- * ett vänligt meddelande i stället för ett fel.
+ * Menysidan (Figma: menu-page): hero med rubrik, kategorifilter som pills,
+ * rutnät av rättkort med bild, kategorimärke, pris och "+ Lägg till" som
+ * lägger rätten i varukorgen, samt allergisektionen. Menyn hämtas från den
+ * publika GET /locations/{id}/menu — bara aktiva rätter, ingen inloggning.
  */
 export default function MenyPage() {
   const configured = isApiConfigured() && isLocationConfigured()
+  const { add } = useCart()
   const [items, setItems] = useState<PublicMenuItem[]>([])
   const [loading, setLoading] = useState(configured)
   const [error, setError] = useState<string | null>(null)
+  const [filter, setFilter] = useState<MenuCategory | null>(null)
 
   useEffect(() => {
     if (!configured || !LOCATION_ID) return
@@ -60,14 +60,39 @@ export default function MenyPage() {
     }
   }, [configured])
 
-  const groups = groupByCategory(items)
+  const visible = (filter ? items.filter((it) => it.category === filter) : items)
+    .slice()
+    .sort(
+      (a, b) =>
+        CATEGORY_ORDER.indexOf(a.category) - CATEGORY_ORDER.indexOf(b.category) ||
+        a.name.localeCompare(b.name, 'sv'),
+    )
 
   return (
     <>
-      <div className="page-head">
-        <h1>Vår meny</h1>
-        <p>Alla priser i kronor. Fråga gärna personalen om allergener.</p>
-      </div>
+      <section className="page-hero">
+        <p className="hero-kicker">Ett kulinariskt hantverk</p>
+        <h1>Vår Meny</h1>
+        <p className="hero-sub">
+          Välkommen till KÄLLA. Vi serverar rätter skapade av säsongsbetonade
+          råvaror, inspirerade av den nordiska naturen.
+        </p>
+        <div className="filter-row" role="group" aria-label="Filtrera på kategori">
+          {CATEGORY_ORDER.map((category) => (
+            <button
+              key={category}
+              type="button"
+              className={`filter-pill${filter === category ? ' active' : ''}`}
+              aria-pressed={filter === category}
+              onClick={() =>
+                setFilter((prev) => (prev === category ? null : category))
+              }
+            >
+              {CATEGORY_LABEL[category]}
+            </button>
+          ))}
+        </div>
+      </section>
 
       {!configured && (
         <p className="notice" role="status">
@@ -84,35 +109,53 @@ export default function MenyPage() {
           Hämtar menyn…
         </p>
       )}
-      {configured && !loading && !error && groups.length === 0 && (
+      {configured && !loading && !error && visible.length === 0 && (
         <p className="notice" role="status">
-          Menyn uppdateras just nu — titta gärna förbi lite senare.
+          {filter
+            ? `Inga rätter under ${CATEGORY_LABEL[filter]} just nu.`
+            : 'Menyn uppdateras just nu — titta gärna förbi lite senare.'}
         </p>
       )}
 
-      {groups.map((group) => (
-        <section className="menu-section" key={group.category}>
-          <h2>{CATEGORY_LABEL[group.category]}</h2>
-          <div className="menu-grid">
-            {group.items.map((dish) => (
-              <article className="dish-card" key={dish.menuItemId}>
-                <div className="dish-media">
-                  <DishImage src={menuImageUrl(dish.imageKey)} alt={dish.name} />
-                </div>
-                <div className="dish-body">
-                  <div className="dish-title-row">
-                    <h3>{dish.name}</h3>
-                    <span className="dish-price">{formatPrice(dish.price)}</span>
-                  </div>
-                  {dish.description && (
-                    <p className="dish-desc">{dish.description}</p>
-                  )}
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-      ))}
+      <div className="menu-grid">
+        {visible.map((dish) => (
+          <article className="dish-card" key={dish.menuItemId}>
+            <div className="dish-media">
+              <span className="dish-badge">{CATEGORY_LABEL[dish.category]}</span>
+              <DishImage src={menuImageUrl(dish.imageKey)} alt={dish.name} />
+            </div>
+            <div className="dish-body">
+              <h3>{dish.name}</h3>
+              {dish.description && <p className="dish-desc">{dish.description}</p>}
+              <div className="dish-foot">
+                <span className="dish-price">{formatPrice(dish.price)}</span>
+                <button
+                  type="button"
+                  className="btn small"
+                  onClick={() =>
+                    add({
+                      menuItemId: dish.menuItemId,
+                      name: dish.name,
+                      price: dish.price,
+                    })
+                  }
+                >
+                  + Lägg till
+                </button>
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+
+      <section className="dark-band">
+        <h2>Allergier eller kostavvikelser?</h2>
+        <p>
+          Berätta för vår personal om dina allergier eller kostavvikelser, så
+          hjälper vi dig att hitta rätt. Vi har glutenfria, laktosfria och
+          veganska alternativ på menyn.
+        </p>
+      </section>
     </>
   )
 }

@@ -1,4 +1,4 @@
-/* Kundsajtens skal och sidor. Tokens kommer från src/index.css. */
+/* Kundsajtens skal och sidor (Figma: KÄLLA). Tokens från src/index.css. */
 
 .site {
   display: flex;
@@ -6,7 +6,17 @@
   min-height: 100svh;
 }
 
-/* --- Topbar ---------------------------------------------------------------- */
+/* --- Informationsrad + topbar ---------------------------------------------- */
+
+.announce-bar {
+  background: var(--green);
+  color: #f2ede4;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: center;
+  padding: 7px 16px;
+}
 
 .site-topbar {
   position: sticky;
@@ -16,17 +26,43 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 14px clamp(16px, 5vw, 48px);
-  background: rgba(250, 248, 245, 0.92);
+  padding: 12px clamp(16px, 5vw, 48px);
+  background: rgba(250, 248, 245, 0.94);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--border);
 }
 
 .site-logo {
-  font: 700 20px/1.2 var(--serif);
-  color: var(--green);
+  display: flex;
+  align-items: center;
+  gap: 10px;
   text-decoration: none;
-  letter-spacing: 0.01em;
+}
+
+.logo-mark {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--green);
+  color: #f2ede4;
+  font: 700 18px/1 var(--serif);
+}
+
+.logo-text {
+  font: 700 20px/1.1 var(--serif);
+  color: var(--green);
+  letter-spacing: 0.08em;
+  display: flex;
+  flex-direction: column;
+}
+
+.logo-text small {
+  font: 500 10px/1.2 var(--sans);
+  color: var(--muted);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
 }
 
 .site-nav {
@@ -49,11 +85,148 @@
 }
 
 .site-nav a.active {
-  color: #fff;
-  background: var(--green);
+  color: var(--green);
+  box-shadow: inset 0 -2px 0 var(--accent);
+  border-radius: 0;
 }
 
-/* --- Innehåll -------------------------------------------------------------- */
+/* --- Varukorg --------------------------------------------------------------- */
+
+.cart-button {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  border: none;
+  border-radius: 999px;
+  background: var(--green);
+  color: #f2ede4;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.cart-button:hover {
+  background: var(--green-soft);
+}
+
+.cart-badge {
+  display: grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 12px;
+}
+
+.cart-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: clamp(16px, 5vw, 48px);
+  width: min(340px, calc(100vw - 32px));
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 16px 40px rgba(26, 43, 35, 0.15);
+  padding: 18px;
+  z-index: 20;
+}
+
+.cart-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.cart-head h2 {
+  font: 700 18px/1.2 var(--serif);
+  color: var(--green);
+}
+
+.cart-close {
+  border: none;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.cart-empty {
+  color: var(--muted);
+  font-size: 14.5px;
+}
+
+.cart-list {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.cart-list li {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 10px;
+  align-items: center;
+  font-size: 14.5px;
+}
+
+.cart-item-name {
+  font-weight: 600;
+}
+
+.cart-qty {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cart-qty button {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  line-height: 1;
+}
+
+.cart-item-price {
+  font-weight: 700;
+  color: var(--green);
+}
+
+.cart-total {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 700;
+  border-top: 1px solid var(--border);
+  margin-top: 12px;
+  padding-top: 10px;
+}
+
+.cart-note {
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+.link-clear {
+  border: none;
+  background: none;
+  color: var(--danger);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+  margin-top: 10px;
+}
+
+/* --- Innehåll ---------------------------------------------------------------- */
 
 .site-main {
   flex: 1;
@@ -63,21 +236,674 @@
   padding: clamp(24px, 5vw, 48px) clamp(16px, 5vw, 48px);
 }
 
-/* --- Hero (startsidan) ----------------------------------------------------- */
+.page-hero {
+  text-align: center;
+  margin-bottom: clamp(20px, 4vw, 36px);
+}
+
+.hero-kicker {
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.page-hero h1 {
+  font: 700 clamp(32px, 5vw, 46px) / 1.1 var(--serif);
+  color: var(--green);
+  margin: 10px 0 12px;
+}
+
+.hero-sub {
+  color: var(--muted);
+  max-width: 56ch;
+  margin: 0 auto;
+}
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 22px;
+}
+
+.filter-pill {
+  padding: 9px 18px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.filter-pill:hover {
+  border-color: var(--muted);
+}
+
+.filter-pill.active {
+  background: var(--green);
+  border-color: var(--green);
+  color: #f2ede4;
+}
+
+/* --- Knappar ----------------------------------------------------------------- */
+
+.btn {
+  display: inline-block;
+  padding: 12px 22px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-weight: 700;
+  font-size: 15px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.btn.primary {
+  background: var(--green);
+  color: #f2ede4;
+}
+
+.btn.primary:hover {
+  background: var(--green-soft);
+}
+
+.btn.primary:disabled {
+  background: var(--border);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.btn.ghost {
+  border-color: var(--border);
+  color: var(--ink);
+  background: var(--surface);
+}
+
+.btn.ghost:hover {
+  border-color: var(--muted);
+}
+
+.btn.small {
+  padding: 8px 14px;
+  font-size: 13px;
+  border: none;
+  background: var(--green);
+  color: #f2ede4;
+}
+
+.btn.small:hover {
+  background: var(--green-soft);
+}
+
+.btn.wide {
+  width: 100%;
+  text-align: center;
+}
+
+/* --- Menysidan ---------------------------------------------------------------- */
+
+.menu-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.dish-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+}
+
+.dish-media {
+  position: relative;
+  height: 150px;
+  background: var(--border);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+/* Absolut position i stället för height: 100% — procenthöjd på ett
+   grid-item med place-items: center löses inte mot radhöjden, och bilden
+   svämmade då över kortet i sitt naturliga bildförhållande. */
+.dish-media img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dish-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 1;
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.dish-placeholder {
+  font-size: 40px;
+}
+
+.dish-body {
+  padding: 14px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.dish-body h3 {
+  font: 700 17px/1.25 var(--serif);
+  color: var(--ink);
+}
+
+.dish-desc {
+  color: var(--muted);
+  font-size: 14px;
+  flex: 1;
+}
+
+.dish-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+}
+
+.dish-price {
+  font-weight: 700;
+  color: var(--accent);
+}
+
+/* --- Mörka band (allergi, avbokningspolicy) ---------------------------------- */
+
+.dark-band {
+  background: var(--green);
+  color: #f2ede4;
+  border-radius: 20px;
+  padding: clamp(24px, 4vw, 40px);
+  margin-top: clamp(32px, 6vw, 56px);
+}
+
+.dark-band h2 {
+  font: 700 22px/1.2 var(--serif);
+  margin-bottom: 10px;
+}
+
+.dark-band p {
+  color: #c9d2c9;
+  max-width: 72ch;
+  font-size: 15px;
+}
+
+/* --- Bokningsflödet ----------------------------------------------------------- */
+
+.booking-steps {
+  display: flex;
+  justify-content: center;
+  gap: clamp(12px, 3vw, 28px);
+  list-style: none;
+  padding: 0;
+  margin: 0 0 clamp(20px, 4vw, 32px);
+  font-size: 14px;
+  color: var(--muted);
+  flex-wrap: wrap;
+}
+
+.booking-steps li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.step-dot {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  font-size: 12px;
+}
+
+.booking-steps li.active {
+  color: var(--green);
+}
+
+.booking-steps li.active .step-dot {
+  background: var(--green);
+  border-color: var(--green);
+  color: #f2ede4;
+}
+
+.booking-steps li.done {
+  color: var(--green);
+}
+
+.booking-steps li.done .step-dot {
+  background: var(--green-soft);
+  border-color: var(--green-soft);
+  color: #f2ede4;
+}
+
+.booking-layout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 24px;
+  align-items: start;
+}
+
+.field-label {
+  font: 700 16px/1.3 var(--sans);
+  color: var(--ink);
+  margin: 22px 0 10px;
+}
+
+.booking-main > .field-label:first-child {
+  margin-top: 0;
+}
+
+.pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.day-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 56px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-weight: 700;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.day-pill small {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.day-pill.active {
+  background: var(--green);
+  border-color: var(--green);
+  color: #f2ede4;
+}
+
+.day-pill.active small {
+  color: #c9d2c9;
+}
+
+.time-pill {
+  padding: 9px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.time-pill.active {
+  background: var(--green);
+  border-color: var(--green);
+  color: #f2ede4;
+}
+
+.guest-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  padding: 6px 10px;
+  font-weight: 700;
+}
+
+.guest-stepper button {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+/* --- Planritning --------------------------------------------------------------- */
+
+.floor-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.floor {
+  position: relative;
+  height: 260px;
+  border-radius: 12px;
+  background: var(--green);
+}
+
+.floor-label,
+.floor-bar {
+  position: absolute;
+  color: #c9d2c9;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.floor-label {
+  bottom: 8px;
+  left: 12px;
+}
+
+.floor-bar {
+  top: 8px;
+  right: 12px;
+  padding: 6px 14px;
+  border: 1px dashed rgba(242, 237, 228, 0.4);
+  border-radius: 8px;
+}
+
+.floor-table {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  border: none;
+  background: #f2ede4;
+  color: var(--green);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+}
+
+.floor-table small {
+  font-size: 9.5px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.floor-table.selected {
+  background: var(--accent);
+  color: #fff;
+  outline: 3px solid rgba(217, 131, 83, 0.4);
+}
+
+.floor-table.selected small {
+  color: #ffe4d3;
+}
+
+.floor-table.taken {
+  background: rgba(242, 237, 228, 0.25);
+  color: rgba(242, 237, 228, 0.6);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.floor-table.taken small {
+  color: rgba(242, 237, 228, 0.5);
+}
+
+.floor-legend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 10px;
+}
+
+.floor-legend .dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.dot.free {
+  background: #f2ede4;
+  border: 1px solid var(--border);
+}
+
+.dot.chosen {
+  background: var(--accent);
+}
+
+.dot.busy {
+  background: rgba(26, 43, 35, 0.35);
+}
+
+/* --- Sammanfattningskortet ------------------------------------------------------ */
+
+.booking-summary {
+  position: sticky;
+  top: 96px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: var(--shadow);
+}
+
+.booking-summary h2 {
+  font: 700 18px/1.2 var(--serif);
+  color: var(--green);
+  margin-bottom: 12px;
+}
+
+.booking-summary dl {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 14px;
+}
+
+.booking-summary dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14.5px;
+}
+
+.booking-summary dt {
+  color: var(--muted);
+}
+
+.booking-summary dd {
+  margin: 0;
+  font-weight: 600;
+  text-align: right;
+}
+
+.summary-total {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 700;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+  margin-bottom: 12px;
+}
+
+.summary-note {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 14px;
+}
+
+/* --- Formulär (betalning) ------------------------------------------------------- */
+
+.form-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: var(--shadow);
+  margin-bottom: 18px;
+}
+
+.form-card h2 {
+  font: 700 18px/1.2 var(--serif);
+  color: var(--green);
+  margin-bottom: 14px;
+}
+
+.form-card label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 14px;
+  flex: 1;
+}
+
+.form-card input {
+  font: inherit;
+  font-weight: 400;
+  padding: 11px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.form-card input:focus {
+  outline: 2px solid var(--green-soft);
+  border-color: var(--green-soft);
+}
+
+.form-row {
+  display: flex;
+  gap: 14px;
+}
+
+.field-error {
+  color: var(--danger);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.fine-print {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* --- Bekräftelsen ---------------------------------------------------------------- */
+
+.confirm-wrap {
+  text-align: center;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: clamp(16px, 4vw, 40px) 0;
+}
+
+.confirm-check {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 18px;
+  border-radius: 50%;
+  background: var(--green);
+  color: #f2ede4;
+  font-size: 28px;
+}
+
+.confirm-wrap h1 {
+  font: 700 clamp(28px, 4vw, 38px) / 1.1 var(--serif);
+  color: var(--green);
+  margin-bottom: 10px;
+}
+
+.confirm-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 20px;
+  margin: 22px 0;
+  text-align: left;
+}
+
+.confirm-card dl {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.confirm-card dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14.5px;
+}
+
+.confirm-card dt {
+  color: var(--muted);
+}
+
+.confirm-card dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* --- Om oss ---------------------------------------------------------------------- */
 
 .hero {
   display: grid;
   grid-template-columns: 1.1fr 0.9fr;
   gap: clamp(24px, 4vw, 48px);
   align-items: center;
-}
-
-.hero-kicker {
-  color: var(--accent);
-  font-weight: 700;
-  font-size: 14px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
 }
 
 .hero h1 {
@@ -106,38 +932,6 @@
   border-radius: 20px;
   box-shadow: var(--shadow);
 }
-
-.btn {
-  display: inline-block;
-  padding: 12px 22px;
-  border-radius: 999px;
-  border: 1px solid transparent;
-  font-weight: 700;
-  font-size: 15px;
-  text-decoration: none;
-  cursor: pointer;
-}
-
-.btn.primary {
-  background: var(--green);
-  color: #fff;
-}
-
-.btn.primary:hover {
-  background: var(--green-soft);
-}
-
-.btn.ghost {
-  border-color: var(--border);
-  color: var(--ink);
-  background: var(--surface);
-}
-
-.btn.ghost:hover {
-  border-color: var(--muted);
-}
-
-/* --- Infokort (öppettider/kontakt) ----------------------------------------- */
 
 .info-grid {
   display: grid;
@@ -184,107 +978,7 @@
   color: var(--ink);
 }
 
-/* --- Menysidan ------------------------------------------------------------- */
-
-.page-head {
-  margin-bottom: clamp(20px, 4vw, 36px);
-}
-
-.page-head h1 {
-  font: 700 clamp(28px, 4vw, 40px) / 1.1 var(--serif);
-  color: var(--green);
-}
-
-.page-head p {
-  color: var(--muted);
-  margin-top: 8px;
-}
-
-.menu-section {
-  margin-top: clamp(24px, 4vw, 40px);
-}
-
-.menu-section h2 {
-  font: 700 22px/1.2 var(--serif);
-  color: var(--green);
-  padding-bottom: 10px;
-  border-bottom: 2px solid var(--accent);
-  display: inline-block;
-}
-
-.menu-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 16px;
-  margin-top: 18px;
-}
-
-.dish-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: var(--shadow);
-  display: flex;
-  flex-direction: column;
-}
-
-.dish-media {
-  position: relative;
-  height: 160px;
-  background: var(--border);
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-}
-
-/* Absolut position i stället för height: 100% — procenthöjd på ett
-   grid-item med place-items: center löses inte mot radhöjden, och bilden
-   svämmade då över kortet i sitt naturliga bildförhållande. */
-.dish-media img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.dish-placeholder {
-  font-size: 40px;
-}
-
-.dish-body {
-  padding: 16px 18px 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  flex: 1;
-}
-
-.dish-title-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 12px;
-}
-
-.dish-title-row h3 {
-  font: 700 17px/1.25 var(--serif);
-  color: var(--ink);
-}
-
-.dish-price {
-  font-weight: 700;
-  color: var(--green);
-  white-space: nowrap;
-}
-
-.dish-desc {
-  color: var(--muted);
-  font-size: 14.5px;
-}
-
-/* --- Statusmeddelanden ------------------------------------------------------ */
+/* --- Statusmeddelanden ------------------------------------------------------------ */
 
 .notice {
   background: var(--surface);
@@ -293,33 +987,107 @@
   border-radius: 12px;
   padding: 16px 18px;
   color: var(--muted);
+  margin-bottom: 16px;
 }
 
 .notice.error {
   border-left-color: var(--danger);
 }
 
-/* --- Footer ----------------------------------------------------------------- */
+/* --- Footer ------------------------------------------------------------------------ */
 
 .site-footer {
-  border-top: 1px solid var(--border);
-  padding: 24px clamp(16px, 5vw, 48px);
+  background: var(--green);
+  color: #c9d2c9;
+  padding: clamp(28px, 5vw, 48px) clamp(16px, 5vw, 48px) 0;
+  margin-top: clamp(32px, 6vw, 64px);
+}
+
+.footer-cols {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr;
+  gap: 24px;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding-bottom: 24px;
+}
+
+.footer-brand h2 {
+  font: 700 22px/1.2 var(--serif);
+  color: #f2ede4;
+  letter-spacing: 0.08em;
+  margin-bottom: 10px;
+}
+
+.footer-brand p {
+  font-size: 14px;
+  max-width: 36ch;
+}
+
+.site-footer h3 {
+  color: var(--accent);
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.site-footer p,
+.footer-hours li {
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.footer-hours {
+  list-style: none;
+  padding: 0;
+}
+
+.footer-bottom {
   display: flex;
   flex-wrap: wrap;
   gap: 8px 24px;
   justify-content: space-between;
-  color: var(--muted);
-  font-size: 14px;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 16px 0 20px;
+  border-top: 1px solid rgba(242, 237, 228, 0.15);
+  font-size: 12.5px;
+  color: rgba(201, 210, 201, 0.8);
 }
 
-/* --- Mobil ------------------------------------------------------------------ */
+/* --- Mobil ------------------------------------------------------------------------- */
+
+@media (max-width: 860px) {
+  .booking-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .booking-summary {
+    position: static;
+  }
+}
 
 @media (max-width: 720px) {
+  .site-nav a {
+    padding: 8px 10px;
+    font-size: 14px;
+  }
+
   .hero {
     grid-template-columns: 1fr;
   }
 
   .hero-photo {
     order: -1;
+  }
+
+  .form-row {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .footer-cols {
+    grid-template-columns: 1fr;
   }
 }
