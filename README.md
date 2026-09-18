@@ -1,6 +1,43 @@
 # customer-front-end
 this is the front end repository for the customers
 
+Kundernas publika sajt: startsida med öppettider/kontakt och menysidan som
+hämtar restaurangens meny från backend-API:t. Vite + React + TypeScript,
+samma struktur och designtokens som `admin-front-end`.
+
+## Kom igång lokalt
+
+```bash
+npm install
+cp .env.example .env   # fyll i VITE_API_BASE_URL och VITE_LOCATION_ID
+npm run dev            # http://localhost:7071
+```
+
+Restaurangens visningsuppgifter (namn, adress, öppettider) redigeras i
+`src/shared/restaurant.ts` tills backend har en publik plats-endpoint.
+
+## Säkerhetsmodell
+
+Sajten är **helt publik och skrivskyddad** - den är byggd så att den inte
+ens *kan* skriva:
+
+- **Inga hemligheter i repot eller bundeln.** Ingen Cognito-konfiguration,
+  inga tokens, inga API-nycklar. Allt `VITE_`-prefixat är publikt per
+  definition och behandlas så.
+- **Enbart publika GET-rutter.** API-lagret (`src/shared/api.ts`) exponerar
+  bara `apiGet` - det finns ingen kodväg för POST/PUT/DELETE och ingen
+  Authorization-header skickas någonsin. Enda rutten som används är
+  `GET /locations/{id}/menu`, som backend håller öppen utan inloggning.
+  Behörighetsgränsen ligger alltså kvar hos API:ts JWT-authorizer - den
+  här appen har inget att läcka.
+- **CSP i `index.html`** låser `connect-src` till API Gateway och `img-src`
+  till menybildernas CDN; inga externa skript alls. Sätt gärna samma CSP
+  (plus `frame-ancestors 'none'`) som riktiga svarshuvuden i CloudFronts
+  response headers policy - meta-taggen är ett skyddsnät, inte en
+  ersättning.
+- **Inaktiva rätter filtreras även klientsidigt** om servern skulle skicka
+  med dem.
+
 ## CI/CD
 
 Two workflows, `dev.yml` (branch `dev`) and `prod.yml` (branch `main`), both calling the shared `reusable_cicd.yml`. Authenticates to AWS via GitHub OIDC - no long-lived AWS keys stored anywhere.
