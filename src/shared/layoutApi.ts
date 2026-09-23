@@ -169,3 +169,16 @@ export function groupElementsByFloor(layout: PublicActiveLayout): FloorGroup[] {
       elements: layout.elements.filter((el) => el.floorId === floor.floorId),
     }))
 }
+
+/**
+ * Bordens nummer, i samma ordning som admin-front-end räknar dem
+ * (layout-editor/layoutApi.ts: `elements.filter(type==='table').map((el, i)
+ * => ...T${i + 1})`) - INTE sorterat på `elementId`. Numret finns inte som
+ * ett eget fält i API:t, men openapi.yaml garanterar att `elements` kommer i
+ * "stored snapshot order", så att räkna i den ordningen (utan att sortera om
+ * den) ger samma nummer på samma fysiska bord här som i admin — annars visar
+ * kund och personal olika nummer för samma bord.
+ */
+export function labelTables(elements: LayoutTableElement[]): Map<string, string> {
+  return new Map(elements.map((table, i) => [table.elementId, `${i + 1}`]))
+}

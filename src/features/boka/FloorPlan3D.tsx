@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
-import { layoutViewBox } from '../../shared/layoutApi'
+import { labelTables, layoutViewBox } from '../../shared/layoutApi'
 import type { FloorGroup, LayoutElement, LayoutTableElement } from '../../shared/layoutApi'
 
 /**
@@ -35,15 +35,6 @@ const FIT_PADDING = 60
 function isHorizontal(rotationY: number): boolean {
   const a = ((rotationY % 180) + 180) % 180
   return a < 45 || a >= 135
-}
-
-/** Borden har ingen etikett i API:t — numrerade i stabil ordning. */
-function labelTables(elements: LayoutTableElement[]) {
-  return new Map(
-    [...elements]
-      .sort((a, b) => a.elementId.localeCompare(b.elementId))
-      .map((table, i) => [table.elementId, `${i + 1}`]),
-  )
 }
 
 export function FloorPlan3D({ group }: { group: FloorGroup }) {

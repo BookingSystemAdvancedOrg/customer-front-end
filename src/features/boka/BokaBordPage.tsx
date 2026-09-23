@@ -2,18 +2,14 @@ import { useEffect, useState } from 'react'
 import { isApiConfigured } from '../../shared/api'
 import { isLocationConfigured, LOCATION_ID } from '../../shared/config'
 import { useLocationInfo } from '../../shared/useLocationInfo'
-import { getPublicActiveLayout, groupElementsByFloor, layoutViewBox } from '../../shared/layoutApi'
+import {
+  getPublicActiveLayout,
+  groupElementsByFloor,
+  labelTables,
+  layoutViewBox,
+} from '../../shared/layoutApi'
 import type { FloorGroup, LayoutElement, LayoutTableElement } from '../../shared/layoutApi'
 import { FloorPlan3D } from './FloorPlan3D'
-
-/** Borden har ingen etikett i API:t - numrerade i stabil ordning per våning. */
-function labelTables(elements: LayoutTableElement[]) {
-  return new Map(
-    [...elements]
-      .sort((a, b) => a.elementId.localeCompare(b.elementId))
-      .map((table, i) => [table.elementId, `${i + 1}`]),
-  )
-}
 
 /**
  * Renderar väggar, dörrar, fönster och bord i verklig skala (SVG-viewBox i

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { LayoutElement, PublicActiveLayout } from './layoutApi'
+import type { LayoutElement, LayoutTableElement, PublicActiveLayout } from './layoutApi'
 
 /** Miljöberoende värden läses vid modul-laddning - importera om per test. */
 async function loadLayoutApi(env: Record<string, string> = {}) {
@@ -169,5 +169,40 @@ describe('groupElementsByFloor', () => {
     const layout: PublicActiveLayout = { floors: [], elements: [] }
 
     expect(groupElementsByFloor(layout)).toEqual([{ floor: null, elements: [] }])
+  })
+})
+
+describe('labelTables', () => {
+  function table(elementId: string): LayoutTableElement {
+    return {
+      elementId,
+      type: 'table',
+      x: 0,
+      y: 0,
+      z: 0,
+      width: 1,
+      height: 0.75,
+      depth: 1,
+      rotationY: 0,
+      shape: 'round',
+      seats: 2,
+      zone: 'main',
+    }
+  }
+
+  it('numrerar i listans ordning, inte sorterat på elementId — samma regel som admin-front-end', async () => {
+    // Regression: elementId är ett slumpat UUID. Att sortera på det (som en
+    // tidigare version gjorde) ger ett annat nummer än admins
+    // `elements.filter(type==='table').map((el, i) => T${i+1})`, som räknar
+    // i den ordning API:t returnerar dem ("stored snapshot order" enligt
+    // openapi.yaml) utan att sortera om. Kund och personal måste se samma
+    // nummer för samma fysiska bord.
+    const { labelTables } = await loadLayoutApi()
+    const tables = [table('zzz-last-alphabetically'), table('aaa-first-alphabetically')]
+
+    const labels = labelTables(tables)
+
+    expect(labels.get('zzz-last-alphabetically')).toBe('1')
+    expect(labels.get('aaa-first-alphabetically')).toBe('2')
   })
 })
