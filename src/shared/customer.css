@@ -1,4 +1,6 @@
-/* Kundsajtens skal och sidor (Figma: KÄLLA). Tokens från src/index.css. */
+/* Kundsajtens skal och sidor. Design portad från github.com/AryaEisa/anar
+   (den riktiga ANAR Restaurang & Bar) - mörk, varm grund med guldaccent.
+   Tokens från src/index.css. */
 
 .site {
   display: flex;
@@ -6,134 +8,490 @@
   min-height: 100svh;
 }
 
-/* --- Informationsrad + topbar ---------------------------------------------- */
+/* --- Sidbakgrund (foto + scrim), Figma-förlaga: anars SiteLayout.jsx -------- */
 
-.announce-bar {
-  background: var(--green);
-  color: #f2ede4;
-  font-size: 12px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  text-align: center;
-  padding: 7px 16px;
+.landing {
+  position: relative;
+  min-height: 100svh;
+  /* overflow-x låg tidigare här, men en overflow-x utan matchande
+     overflow-y tvingar webbläsaren att beräkna overflow-y: auto på samma
+     element - det gör .landing till en scroll-container och bryter
+     `position: sticky` för ALLT under den (headern inkluderad - den såg
+     sticky ut i CSS:en men flöt faktiskt med sidan). Klippningen ligger nu
+     på html/body i stället (se index.css), som är sidans egna
+     rot-scroller och inte har samma bieffekt på sticky-avkomlingar. */
+  background: var(--bg);
 }
 
-.site-topbar {
+.landing-bg {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100vh;
+  object-fit: cover;
+  object-position: center center;
+  z-index: 0;
+}
+
+.landing-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(
+      180deg,
+      rgba(8, 4, 4, 0.78) 0%,
+      rgba(12, 6, 6, 0.42) 38%,
+      rgba(10, 5, 5, 0.62) 100%
+    ),
+    radial-gradient(ellipse 120% 80% at 50% 0%, rgba(60, 8, 14, 0.32), transparent 55%);
+}
+
+.landing[data-page='meny'] .landing-scrim {
+  background: linear-gradient(
+      180deg,
+      rgba(6, 3, 3, 0.85) 0%,
+      rgba(10, 6, 6, 0.55) 42%,
+      rgba(8, 4, 4, 0.75) 100%
+    ),
+    radial-gradient(ellipse 120% 85% at 50% 0%, rgba(40, 6, 10, 0.42), transparent 58%);
+}
+
+.landing[data-page='historia'] .landing-scrim {
+  background: linear-gradient(
+      180deg,
+      rgba(10, 4, 6, 0.6) 0%,
+      rgba(14, 6, 8, 0.34) 42%,
+      rgba(10, 4, 6, 0.58) 100%
+    ),
+    radial-gradient(ellipse 110% 90% at 50% 0%, rgba(55, 12, 18, 0.22), transparent 58%);
+}
+
+.landing[data-page='parkering'] .landing-scrim {
+  background: linear-gradient(
+      180deg,
+      rgba(6, 8, 14, 0.78) 0%,
+      rgba(10, 12, 18, 0.5) 45%,
+      rgba(6, 8, 12, 0.74) 100%
+    ),
+    radial-gradient(ellipse 115% 90% at 50% 0%, rgba(20, 35, 55, 0.32), transparent 58%);
+}
+
+.landing[data-page='kontakt'] .landing-scrim {
+  background: linear-gradient(
+      180deg,
+      rgba(8, 6, 5, 0.84) 0%,
+      rgba(12, 10, 8, 0.58) 42%,
+      rgba(6, 5, 4, 0.8) 100%
+    ),
+    radial-gradient(ellipse 100% 80% at 70% 30%, rgba(40, 22, 14, 0.22), transparent 55%);
+}
+
+.landing-content {
+  position: relative;
+  z-index: 2;
+}
+
+/* --- Header ------------------------------------------------------------ */
+
+.site-header {
   position: sticky;
   top: 0;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 12px clamp(16px, 5vw, 48px);
-  background: rgba(250, 248, 245, 0.94);
-  backdrop-filter: blur(8px);
-  border-bottom: 1px solid var(--border);
-}
-
-.site-logo {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  text-decoration: none;
-}
-
-.logo-mark {
+  z-index: 30;
   display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: var(--green);
-  color: #f2ede4;
-  font: 700 18px/1 var(--serif);
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(0.75rem, 2vw, 2rem);
+  padding: clamp(0.85rem, 2.2vw, 1.35rem) clamp(16px, 4vw, 48px);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  background: rgba(6, 3, 3, 0.72);
 }
 
-.logo-text {
-  font: 700 20px/1.1 var(--serif);
-  color: var(--green);
-  letter-spacing: 0.08em;
+.site-header-gutter {
+  display: none;
+  width: 2.75rem;
+  height: 2.75rem;
+  pointer-events: none;
+}
+
+.site-header-nav ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: clamp(0.35rem, 1.2vw, 1.1rem);
+}
+
+.site-header-nav--left ul {
+  justify-content: flex-end;
+}
+
+.site-header-nav--right ul {
+  justify-content: flex-start;
+}
+
+.site-header-nav a,
+.site-header-dropdown-trigger {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--sans);
+  font-size: clamp(0.78rem, 1.05vw, 0.95rem);
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 248, 242, 0.88);
+  text-decoration: none;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0.35rem 0.5rem;
+  border-radius: 2px;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+
+.site-header-nav a:hover,
+.site-header-dropdown-trigger:hover {
+  color: var(--gold-bright);
+  background: rgba(139, 24, 32, 0.25);
+}
+
+.site-header-nav a.active {
+  color: var(--gold);
+}
+
+.site-header-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+  filter: drop-shadow(0 4px 24px rgba(0, 0, 0, 0.45));
+  transition: transform 0.35s ease, filter 0.35s ease;
+}
+
+.site-header-brand:hover {
+  transform: scale(1.04);
+  filter: drop-shadow(0 6px 28px rgba(90, 12, 18, 0.55));
+}
+
+.site-header-brand img {
+  width: clamp(52px, 7vw, 72px);
+  height: auto;
+  display: block;
+  border-radius: 50%;
+}
+
+.site-header-burger {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 4px;
+  background: rgba(255, 248, 242, 0.08);
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.site-header-burger:hover {
+  background: rgba(139, 24, 32, 0.35);
+}
+
+.site-header-burger-line {
+  display: block;
+  width: 1.25rem;
+  height: 2px;
+  background: rgba(255, 248, 242, 0.92);
+  border-radius: 1px;
+  transition: transform 0.25s ease, opacity 0.2s ease;
+}
+
+.site-header-burger--open .site-header-burger-line:nth-child(1) {
+  transform: translateY(8px) rotate(45deg);
+}
+
+.site-header-burger--open .site-header-burger-line:nth-child(2) {
+  opacity: 0;
+}
+
+.site-header-burger--open .site-header-burger-line:nth-child(3) {
+  transform: translateY(-8px) rotate(-45deg);
+}
+
+@media (max-width: 1073px) {
+  .site-header {
+    grid-template-columns: 2.75rem 1fr 2.75rem;
+    gap: 0.5rem;
+  }
+
+  .site-header-burger {
+    display: flex;
+    justify-self: end;
+  }
+
+  .site-header-gutter {
+    display: block;
+    justify-self: start;
+  }
+
+  .site-header-nav--left,
+  .site-header-nav--right {
+    display: none;
+  }
+
+  .site-header-brand {
+    justify-self: center;
+  }
+}
+
+/* --- Mobil-drawer -------------------------------------------------------- */
+
+.mobile-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 18;
+  background: rgba(0, 0, 0, 0.55);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.28s ease, visibility 0.28s ease;
+}
+
+.mobile-drawer-backdrop--visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.mobile-drawer {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  z-index: 20;
+  width: min(18rem, 86vw);
+  max-width: 100%;
+  padding: calc(5.5rem + env(safe-area-inset-top, 0px)) max(1.25rem, env(safe-area-inset-right, 0px)) 1.5rem
+    1.25rem;
+  background: rgba(12, 6, 6, 0.97);
+  border-left: 1px solid var(--border);
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.45);
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow-y: auto;
+}
+
+.mobile-drawer--open {
+  transform: translateX(0);
+}
+
+.mobile-drawer-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
+  gap: 0.15rem;
 }
 
-.logo-text small {
-  font: 500 10px/1.2 var(--sans);
-  color: var(--muted);
-  letter-spacing: 0.18em;
+.mobile-drawer-list a,
+.mobile-drawer-list .mobile-drawer-hours-trigger {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  font: inherit;
+  font-family: var(--sans);
+  font-size: 0.95rem;
+  font-weight: 400;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-}
-
-.site-nav {
-  display: flex;
-  gap: 4px;
-}
-
-.site-nav a {
-  padding: 8px 14px;
-  border-radius: 999px;
-  color: var(--muted);
+  color: rgba(255, 248, 242, 0.92);
   text-decoration: none;
-  font-weight: 600;
-  font-size: 15px;
+  text-align: left;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0.75rem 0.5rem;
+  border-radius: 4px;
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
-.site-nav a:hover {
-  color: var(--ink);
-  background: var(--border);
+.mobile-drawer-list a:hover,
+.mobile-drawer-list a:focus-visible,
+.mobile-drawer-list .mobile-drawer-hours-trigger:hover,
+.mobile-drawer-list .mobile-drawer-hours-trigger:focus-visible {
+  color: var(--gold-bright);
+  background: rgba(139, 24, 32, 0.28);
+  outline: none;
 }
 
-.site-nav a.active {
-  color: var(--green);
-  box-shadow: inset 0 -2px 0 var(--accent);
-  border-radius: 0;
-}
+/* --- Öppettider (modal) --------------------------------------------------- */
 
-/* --- Varukorg --------------------------------------------------------------- */
-
-.cart-button {
-  position: relative;
+.opening-hours-modal-root {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 9px 18px;
+  justify-content: center;
+  padding: clamp(0.75rem, 3vw, 1.5rem);
+  box-sizing: border-box;
+}
+
+.opening-hours-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 0;
   border: none;
-  border-radius: 999px;
-  background: var(--green);
-  color: #f2ede4;
-  font-weight: 700;
-  font-size: 14px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(5px);
   cursor: pointer;
 }
 
+.opening-hours-modal-panel {
+  position: relative;
+  z-index: 1;
+  width: min(24rem, 100%);
+  max-height: min(88vh, 40rem);
+  overflow-y: auto;
+  padding: 1rem 1.15rem 1.2rem;
+  border-radius: 12px;
+  background: rgba(14, 8, 8, 0.97);
+  border: 1px solid rgba(201, 166, 107, 0.38);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.28), 0 20px 56px rgba(0, 0, 0, 0.55);
+}
+
+.opening-hours-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.65rem;
+  padding-bottom: 0.55rem;
+  border-bottom: 1px solid rgba(255, 245, 238, 0.12);
+}
+
+.opening-hours-modal-heading {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: clamp(1.05rem, 2.2vw, 1.35rem);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--gold);
+}
+
+.opening-hours-modal-close {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  font-family: var(--sans);
+  font-size: 1.45rem;
+  font-weight: 300;
+  line-height: 1;
+  color: rgba(255, 248, 242, 0.85);
+  background: rgba(139, 24, 32, 0.35);
+  border: 1px solid rgba(255, 245, 238, 0.15);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.opening-hours-modal-close:hover {
+  color: #fff;
+  background: rgba(139, 24, 32, 0.55);
+}
+
+.opening-hours-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--sans);
+  font-size: 0.85rem;
+}
+
+.opening-hours-table th,
+.opening-hours-table td {
+  padding: 0.4rem 0.5rem;
+  text-align: left;
+  font-weight: 400;
+  border-top: 1px solid rgba(255, 245, 238, 0.08);
+}
+
+.opening-hours-table th {
+  color: var(--muted);
+  font-weight: 500;
+  width: 45%;
+}
+
+.opening-hours-table td {
+  color: rgba(255, 248, 242, 0.92);
+}
+
+/* --- Varukorg (bara på Beställ mat, se FloatingCart.tsx) ------------------- */
+
+.floating-cart {
+  position: fixed;
+  top: clamp(80px, 11vw, 116px);
+  right: clamp(16px, 4vw, 48px);
+  z-index: 25;
+}
+
+.cart-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid rgba(201, 166, 107, 0.35);
+  border-radius: 999px;
+  background: rgba(255, 248, 242, 0.04);
+  color: rgba(255, 248, 242, 0.9);
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
 .cart-button:hover {
-  background: var(--green-soft);
+  background: rgba(201, 166, 107, 0.14);
+  border-color: var(--gold);
 }
 
 .cart-badge {
   display: grid;
   place-items: center;
-  min-width: 20px;
-  height: 20px;
+  min-width: 18px;
+  height: 18px;
   padding: 0 5px;
   border-radius: 999px;
-  background: var(--accent);
-  color: #fff;
-  font-size: 12px;
+  background: var(--gold);
+  color: var(--brand-dark);
+  font-size: 11px;
+  font-weight: 700;
 }
 
 .cart-panel {
   position: absolute;
-  top: calc(100% + 8px);
-  right: clamp(16px, 5vw, 48px);
+  top: calc(100% + 10px);
+  right: 0;
   width: min(340px, calc(100vw - 32px));
-  background: var(--surface);
+  background: rgba(14, 8, 8, 0.97);
   border: 1px solid var(--border);
   border-radius: 16px;
-  box-shadow: 0 16px 40px rgba(26, 43, 35, 0.15);
+  box-shadow: var(--shadow);
   padding: 18px;
-  z-index: 20;
+  z-index: 40;
 }
 
 .cart-head {
@@ -144,8 +502,8 @@
 }
 
 .cart-head h2 {
-  font: 700 18px/1.2 var(--serif);
-  color: var(--green);
+  font: 600 18px/1.2 var(--serif);
+  color: var(--gold);
 }
 
 .cart-close {
@@ -177,7 +535,7 @@
 }
 
 .cart-item-name {
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .cart-qty {
@@ -192,19 +550,20 @@
   border-radius: 50%;
   border: 1px solid var(--border);
   background: var(--surface);
+  color: var(--ink);
   cursor: pointer;
   line-height: 1;
 }
 
 .cart-item-price {
-  font-weight: 700;
-  color: var(--green);
+  font-weight: 600;
+  color: var(--gold);
 }
 
 .cart-total {
   display: flex;
   justify-content: space-between;
-  font-weight: 700;
+  font-weight: 600;
   border-top: 1px solid var(--border);
   margin-top: 12px;
   padding-top: 10px;
@@ -226,7 +585,7 @@
   margin-top: 10px;
 }
 
-/* --- Innehåll ---------------------------------------------------------------- */
+/* --- Innehåll --------------------------------------------------------------- */
 
 .site-main {
   flex: 1;
@@ -242,17 +601,20 @@
 }
 
 .hero-kicker {
-  color: var(--accent);
-  font-weight: 700;
-  font-size: 13px;
-  letter-spacing: 0.16em;
+  color: var(--gold);
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 0.78rem;
+  letter-spacing: 0.26em;
   text-transform: uppercase;
 }
 
-.page-hero h1 {
-  font: 700 clamp(32px, 5vw, 46px) / 1.1 var(--serif);
-  color: var(--green);
+.page-hero h1,
+.photo-hero h1 {
+  font: 600 clamp(32px, 5vw, 46px) / 1.1 var(--serif);
+  color: var(--ink);
   margin: 10px 0 12px;
+  letter-spacing: 0.02em;
 }
 
 .hero-sub {
@@ -273,71 +635,211 @@
   padding: 9px 18px;
   border-radius: 999px;
   border: 1px solid var(--border);
-  background: var(--surface);
+  background: rgba(255, 248, 242, 0.03);
   color: var(--ink);
-  font-weight: 600;
+  font-weight: 500;
   font-size: 14px;
   cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
 .filter-pill:hover {
-  border-color: var(--muted);
+  border-color: var(--gold);
 }
 
 .filter-pill.active {
-  background: var(--green);
-  border-color: var(--green);
-  color: #f2ede4;
+  background: linear-gradient(145deg, var(--gold-bright) 0%, var(--gold-deep) 100%);
+  border-color: var(--gold);
+  color: var(--brand-dark);
+  font-weight: 600;
 }
 
-/* --- Knappar ----------------------------------------------------------------- */
+/* --- Kategorinavigering + menyinnehåll (Meny, Beställ mat) --------------------
+   CategoryNav renderar BÅDA varianterna - sidopanel och dropdown - alltid;
+   media queryn nedan väljer vilken som visas. Brytpunkten (1073px) matchar
+   headerns egen hamburgermeny-brytpunkt så de växlar tillsammans. */
+
+.menu-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: clamp(20px, 4vw, 40px);
+}
+
+.category-sidebar {
+  position: sticky;
+  top: calc(var(--header-h) + 24px);
+  flex: 0 0 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.category-sidebar-kicker {
+  color: var(--gold);
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 0.7rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.category-sidebar ul {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.category-sidebar-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: rgba(255, 248, 242, 0.03);
+  color: var(--ink);
+  font-weight: 500;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.category-sidebar-item:hover {
+  border-color: var(--gold);
+}
+
+.category-sidebar-item.active {
+  background: linear-gradient(145deg, var(--gold-bright) 0%, var(--gold-deep) 100%);
+  border-color: var(--gold);
+  color: var(--brand-dark);
+  font-weight: 600;
+}
+
+.menu-content {
+  flex: 1 1 0;
+  min-width: 1px;
+}
+
+.menu-content-title {
+  font: 600 clamp(24px, 3.4vw, 32px) / 1.2 var(--serif);
+  color: var(--ink);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 14px;
+  margin-bottom: 20px;
+}
+
+/* Dropdown-varianten är dold på skrivbord - visas bara under 1073px. */
+.category-dropdown {
+  display: none;
+}
+
+@media (max-width: 1073px) {
+  .menu-layout {
+    display: block;
+  }
+
+  .category-sidebar {
+    display: none;
+  }
+
+  .category-dropdown {
+    display: block;
+    position: sticky;
+    top: var(--header-h);
+    z-index: 10;
+    /* Samma "frostat glas"-behandling som .site-header, så den sticky
+       raden smälter in mot sidfotot i stället för att se ut som en platt
+       ruta när den klistrar sig fast under scroll. */
+    background: rgba(6, 3, 3, 0.72);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    padding: 16px 0;
+    margin: 0 0 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .category-dropdown-label {
+    display: block;
+    color: var(--gold);
+    font-weight: 600;
+    font-size: 0.7rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .category-dropdown select {
+    width: 100%;
+    padding: 12px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--ink);
+    font: 600 16px/1.3 var(--serif);
+    cursor: pointer;
+  }
+}
+
+/* --- Knappar ------------------------------------------------------------------ */
 
 .btn {
   display: inline-block;
   padding: 12px 22px;
-  border-radius: 999px;
+  border-radius: 4px;
   border: 1px solid transparent;
-  font-weight: 700;
-  font-size: 15px;
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: 1rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   text-decoration: none;
   cursor: pointer;
+  transition: transform 0.2s ease, filter 0.2s ease;
 }
 
 .btn.primary {
-  background: var(--green);
-  color: #f2ede4;
+  background: linear-gradient(145deg, #e8d4b8 0%, #c9a66b 45%, #a67c32 100%);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #1a0a0a;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
 .btn.primary:hover {
-  background: var(--green-soft);
+  transform: translateY(-1px);
+  filter: brightness(1.04);
 }
 
 .btn.primary:disabled {
-  background: var(--border);
+  background: var(--surface-soft);
   color: var(--muted);
   cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
 }
 
 .btn.ghost {
   border-color: var(--border);
   color: var(--ink);
-  background: var(--surface);
+  background: rgba(255, 248, 242, 0.03);
 }
 
 .btn.ghost:hover {
-  border-color: var(--muted);
+  border-color: var(--gold);
 }
 
 .btn.small {
   padding: 8px 14px;
-  font-size: 13px;
-  border: none;
-  background: var(--green);
-  color: #f2ede4;
+  font-size: 0.8rem;
+  border: 1px solid rgba(201, 166, 107, 0.4);
+  background: rgba(201, 166, 107, 0.14);
+  color: var(--gold-bright);
+  letter-spacing: 0.06em;
 }
 
 .btn.small:hover {
-  background: var(--green-soft);
+  background: rgba(201, 166, 107, 0.26);
 }
 
 .btn.wide {
@@ -345,7 +847,7 @@
   text-align: center;
 }
 
-/* --- Menysidan ---------------------------------------------------------------- */
+/* --- Menysidan ------------------------------------------------------------------ */
 
 .menu-grid {
   display: grid;
@@ -354,9 +856,9 @@
 }
 
 .dish-card {
-  background: var(--surface);
+  background: linear-gradient(155deg, rgba(22, 14, 12, 0.7) 0%, rgba(14, 10, 9, 0.78) 100%);
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: 14px;
   overflow: hidden;
   box-shadow: var(--shadow);
   display: flex;
@@ -366,15 +868,12 @@
 .dish-media {
   position: relative;
   height: 150px;
-  background: var(--border);
+  background: var(--surface-soft);
   display: grid;
   place-items: center;
   overflow: hidden;
 }
 
-/* Absolut position i stället för height: 100% — procenthöjd på ett
-   grid-item med place-items: center löses inte mot radhöjden, och bilden
-   svämmade då över kortet i sitt naturliga bildförhållande. */
 .dish-media img {
   position: absolute;
   inset: 0;
@@ -388,10 +887,10 @@
   top: 10px;
   left: 10px;
   z-index: 1;
-  background: var(--accent);
-  color: #fff;
+  background: rgba(139, 24, 32, 0.85);
+  color: #fff8f2;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   padding: 4px 10px;
@@ -411,7 +910,7 @@
 }
 
 .dish-body h3 {
-  font: 700 17px/1.25 var(--serif);
+  font: 600 17px/1.25 var(--serif);
   color: var(--ink);
 }
 
@@ -429,561 +928,388 @@
 }
 
 .dish-price {
-  font-weight: 700;
-  color: var(--accent);
+  font-weight: 600;
+  color: var(--gold);
 }
 
-/* --- Mörka band (allergi, avbokningspolicy) ---------------------------------- */
+/* --- Mörka band (allergi, avbokningspolicy) -------------------------------------- */
 
 .dark-band {
-  background: var(--green);
-  color: #f2ede4;
-  border-radius: 20px;
+  background: linear-gradient(160deg, rgba(20, 14, 12, 0.55) 0%, rgba(12, 9, 8, 0.6) 100%);
+  border: 1px solid var(--border);
+  color: var(--ink);
+  border-radius: 14px;
   padding: clamp(24px, 4vw, 40px);
   margin-top: clamp(32px, 6vw, 56px);
 }
 
 .dark-band h2 {
-  font: 700 22px/1.2 var(--serif);
+  font: 600 22px/1.2 var(--serif);
+  color: var(--gold);
   margin-bottom: 10px;
 }
 
 .dark-band p {
-  color: #c9d2c9;
+  color: var(--muted);
   max-width: 72ch;
   font-size: 15px;
 }
 
-/* --- Bokningsflödet ----------------------------------------------------------- */
-
-.booking-steps {
-  display: flex;
-  justify-content: center;
-  gap: clamp(12px, 3vw, 28px);
-  list-style: none;
-  padding: 0;
-  margin: 0 0 clamp(20px, 4vw, 32px);
-  font-size: 14px;
-  color: var(--muted);
-  flex-wrap: wrap;
-}
-
-.booking-steps li {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 600;
-}
-
-.step-dot {
-  display: grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  border: 1.5px solid var(--border);
-  background: var(--surface);
-  font-size: 12px;
-}
-
-.booking-steps li.active {
-  color: var(--green);
-}
-
-.booking-steps li.active .step-dot {
-  background: var(--green);
-  border-color: var(--green);
-  color: #f2ede4;
-}
-
-.booking-steps li.done {
-  color: var(--green);
-}
-
-.booking-steps li.done .step-dot {
-  background: var(--green-soft);
-  border-color: var(--green-soft);
-  color: #f2ede4;
-}
-
-.booking-layout {
-  display: grid;
-  grid-template-columns: 1fr 320px;
-  gap: 24px;
-  align-items: start;
-}
-
-.field-label {
-  font: 700 16px/1.3 var(--sans);
-  color: var(--ink);
-  margin: 22px 0 10px;
-}
-
-.booking-main > .field-label:first-child {
-  margin-top: 0;
-}
-
-.pill-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.day-pill {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  min-width: 56px;
-  padding: 10px 12px;
-  border-radius: 14px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  font-weight: 700;
-  font-size: 16px;
-  cursor: pointer;
-}
-
-.day-pill small {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.day-pill.active {
-  background: var(--green);
-  border-color: var(--green);
-  color: #f2ede4;
-}
-
-.day-pill.active small {
-  color: #c9d2c9;
-}
-
-.time-pill {
-  padding: 9px 16px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  font-weight: 600;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.time-pill.active {
-  background: var(--green);
-  border-color: var(--green);
-  color: #f2ede4;
-}
-
-.guest-stepper {
-  display: inline-flex;
-  align-items: center;
-  gap: 16px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--surface);
-  padding: 6px 10px;
-  font-weight: 700;
-}
-
-.guest-stepper button {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  font-size: 16px;
-  cursor: pointer;
-}
-
-/* --- Planritning --------------------------------------------------------------- */
-
-.floor-wrap {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 16px;
-}
-
-.floor {
-  position: relative;
-  height: 260px;
-  border-radius: 12px;
-  background: var(--green);
-}
-
-.floor-label,
-.floor-bar {
-  position: absolute;
-  color: #c9d2c9;
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.floor-label {
-  bottom: 8px;
-  left: 12px;
-}
-
-.floor-bar {
-  top: 8px;
-  right: 12px;
-  padding: 6px 14px;
-  border: 1px dashed rgba(242, 237, 228, 0.4);
-  border-radius: 8px;
-}
-
-.floor-table {
-  position: absolute;
-  transform: translate(-50%, -50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1px;
-  width: 52px;
-  height: 52px;
-  border-radius: 12px;
-  border: none;
-  background: #f2ede4;
-  color: var(--green);
-  font-weight: 700;
-  font-size: 14px;
-  cursor: pointer;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
-}
-
-.floor-table small {
-  font-size: 9.5px;
-  font-weight: 600;
-  color: var(--muted);
-}
-
-.floor-table.selected {
-  background: var(--accent);
-  color: #fff;
-  outline: 3px solid rgba(217, 131, 83, 0.4);
-}
-
-.floor-table.selected small {
-  color: #ffe4d3;
-}
-
-.floor-table.taken {
-  background: rgba(242, 237, 228, 0.25);
-  color: rgba(242, 237, 228, 0.6);
-  cursor: not-allowed;
-  box-shadow: none;
-}
-
-.floor-table.taken small {
-  color: rgba(242, 237, 228, 0.5);
-}
-
-.floor-legend {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--muted);
-  font-size: 13px;
-  margin-top: 10px;
-}
-
-.floor-legend .dot {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-}
-
-.dot.free {
-  background: #f2ede4;
-  border: 1px solid var(--border);
-}
-
-.dot.chosen {
-  background: var(--accent);
-}
-
-.dot.busy {
-  background: rgba(26, 43, 35, 0.35);
-}
-
-/* --- Sammanfattningskortet ------------------------------------------------------ */
-
-.booking-summary {
-  position: sticky;
-  top: 96px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 20px;
-  box-shadow: var(--shadow);
-}
-
-.booking-summary h2 {
-  font: 700 18px/1.2 var(--serif);
-  color: var(--green);
-  margin-bottom: 12px;
-}
-
-.booking-summary dl {
-  display: grid;
-  gap: 8px;
-  margin: 0 0 14px;
-}
-
-.booking-summary dl div {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  font-size: 14.5px;
-}
-
-.booking-summary dt {
-  color: var(--muted);
-}
-
-.booking-summary dd {
-  margin: 0;
-  font-weight: 600;
-  text-align: right;
-}
-
-.summary-total {
-  display: flex;
-  justify-content: space-between;
-  font-weight: 700;
-  border-top: 1px solid var(--border);
-  padding-top: 10px;
-  margin-bottom: 12px;
-}
-
-.summary-note {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 10px 12px;
-  color: var(--muted);
-  font-size: 13px;
-  margin-bottom: 14px;
-}
-
-/* --- Formulär (betalning) ------------------------------------------------------- */
-
-.form-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 20px;
-  box-shadow: var(--shadow);
-  margin-bottom: 18px;
-}
-
-.form-card h2 {
-  font: 700 18px/1.2 var(--serif);
-  color: var(--green);
-  margin-bottom: 14px;
-}
-
-.form-card label {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-weight: 600;
-  font-size: 14px;
-  margin-bottom: 14px;
-  flex: 1;
-}
-
-.form-card input {
-  font: inherit;
-  font-weight: 400;
-  padding: 11px 14px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--bg);
-  color: var(--ink);
-}
-
-.form-card input:focus {
-  outline: 2px solid var(--green-soft);
-  border-color: var(--green-soft);
-}
-
-.form-row {
-  display: flex;
-  gap: 14px;
-}
-
-.field-error {
-  color: var(--danger);
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.fine-print {
-  color: var(--muted);
-  font-size: 13px;
-}
-
-/* --- Bekräftelsen ---------------------------------------------------------------- */
-
-.confirm-wrap {
+.menu-cta {
   text-align: center;
-  max-width: 520px;
-  margin: 0 auto;
-  padding: clamp(16px, 4vw, 40px) 0;
-}
-
-.confirm-check {
-  display: grid;
-  place-items: center;
-  width: 64px;
-  height: 64px;
-  margin: 0 auto 18px;
-  border-radius: 50%;
-  background: var(--green);
-  color: #f2ede4;
-  font-size: 28px;
-}
-
-.confirm-wrap h1 {
-  font: 700 clamp(28px, 4vw, 38px) / 1.1 var(--serif);
-  color: var(--green);
-  margin-bottom: 10px;
-}
-
-.confirm-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  box-shadow: var(--shadow);
-  padding: 20px;
-  margin: 22px 0;
-  text-align: left;
-}
-
-.confirm-card dl {
-  display: grid;
-  gap: 10px;
-  margin: 0;
-}
-
-.confirm-card dl div {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  font-size: 14.5px;
-}
-
-.confirm-card dt {
-  color: var(--muted);
-}
-
-.confirm-card dd {
-  margin: 0;
-  font-weight: 600;
-}
-
-.confirm-actions {
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-/* --- Om oss ---------------------------------------------------------------------- */
-
-.hero {
-  display: grid;
-  grid-template-columns: 1.1fr 0.9fr;
-  gap: clamp(24px, 4vw, 48px);
-  align-items: center;
-}
-
-.hero h1 {
-  font: 700 clamp(34px, 5vw, 52px) / 1.08 var(--serif);
-  color: var(--green);
-  margin: 12px 0 16px;
-}
-
-.hero-lead {
-  color: var(--muted);
-  font-size: 18px;
-  max-width: 46ch;
-}
-
-.hero-actions {
-  display: flex;
-  gap: 12px;
-  margin-top: 28px;
-  flex-wrap: wrap;
-}
-
-.hero-photo {
-  width: 100%;
-  aspect-ratio: 4 / 3;
-  object-fit: cover;
-  border-radius: 20px;
-  box-shadow: var(--shadow);
-}
-
-.info-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 16px;
-  margin-top: clamp(32px, 6vw, 64px);
-}
-
-.info-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 22px;
-  box-shadow: var(--shadow);
-}
-
-.info-card h2 {
-  font: 700 18px/1.3 var(--serif);
-  color: var(--green);
-  margin-bottom: 12px;
-}
-
-.info-card p,
-.info-card li {
+  margin-top: clamp(20px, 4vw, 32px);
   color: var(--muted);
   font-size: 15px;
 }
 
-.hours-list {
-  list-style: none;
-  padding: 0;
-  display: grid;
-  gap: 6px;
-}
-
-.hours-list li {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.hours-list .days {
+.menu-cta a {
+  color: var(--gold-bright);
   font-weight: 600;
-  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
-/* --- Statusmeddelanden ------------------------------------------------------------ */
+.menu-cta a:hover {
+  color: var(--gold);
+}
+
+/* --- Planritning (Boka bord - förhandsvisning, se BokaBordPage.tsx) --------------- */
+
+.floor-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+}
+
+.floor-svg-frame {
+  position: relative;
+  width: 100%;
+  max-height: 65vh;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--brand-dark);
+}
+
+.floor-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Elementens x/z-koordinater är i meter (API:t), så stroke/font-storlekar
+   är satta i samma skala i stället för pixlar. */
+.floor-svg-wall {
+  fill: rgba(255, 248, 242, 0.16);
+  stroke: rgba(201, 166, 107, 0.55);
+  stroke-width: 0.03;
+}
+
+.floor-svg-door {
+  fill: var(--brand-dark);
+  stroke: rgba(201, 166, 107, 0.85);
+  stroke-width: 0.03;
+  stroke-dasharray: 0.08 0.06;
+}
+
+.floor-svg-window {
+  fill: rgba(140, 190, 220, 0.28);
+  stroke: rgba(140, 190, 220, 0.6);
+  stroke-width: 0.02;
+}
+
+.floor-svg-table {
+  fill: rgba(255, 248, 242, 0.94);
+  stroke: rgba(201, 166, 107, 0.7);
+  stroke-width: 0.03;
+}
+
+.floor-svg-table-label {
+  fill: var(--brand-dark);
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: 0.32px;
+  dominant-baseline: middle;
+}
+
+.floor-svg-table-seats {
+  fill: rgba(18, 12, 10, 0.72);
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 0.22px;
+  dominant-baseline: middle;
+}
+
+/* --- 3D-vy (Figma-förlaga: admin-front-ends layout-editor, samma
+   "utfälld låda"-teknik i CSS: väggar/bord byggs av roterade sidoytor +
+   ett tak, i en scen med perspective + rotateX(tilt) rotateZ(spin)).
+   Bara läsning här — ingen redigering, bara dra för att rotera vyn. ------- */
+
+.floor-view-toggle {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.floor-view-toggle button {
+  padding: 8px 18px;
+  border: 0;
+  background: rgba(255, 248, 242, 0.03);
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.floor-view-toggle button.active {
+  background: linear-gradient(145deg, var(--gold-bright) 0%, var(--gold-deep) 100%);
+  color: var(--brand-dark);
+}
+
+.f3d-scene {
+  position: relative;
+  width: 100%;
+  height: clamp(280px, 46vw, 460px);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--brand-dark);
+  perspective: 1600px;
+  cursor: grab;
+  touch-action: none;
+}
+
+.f3d-scene--dragging {
+  cursor: grabbing;
+}
+
+.f3d-hint {
+  position: absolute;
+  left: 12px;
+  bottom: 10px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  color: rgba(255, 245, 238, 0.55);
+  pointer-events: none;
+}
+
+.f3d-hint-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(255, 248, 242, 0.08);
+  border: 1px solid var(--border);
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.f3d-world {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform-style: preserve-3d;
+  transform: translate(-50%, -50%) scale(var(--zoom, 1)) rotateX(var(--tilt, 0deg))
+    rotateZ(var(--spin, 0deg));
+  transition: transform 320ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.f3d-world--dragging {
+  transition: none;
+}
+
+.f3d-plane {
+  position: relative;
+  transform-style: preserve-3d;
+}
+
+.f3d-wall {
+  position: absolute;
+  transform-style: preserve-3d;
+}
+
+.f3d-face {
+  position: absolute;
+  backface-visibility: visible;
+}
+
+.f3d-face.h-n {
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: var(--wh, 90px);
+  transform-origin: top center;
+  transform: rotateX(90deg);
+  background: linear-gradient(rgba(201, 166, 107, 0.32), rgba(201, 166, 107, 0.14));
+}
+
+.f3d-face.h-s {
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: var(--wh, 90px);
+  transform-origin: bottom center;
+  transform: rotateX(-90deg);
+  background: linear-gradient(rgba(201, 166, 107, 0.32), rgba(201, 166, 107, 0.14));
+}
+
+.f3d-face.v-w {
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: var(--wh, 90px);
+  transform-origin: center left;
+  transform: rotateY(-90deg);
+  background: linear-gradient(rgba(201, 166, 107, 0.28), rgba(201, 166, 107, 0.12));
+}
+
+.f3d-face.v-e {
+  right: 0;
+  top: 0;
+  height: 100%;
+  width: var(--wh, 90px);
+  transform-origin: center right;
+  transform: rotateY(90deg);
+  background: linear-gradient(rgba(201, 166, 107, 0.28), rgba(201, 166, 107, 0.12));
+}
+
+.f3d-cap {
+  position: absolute;
+  inset: 0;
+  transform: translateZ(var(--wh, 90px));
+  background: rgba(201, 166, 107, 0.42);
+}
+
+.f3d-window .f3d-face {
+  background: linear-gradient(rgba(214, 235, 243, 0.55), rgba(150, 196, 214, 0.4));
+}
+
+.f3d-window .f3d-cap {
+  background: rgba(159, 196, 210, 0.55);
+}
+
+.f3d-door .f3d-face {
+  background: linear-gradient(rgba(232, 212, 184, 0.3), rgba(201, 166, 107, 0.16));
+}
+
+.f3d-table {
+  position: absolute;
+  transform-style: preserve-3d;
+}
+
+.f3d-table-body {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+}
+
+.f3d-table-face {
+  position: absolute;
+  background: rgba(255, 248, 242, 0.7);
+}
+
+.f3d-table-face.front {
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: var(--th, 26px);
+  transform-origin: bottom center;
+  transform: rotateX(-90deg);
+}
+
+.f3d-table-face.back {
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: var(--th, 26px);
+  transform-origin: top center;
+  transform: rotateX(90deg);
+}
+
+.f3d-table-face.left {
+  left: 0;
+  top: 0;
+  width: var(--th, 26px);
+  height: 100%;
+  transform-origin: center left;
+  transform: rotateY(-90deg);
+}
+
+.f3d-table-face.right {
+  right: 0;
+  top: 0;
+  width: var(--th, 26px);
+  height: 100%;
+  transform-origin: center right;
+  transform: rotateY(90deg);
+}
+
+.f3d-table-face.ring {
+  inset: 0;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: 0 0 0 1px rgba(201, 166, 107, 0.6);
+  transform: translateZ(calc(var(--th, 26px) / 2));
+}
+
+.f3d-table--round .f3d-table-top,
+.f3d-table--round .f3d-table-face.ring {
+  border-radius: 50%;
+}
+
+.f3d-table-top {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 248, 242, 0.94);
+  border: 1px solid rgba(201, 166, 107, 0.5);
+  transform: translateZ(var(--th, 26px));
+  transform-style: preserve-3d;
+}
+
+/* Etiketten vrids tillbaka mot kameran så texten alltid är läsbar,
+   oavsett hur mycket scenen roterats (samma knep som admins .table-labels). */
+.f3d-table-label-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  transform: rotateZ(calc(-1 * var(--spin, 0deg))) rotateX(calc(-1 * var(--tilt, 0deg)));
+  transition: transform 320ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.f3d-table-label {
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--brand-dark);
+  line-height: 1.1;
+}
+
+.f3d-table-seats {
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 9.5px;
+  color: rgba(18, 12, 10, 0.7);
+}
+
+/* --- Statusmeddelanden ------------------------------------------------------------------- */
 
 .notice {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-left: 4px solid var(--accent);
+  border-left: 4px solid var(--gold);
   border-radius: 12px;
   padding: 16px 18px;
   color: var(--muted);
@@ -994,12 +1320,12 @@
   border-left-color: var(--danger);
 }
 
-/* --- Footer ------------------------------------------------------------------------ */
+/* --- Footer -------------------------------------------------------------------------------- */
 
 .site-footer {
-  background: var(--green);
-  color: #c9d2c9;
-  padding: clamp(28px, 5vw, 48px) clamp(16px, 5vw, 48px) 0;
+  background: rgba(4, 2, 2, 0.85);
+  border-top: 1px solid var(--border);
+  color: var(--muted);
   margin-top: clamp(32px, 6vw, 64px);
 }
 
@@ -1009,12 +1335,12 @@
   gap: 24px;
   max-width: 1100px;
   margin: 0 auto;
-  padding-bottom: 24px;
+  padding: clamp(28px, 5vw, 48px) clamp(16px, 5vw, 48px) 24px;
 }
 
 .footer-brand h2 {
-  font: 700 22px/1.2 var(--serif);
-  color: #f2ede4;
+  font: 600 22px/1.2 var(--serif);
+  color: var(--ink);
   letter-spacing: 0.08em;
   margin-bottom: 10px;
 }
@@ -1025,7 +1351,8 @@
 }
 
 .site-footer h3 {
-  color: var(--accent);
+  color: var(--gold);
+  font-family: var(--sans);
   font-size: 12px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -1043,51 +1370,365 @@
   padding: 0;
 }
 
-.footer-bottom {
+.site-footer-main {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 24px;
   justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem 1.5rem;
   max-width: 1100px;
   margin: 0 auto;
-  padding: 16px 0 20px;
-  border-top: 1px solid rgba(242, 237, 228, 0.15);
-  font-size: 12.5px;
-  color: rgba(201, 210, 201, 0.8);
+  padding: 0.85rem clamp(16px, 5vw, 48px) 1.25rem;
+  border-top: 1px solid var(--border);
+  box-sizing: border-box;
 }
 
-/* --- Mobil ------------------------------------------------------------------------- */
-
-@media (max-width: 860px) {
-  .booking-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .booking-summary {
-    position: static;
-  }
+.site-footer-rights {
+  margin: 0;
+  max-width: 20rem;
+  font-family: var(--sans);
+  font-size: 0.68rem;
+  font-weight: 400;
+  line-height: 1.35;
+  color: rgba(255, 245, 238, 0.5);
+  text-align: left;
 }
+
+.site-footer-credit-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+  max-width: 18rem;
+  margin-left: auto;
+}
+
+.site-footer-credit {
+  margin: 0;
+  font-family: var(--sans);
+  font-size: 0.68rem;
+  font-weight: 400;
+  line-height: 1.35;
+  color: rgba(255, 245, 238, 0.5);
+  text-align: right;
+}
+
+.site-footer-dev-site {
+  margin: 0;
+}
+
+.site-footer-dev-link {
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: var(--gold);
+  text-decoration: none;
+}
+
+.site-footer-dev-link:hover {
+  color: var(--gold-bright);
+  text-decoration: underline;
+}
+
+/* --- Sidhero (Historia/Parkering/Kontakt) - fotot kommer nu från den
+   sidfasta landing-bg:n bakom hela sidan, inte en egen bild per hero. ------ */
+
+.photo-hero {
+  margin-bottom: clamp(24px, 5vw, 40px);
+  text-align: center;
+}
+
+.photo-hero .hero-kicker,
+.photo-hero h1,
+.photo-hero .hero-sub {
+  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.6);
+}
+
+/* --- Glaspaneler (Historia/Parkering/Kontakt-innehåll) ----------------------------------- */
+
+.glass-panel {
+  margin-bottom: clamp(18px, 3.5vw, 26px);
+  padding: clamp(18px, 3.2vw, 26px);
+  border-radius: 12px;
+  background: linear-gradient(160deg, rgba(20, 14, 12, 0.55) 0%, rgba(12, 9, 8, 0.6) 100%);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+
+.glass-panel h2 {
+  margin: 0 0 0.75rem;
+  font-family: var(--serif);
+  font-size: clamp(1.35rem, 3.5vw, 1.65rem);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--gold);
+}
+
+.glass-panel p {
+  margin: 0 0 0.85rem;
+  font-size: clamp(0.9rem, 2.1vw, 1rem);
+  line-height: 1.65;
+  color: rgba(255, 245, 238, 0.86);
+}
+
+.glass-panel p:last-child {
+  margin-bottom: 0;
+}
+
+.glass-quote {
+  margin: 0 0 clamp(18px, 3.5vw, 26px);
+  padding: clamp(1.1rem, 2.8vw, 1.4rem);
+  border-left: 3px solid var(--gold);
+  border-radius: 0 10px 10px 0;
+  background: rgba(8, 5, 4, 0.55);
+}
+
+.glass-quote p {
+  margin: 0 0 0.65rem;
+  font-family: var(--serif);
+  font-size: clamp(1.05rem, 2.6vw, 1.22rem);
+  font-style: italic;
+  font-weight: 500;
+  line-height: 1.55;
+  color: rgba(255, 248, 242, 0.92);
+}
+
+.glass-quote footer {
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--gold);
+}
+
+.glass-figure {
+  margin: 0 0 clamp(1rem, 2.5vw, 1.35rem);
+}
+
+.glass-figure-frame {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  line-height: 0;
+}
+
+.glass-figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+}
+
+.glass-figure figcaption {
+  margin-top: 0.55rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-align: center;
+  color: var(--muted);
+}
+
+.glass-link {
+  color: var(--gold-bright);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.glass-link:hover {
+  color: var(--gold);
+}
+
+/* --- Kontaktformulär ---------------------------------------------------------------------- */
+
+.contact-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 30rem;
+  margin: 0 auto;
+}
+
+.contact-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.contact-form-field label {
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.contact-form-field input,
+.contact-form-field select,
+.contact-form-field textarea {
+  width: 100%;
+  margin: 0;
+  padding: 0.72rem 0.85rem;
+  box-sizing: border-box;
+  font: inherit;
+  font-size: 0.92rem;
+  color: rgba(255, 248, 242, 0.96);
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 245, 238, 0.18);
+  border-radius: 6px;
+}
+
+.contact-form-field textarea {
+  resize: vertical;
+  min-height: 7rem;
+}
+
+.contact-form-field select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23c9a66b' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  padding-right: 2.25rem;
+}
+
+.contact-form-field select option {
+  color: #1a1210;
+  background: #f5f0eb;
+}
+
+.contact-form-field input:focus,
+.contact-form-field select:focus,
+.contact-form-field textarea:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px rgba(201, 166, 107, 0.2);
+}
+
+/* --- Parkering ------------------------------------------------------------------------------ */
+
+.parking-map-frame {
+  position: relative;
+  width: 100%;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  aspect-ratio: 16 / 10;
+  max-height: min(56vh, 24rem);
+  isolation: isolate;
+}
+
+.parking-leaflet {
+  height: 100%;
+  width: 100%;
+  min-height: 220px;
+  border-radius: 10px;
+}
+
+.parking-map-attrib {
+  margin: 0.65rem 0 0;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.parking-map-attrib a {
+  color: var(--gold);
+}
+
+.parking-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.85rem, 2.5vw, 1.1rem);
+}
+
+.parking-card {
+  margin: 0;
+  padding: clamp(0.95rem, 2.5vw, 1.15rem);
+  border-radius: 10px;
+  background: rgba(8, 6, 5, 0.4);
+  border: 1px solid var(--border);
+}
+
+.parking-card-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+.parking-distance {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold-bright);
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  background: rgba(201, 166, 107, 0.18);
+  border: 1px solid rgba(201, 166, 107, 0.35);
+}
+
+.parking-spaces {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: rgba(255, 245, 238, 0.88);
+}
+
+.parking-card h3 {
+  margin: 0 0 0.35rem;
+  font-family: var(--serif);
+  font-size: clamp(1.12rem, 2.8vw, 1.28rem);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.parking-card p {
+  margin: 0 0 0.65rem;
+  font-size: 0.86rem;
+  color: var(--muted);
+}
+
+.parking-card a {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--gold-bright);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.parking-card a:hover {
+  color: var(--gold);
+}
+
+/* --- Mobil ----------------------------------------------------------------------------------- */
 
 @media (max-width: 720px) {
-  .site-nav a {
-    padding: 8px 10px;
-    font-size: 14px;
-  }
-
-  .hero {
-    grid-template-columns: 1fr;
-  }
-
-  .hero-photo {
-    order: -1;
-  }
-
-  .form-row {
-    flex-direction: column;
-    gap: 0;
-  }
-
   .footer-cols {
     grid-template-columns: 1fr;
+  }
+
+  .site-footer-main {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .site-footer-rights,
+  .site-footer-credit-block {
+    text-align: center;
+    margin-left: 0;
+  }
+
+  .site-footer-credit-block {
+    align-items: center;
+  }
+
+  .site-footer-credit {
+    text-align: center;
   }
 }

@@ -44,7 +44,7 @@ describe('apiGet', () => {
     expect(url).toBe('https://api.example.com/locations/abc/menu')
     expect(init.method).toBe('GET')
     expect(init.credentials).toBe('omit')
-    // Kundsajten har ingen inloggning — ingen Authorization får någonsin
+    // Kundsajten har ingen inloggning - ingen Authorization får någonsin
     // skickas, oavsett vad som ligger i webbläsarens lagring.
     expect(
       Object.keys((init.headers ?? {}) as Record<string, string>),

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { PublicMenuItem } from './menuApi'
 
-/** Miljöberoende värden läses vid modul-laddning — importera om per test. */
+/** Miljöberoende värden läses vid modul-laddning - importera om per test. */
 async function loadMenuApi(env: Record<string, string>) {
   vi.resetModules()
   vi.stubEnv('VITE_API_BASE_URL', env.VITE_API_BASE_URL ?? '')

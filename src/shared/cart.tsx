@@ -18,7 +18,7 @@ function readStoredCart(): CartItem[] {
     if (!raw) return []
     const parsed = JSON.parse(raw) as unknown
     if (!Array.isArray(parsed)) return []
-    // Lagrad data är opålitlig (gammal version, manuellt mixtrad) — släpp
+    // Lagrad data är opålitlig (gammal version, manuellt mixtrad) - släpp
     // igenom bara poster med rätt form, och priser sätts ändå om från
     // API-datat när något läggs till.
     return parsed.filter(

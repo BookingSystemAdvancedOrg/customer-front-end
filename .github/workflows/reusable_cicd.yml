@@ -113,7 +113,7 @@ jobs:
         run: npm run lint --if-present
 
       - name: Test
-        run: npm test --if-present -- --ci
+        run: npm test --if-present
 
       - name: Build
         run: npm run build

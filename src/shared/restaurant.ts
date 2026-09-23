@@ -1,8 +1,14 @@
 /**
- * Restaurangens visningsuppgifter (Figma: KÄLLA-designen). Platsdata i
- * API:t (namn, adress, öppettider via GET /locations/{id}) kräver
- * inloggning, som kundsajten medvetet saknar — tills backend fått en publik
- * plats-endpoint redigeras uppgifterna här och följer med bygget.
+ * Restaurangens visningsuppgifter (design portad från
+ * github.com/AryaEisa/anar - den riktiga ANAR Restaurang & Bar).
+ *
+ * Namn/adress/kontakt/öppettider hämtas numera live från den publika
+ * GET /locations/{id}/public-info (se locationApi.ts + LocationInfoContext)
+ * - värdena här under är bara startfallbacken tills det svaret kommit, och
+ * det som visas om anropet misslyckas eller API:t inte är konfigurerat.
+ * Fallbackvärdena är satta till Anars riktiga, publicerade uppgifter.
+ * Tagline/logoTagline/announcement är ren varumärkestext och finns inte i
+ * API:t, så de är alltid statiska.
  */
 
 export interface OpeningHoursRow {
@@ -19,21 +25,19 @@ export interface DayHours {
 }
 
 export const RESTAURANT = {
-  name: 'KÄLLA',
+  name: 'Anar',
   /** Liten rad under logotypen. */
-  logoTagline: 'Restaurang & bar',
+  logoTagline: 'Restaurang & Bar',
   tagline:
-    'Hantverksmat lagad från grunden — ur modern skandinavisk mylla, med säsongens råvaror i centrum.',
-  announcement:
-    'Fri hemkörning i hela Stockholm vid beställningar över 499 kr · Boka bord online',
-  address: 'Storgatan 12, 112 24 Stockholm',
-  phone: '08-123 45 67',
-  email: 'info@kallarestaurang.se',
+    'Persisk och afghansk mat i Linköping - à la carte, kolgrill och en varm gästfrihet som känns äkta.',
+  address: 'Djurgårdsgatan 33A, 582 29 Linköping',
+  phone: '013-123 45 67',
+  email: 'info@anarrestaurang.se',
   openingHours: [
-    { days: 'Mån–Tor', hours: '11:00–22:00' },
-    { days: 'Fredag', hours: '11:00–23:00' },
-    { days: 'Lördag', hours: '12:00–23:00' },
-    { days: 'Söndag', hours: '12:00–21:00' },
+    { days: 'Tis–Tor', hours: '11:00–21:00' },
+    { days: 'Fredag', hours: '11:00–22:00' },
+    { days: 'Lördag', hours: '12:00–22:00' },
+    { days: 'Sön–Mån', hours: 'Stängt' },
   ] satisfies OpeningHoursRow[],
 } as const
 
@@ -42,11 +46,11 @@ export const RESTAURANT = {
  * Index enligt Date.getDay(): 0 = söndag … 6 = lördag.
  */
 export const WEEKDAY_HOURS: readonly DayHours[] = [
-  { opensAt: '12:00', closesAt: '21:00' }, // söndag
-  { opensAt: '11:00', closesAt: '22:00' }, // måndag
-  { opensAt: '11:00', closesAt: '22:00' }, // tisdag
-  { opensAt: '11:00', closesAt: '22:00' }, // onsdag
-  { opensAt: '11:00', closesAt: '22:00' }, // torsdag
-  { opensAt: '11:00', closesAt: '23:00' }, // fredag
-  { opensAt: '12:00', closesAt: '23:00' }, // lördag
+  { opensAt: '00:00', closesAt: '00:00' }, // söndag (stängt)
+  { opensAt: '00:00', closesAt: '00:00' }, // måndag (stängt)
+  { opensAt: '11:00', closesAt: '21:00' }, // tisdag
+  { opensAt: '11:00', closesAt: '21:00' }, // onsdag
+  { opensAt: '11:00', closesAt: '21:00' }, // torsdag
+  { opensAt: '11:00', closesAt: '22:00' }, // fredag
+  { opensAt: '12:00', closesAt: '22:00' }, // lördag
 ]

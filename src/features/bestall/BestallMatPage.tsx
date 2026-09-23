@@ -1,34 +1,40 @@
-import { Link } from 'react-router-dom'
-import { CategoryNav } from './CategoryNav'
-import { DishImage } from './DishImage'
-import { useMenuList } from './useMenuList'
-import { CATEGORY_LABEL, formatPrice, menuImageUrl } from './menuApi'
+import { useCart } from '../../shared/useCart'
+import { CategoryNav } from '../meny/CategoryNav'
+import { DishImage } from '../meny/DishImage'
+import { useMenuList } from '../meny/useMenuList'
+import { CATEGORY_LABEL, formatPrice, menuImageUrl } from '../meny/menuApi'
+import { FloatingCart } from './FloatingCart'
 
 /**
- * Menysidan: enbart läsning - hero, kategorinavigering (sidopanel på
- * skrivbord, dropdown på mobil, se CategoryNav) och rättkort med bild,
- * beskrivning och pris för EN kategori i taget. Ingen "Lägg till"-knapp
- * här; för att beställa går gästen till Beställ mat (BestallMatPage), som
- * visar samma publika GET /locations/{id}/menu men med varukorgen
- * inkopplad och identisk kategorinavigering.
+ * Beställ mat: samma publika GET /locations/{id}/menu som Meny-sidan, med
+ * identisk kategorinavigering (CategoryNav), men med "+ Lägg till"-knappen
+ * och varukorgen inkopplad - Meny-sidan i sig är enbart läsning. Det finns
+ * ingen beställnings-endpoint i backend än, så korgen är fortsatt en
+ * minneslista (se useCart/cart.tsx) - den skickas inte någonstans, bara
+ * visas för personalen på plats. Varukorgen (se FloatingCart.tsx) visas
+ * bara här, inte i den globala headern, eftersom det bara är här man kan
+ * lägga något i den.
  */
-export default function MenyPage() {
+export default function BestallMatPage() {
   const { configured, loading, error, filter, setFilter, visible } = useMenuList()
+  const { add } = useCart()
 
   return (
     <>
+      <FloatingCart />
+
       <section className="page-hero">
-        <p className="hero-kicker">À la carte</p>
-        <h1>Vår Meny</h1>
+        <p className="hero-kicker">Lägg i varukorgen</p>
+        <h1>Beställ mat</h1>
         <p className="hero-sub">
-          Välkommen till Anar. Vi serverar persiska och afghanska rätter
-          lagade med ris, saffran, örter och en gästfrihet som känns äkta.
+          Bläddra i menyn och lägg till det du vill ha. Visa varukorgen för
+          personalen när du beställer på plats.
         </p>
       </section>
 
       {!configured && (
         <p className="notice" role="status">
-          Menyn är inte tillgänglig just nu - titta gärna förbi lite senare.
+          Beställning är inte tillgänglig just nu - titta gärna förbi lite senare.
         </p>
       )}
       {error && (
@@ -66,6 +72,19 @@ export default function MenyPage() {
                     {dish.description && <p className="dish-desc">{dish.description}</p>}
                     <div className="dish-foot">
                       <span className="dish-price">{formatPrice(dish.price)}</span>
+                      <button
+                        type="button"
+                        className="btn small"
+                        onClick={() =>
+                          add({
+                            menuItemId: dish.menuItemId,
+                            name: dish.name,
+                            price: dish.price,
+                          })
+                        }
+                      >
+                        + Lägg till
+                      </button>
                     </div>
                   </div>
                 </article>
@@ -74,19 +93,6 @@ export default function MenyPage() {
           </div>
         </div>
       )}
-
-      <section className="dark-band">
-        <h2>Allergier eller kostavvikelser?</h2>
-        <p>
-          Berätta för vår personal om dina allergier eller kostavvikelser, så
-          hjälper vi dig att hitta rätt. Vi har glutenfria, laktosfria och
-          veganska alternativ på menyn.
-        </p>
-      </section>
-
-      <p className="menu-cta">
-        Vill du beställa direkt? <Link to="/bestall">Gå till Beställ mat →</Link>
-      </p>
     </>
   )
 }

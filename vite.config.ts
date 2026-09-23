@@ -7,7 +7,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const apiTarget = env.VITE_API_BASE_URL ?? ''
   // I dev proxas API-anropen genom dev-servern (samma origin) i stället för
-  // att webbläsaren pratar direkt med API Gateway — samma mönster som
+  // att webbläsaren pratar direkt med API Gateway - samma mönster som
   // admin-front-end. Bygget påverkas inte: där används VITE_API_BASE_URL
   // från .env / project.env som vanligt.
   const useDevProxy = mode === 'development' && /^https?:/.test(apiTarget)
@@ -40,7 +40,7 @@ export default defineConfig(({ mode }) => {
       globals: true,
     },
     server: {
-      // 7070 är admin-appens port på den här datorn — kundappen kör 7071 så
+      // 7070 är admin-appens port på den här datorn - kundappen kör 7071 så
       // att båda kan vara igång samtidigt. strictPort så att dev-servern inte
       // tyst byter port.
       port: 7071,

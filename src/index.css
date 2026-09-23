@@ -1,24 +1,33 @@
 /* Globala CSS-variabler och nollställningar. Sid-specifik styling bor i
-   src/shared/customer.css. Tokens delas med admin-front-end (samma Figma-
-   familj) så båda sajterna talar samma visuella språk. */
+   src/shared/customer.css.
+   Tokens matchar ANAR Restaurang & Bars riktiga varumärke (portat från
+   github.com/AryaEisa/anar): mörk, varm bakgrund med guldaccent, i stället
+   för den tidigare KÄLLA-Figma-placeholderns ljusa gröna palett. Detta gör
+   att customer-front-end inte längre delar tokens med admin-front-end. */
 :root {
-  --bg: #faf8f5;
-  --surface: #ffffff;
-  --border: #eae6df;
-  --ink: #111311;
-  --muted: #636863;
-  --green: #1a2b23;
-  --green-soft: #294436;
-  --accent: #d98353;
-  --danger: #b2472a;
-  --shadow: 0 8px 24px rgba(26, 43, 35, 0.05);
-  --serif: 'Fraunces', Georgia, serif;
-  --sans: 'Manrope', 'Segoe UI', system-ui, sans-serif;
+  --bg: #0a0606;
+  --surface: #170f0d;
+  --surface-soft: #1f1613;
+  --border: rgba(201, 166, 107, 0.25);
+  --ink: #fff8f2;
+  --muted: rgba(255, 245, 238, 0.68);
+  --brand-dark: #120c0a;
+  --gold: #c9a66b;
+  --gold-bright: #e8d4b8;
+  --gold-deep: #a67c32;
+  --accent: var(--gold);
+  --danger: #e06a52;
+  --shadow: 0 14px 36px rgba(0, 0, 0, 0.35);
+  --serif: 'Cormorant Garamond', Georgia, serif;
+  --sans: 'Outfit', 'Segoe UI', system-ui, sans-serif;
+  /* Verkligt värde sätts av CustomerLayout (mätt, headern har flytande
+     höjd) - det här är bara en fallback innan JS hunnit köra. */
+  --header-h: 96px;
 
   font: 16px/1.45 var(--sans);
   color: var(--ink);
   background: var(--bg);
-  color-scheme: light;
+  color-scheme: dark;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -33,6 +42,13 @@ body,
 #root {
   margin: 0;
   min-height: 100%;
+}
+
+html {
+  /* Klipper horisontell overflow (t.ex. sidfasta bakgrundsfoton) utan att
+     bryta `position: sticky` längre in i sidan - se kommentaren på
+     .landing i customer.css för varför den inte låg där. */
+  overflow-x: hidden;
 }
 
 body {

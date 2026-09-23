@@ -1,6 +1,6 @@
 /**
  * Byggtidskonfiguration för kundsajten. Systemet driftsätts med en instans
- * per restaurang, så plats-ID:t är ett deployvärde (project.env / .env) —
+ * per restaurang, så plats-ID:t är ett deployvärde (project.env / .env) -
  * kundsajten kan inte slå upp det själv eftersom platskatalogen
  * (GET /locations) kräver inloggning, vilket kundsajten medvetet saknar.
  */

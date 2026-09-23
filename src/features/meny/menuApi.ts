@@ -3,7 +3,7 @@ import { apiGet, ApiError } from '../../shared/api'
 /**
  * Klient mot backendens PUBLIKA meny-endpoint (openapi.yaml, Menu-taggen):
  *
- *   GET /locations/{id}/menu — aktiva rätter, ingen inloggning krävs.
+ *   GET /locations/{id}/menu - aktiva rätter, ingen inloggning krävs.
  *
  * Det är den enda meny-rutt kundsajten använder. Adminrutterna
  * (/menu/items m.fl.) hör hemma i admin-front-end och finns medvetet inte
@@ -28,7 +28,7 @@ export const CATEGORY_LABEL: Record<MenuCategory, string> = {
 }
 
 /**
- * Den publika menyns kundvända form — inga auditfält. `active` är med som
+ * Den publika menyns kundvända form - inga auditfält. `active` är med som
  * frivilligt fält: backend-teamet har beskrivit en variant där samma rutt
  * kan bära flaggan, och då ska den respekteras i stället för att antas sann.
  */
@@ -46,7 +46,7 @@ export interface PublicMenuItem {
 
 /**
  * Bas-URL (CDN/CloudFront) för menybilder. API:t returnerar bara S3-nyckeln
- * (prefixad med menu-images/), aldrig en färdig URL — utan variabeln visas
+ * (prefixad med menu-images/), aldrig en färdig URL - utan variabeln visas
  * platshållaren i stället.
  */
 export const MENU_IMAGE_BASE_URL = (
@@ -62,7 +62,7 @@ export function menuImageUrl(imageKey: string): string | null {
 
 function toFriendlyMenuError(err: unknown): Error {
   if (err instanceof DOMException && err.name === 'TimeoutError') {
-    return new Error('Menyn tog för lång tid att hämta — försök igen.')
+    return new Error('Menyn tog för lång tid att hämta - försök igen.')
   }
   if (!(err instanceof ApiError)) {
     return err instanceof Error ? err : new Error('Ett okänt fel inträffade.')
@@ -74,7 +74,7 @@ function toFriendlyMenuError(err: unknown): Error {
     case 404:
       return new ApiError(404, 'Menyn kunde inte hittas.')
     case 429:
-      return new ApiError(429, 'För många förfrågningar — vänta en stund.')
+      return new ApiError(429, 'För många förfrågningar - vänta en stund.')
     case 503:
       return new ApiError(503, 'Menyn är tillfälligt otillgänglig. Försök igen.')
     default:
@@ -89,7 +89,7 @@ function toFriendlyMenuError(err: unknown): Error {
 
 /**
  * Publika menyn för en plats. Inaktiva rätter filtreras bort även om
- * servern skulle skicka med dem — kunder ska aldrig se avstängda rätter.
+ * servern skulle skicka med dem - kunder ska aldrig se avstängda rätter.
  */
 export async function getPublicMenu(
   locationId: string,
