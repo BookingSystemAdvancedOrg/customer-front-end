@@ -26,6 +26,8 @@ import type { FloorGroup, LayoutElement, LayoutTableElement } from '../../shared
 
 const SCALE = 42
 const WALL_HEIGHT_PX = 90
+/** Sockelhöjd för väggen som vetter mot kameran — samma idé som admins WALL_LOW. */
+const WALL_LOW_PX = 16
 const TABLE_HEIGHT_PX = 26
 const TILT_DEG = 55
 /** Marginal runt innehållet (i pixlar, samma skala som SCALE) vid auto-fit. */
@@ -35,6 +37,39 @@ const FIT_PADDING = 60
 function isHorizontal(rotationY: number): boolean {
   const a = ((rotationY % 180) + 180) % 180
   return a < 45 || a >= 135
+}
+
+/**
+ * Sänker väggen som är vänd mot kameran, så bordet bakom den inte skyms —
+ * samma princip som admins `isLowered`. Adminens egen variant testar mot en
+ * ritad markyta (vilken sida av väggen är "inne i rummet"); den finns aldrig
+ * i den publika layouten (grounds/fixtures lagras bara lokalt i admins
+ * webbläsare, se docblocken ovan), så den här varianten använder rummets
+ * geometriska mittpunkt (från layoutViewBox) i stället — väggens sida som
+ * vetter BORT från mitten är dess utsida, och om den utsidan pekar mot
+ * kameran (samma riktning som `viewDir`, som roterar med `spin`) ska den
+ * sänkas.
+ */
+function isFacingCamera(
+  el: LayoutElement,
+  originX: number,
+  originZ: number,
+  spinDeg: number,
+): boolean {
+  const horizontal = isHorizontal(el.rotationY)
+  let nx = horizontal ? 0 : 1
+  let nz = horizontal ? 1 : 0
+  const towardCenterX = originX - el.x
+  const towardCenterZ = originZ - el.z
+  if (nx * towardCenterX + nz * towardCenterZ > 0) {
+    // Kandidatriktningen pekade mot mitten — vänd den så den pekar utåt.
+    nx = -nx
+    nz = -nz
+  }
+  const spinRad = (spinDeg * Math.PI) / 180
+  const viewX = Math.sin(spinRad)
+  const viewZ = Math.cos(spinRad)
+  return nx * viewX + nz * viewZ > 0
 }
 
 export function FloorPlan3D({ group }: { group: FloorGroup }) {
@@ -137,11 +172,12 @@ export function FloorPlan3D({ group }: { group: FloorGroup }) {
               .filter((el) => el.type === 'wall')
               .map((el) => {
                 const { left, top, width, height, horizontal } = wallBox(el)
+                const wh = isFacingCamera(el, originX, originZ, spin) ? WALL_LOW_PX : WALL_HEIGHT_PX
                 return (
                   <div
                     key={el.elementId}
                     className="f3d-wall"
-                    style={{ left, top, width, height, ['--wh' as string]: `${WALL_HEIGHT_PX}px` }}
+                    style={{ left, top, width, height, ['--wh' as string]: `${wh}px` }}
                   >
                     <div className={`f3d-face ${horizontal ? 'h-n' : 'v-w'}`} />
                     <div className={`f3d-face ${horizontal ? 'h-s' : 'v-e'}`} />
@@ -155,11 +191,12 @@ export function FloorPlan3D({ group }: { group: FloorGroup }) {
               .map((el) => {
                 const { left, top, width, height, horizontal } = wallBox(el)
                 const isWindow = el.type === 'window'
+                const wh = isFacingCamera(el, originX, originZ, spin) ? WALL_LOW_PX : WALL_HEIGHT_PX
                 return (
                   <div
                     key={el.elementId}
                     className={`f3d-wall f3d-opening ${isWindow ? 'f3d-window' : 'f3d-door'}`}
-                    style={{ left, top, width, height, ['--wh' as string]: `${WALL_HEIGHT_PX}px` }}
+                    style={{ left, top, width, height, ['--wh' as string]: `${wh}px` }}
                   >
                     <div className={`f3d-face ${horizontal ? 'h-n' : 'v-w'}`} />
                     <div className={`f3d-face ${horizontal ? 'h-s' : 'v-e'}`} />
