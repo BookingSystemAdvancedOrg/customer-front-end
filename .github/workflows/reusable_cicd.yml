@@ -11,7 +11,11 @@ on:
         description: Node version used for install/build
         required: false
         type: string
-        default: "20"
+        # jsdom 30 (vitest's DOM environment) requires Node ^22.22.2 ||
+        # ^24.15.0 || >=26 - Node 20 fails at require-time with
+        # "webidl.util.markAsUncloneable is not a function" before any test
+        # even runs. Verified locally in a node:24-bullseye container.
+        default: "24"
 
 permissions:
   contents: read
