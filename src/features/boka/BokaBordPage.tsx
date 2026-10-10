@@ -228,10 +228,14 @@ export default function BokaBordPage() {
           </div>
           {booked.location?.address && <div><dt>Adress</dt><dd>{booked.location.address}</dd></div>}
         </dl>
+        <p className="booking-sent">
+          Vi skickar en bekräftelse till <strong>{guest.email.trim()}</strong> med en
+          länk där du kan se och avboka din bokning.
+        </p>
         {link && (
           <div className="booking-manage">
             <p>
-              Spara länken - med den kan du se och avboka din bokning:
+              Du kan också spara länken här:
             </p>
             <p className="booking-manage-link">
               <a href={link}>{link}</a>
