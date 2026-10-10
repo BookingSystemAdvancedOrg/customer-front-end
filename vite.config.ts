@@ -16,6 +16,21 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       {
+        // CSP:ns connect-src får API:ts origin från bygget (VITE_API_BASE_URL)
+        // i stället för ett hårdkodat wildcard - fungerar även med en egen
+        // API-domän i prod.
+        name: 'csp-api-origin',
+        transformIndexHtml(html) {
+          let origin = "https://*.execute-api.eu-north-1.amazonaws.com"
+          try {
+            if (/^https:\/\//.test(apiTarget)) origin = new URL(apiTarget).origin
+          } catch {
+            // ogiltig URL - behåll standardvärdet
+          }
+          return html.replaceAll('%API_ORIGIN%', origin)
+        },
+      },
+      {
         // CSP:n i index.html är skriven för den byggda sajten. Vites dev-läge
         // behöver inline-skript (React refresh-preamble) och blob-workers som
         // den policyn med rätta förbjuder, så i dev tas meta-taggen bort.
@@ -38,6 +53,7 @@ export default defineConfig(({ mode }) => {
       environment: 'jsdom',
       setupFiles: './src/test/setup.ts',
       globals: true,
+      env: { VITE_API_BASE_URL: 'https://api.test' },
     },
     server: {
       // 7070 är admin-appens port på den här datorn - kundappen kör 7071 så

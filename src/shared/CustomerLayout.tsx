@@ -1,67 +1,44 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
-import logo from '../assets/anar/logo.png'
-import granatapple from '../assets/anar/granatapple.webp'
-import kebab from '../assets/anar/kebab.gif'
-import historiaBg from '../assets/anar/historia-bg.png'
-import parkingBg from '../assets/anar/parking.jpg'
-import contactBg from '../assets/anar/contact.png'
+import { Link, NavLink, Outlet } from 'react-router-dom'
 import { OpeningHoursModal } from './OpeningHoursModal'
 import { useLocationInfo } from './useLocationInfo'
-import { RESTAURANT } from './restaurant'
+import { useSite } from './SiteContext'
 import './customer.css'
 
 /**
- * Kundsajtens skal, design portad från github.com/AryaEisa/anar (den
- * riktiga ANAR Restaurang & Bar): header med vänster/höger-nav kring en
- * centrerad logotyp, hamburgermeny under 1074px, öppettider som modal, en
- * sidfast bakgrundsbild + gradient-scrim per sida (samma mönster som anars
- * SiteLayout.jsx), och en mörk footer. Ingen inloggning finns - sajten är
- * publik och skrivskyddad.
+ * Kundsajtens skal: header med vänster/höger-nav kring restaurangens
+ * logotyp (eller namn), hamburgermeny under 1074px, öppettider som modal,
+ * restaurangens egen bakgrundsbild (varumärkesinställningen heroImageUrl,
+ * annars en neutral gradient) och en mörk footer med juridiska länkar.
  *
- * Varukorgen visas INTE här — den hör bara hemma på Beställ mat (se
- * FloatingCart.tsx i src/features/bestall), eftersom det bara är där man
- * kan lägga något i den.
+ * Allt innehåll kommer från GET /site-config för den här domänen - ingen
+ * restaurangs uppgifter är inbyggda i sajten. Menypunkter visas bara för
+ * funktioner restaurangen har i sin plan.
  */
 
-const LEFT_NAV = [
-  { to: '/meny', label: 'Meny' },
-  { to: '/bestall', label: 'Beställ mat' },
-  { to: '/boka-bord', label: 'Boka bord' },
-]
-const RIGHT_NAV = [
-  { to: '/historia', label: 'Vår historia' },
-  { to: '/parkering', label: 'Parkering' },
-  { to: '/kontakt', label: 'Kontakt' },
-]
-
-/**
- * Sidfast bakgrundsfoto + scrim per sida. `data-page` styr scrim-varianten
- * i customer.css (samma princip som anars landing--meny/landing--historia
- * m.fl.). Sidor utan eget foto i anar-repot (Beställ mat, Boka bord - nya
- * sidor som inte finns i originalet) återanvänder startsidans kebab.gif.
- */
-const PAGE_BACKGROUNDS: Record<string, { image: string; page: string }> = {
-  '/': { image: granatapple, page: 'meny' },
-  '/meny': { image: granatapple, page: 'meny' },
-  '/bestall': { image: kebab, page: 'bestall' },
-  '/boka-bord': { image: kebab, page: 'boka-bord' },
-  '/historia': { image: historiaBg, page: 'historia' },
-  '/parkering': { image: parkingBg, page: 'parkering' },
-  '/kontakt': { image: contactBg, page: 'kontakt' },
+interface NavItem {
+  to: string
+  label: string
 }
-const DEFAULT_BACKGROUND = { image: kebab, page: 'default' }
 
 export function CustomerLayout() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [hoursOpen, setHoursOpen] = useState(false)
   const location = useLocationInfo()
-  const { pathname } = useLocation()
+  const { config, location: current, setLocationId } = useSite()
+  const { tenant, legal } = config
   const menuBtnRef = useRef<HTMLButtonElement>(null)
   const prevMenuOpen = useRef(false)
   const headerRef = useRef<HTMLElement>(null)
 
-  const background = PAGE_BACKGROUNDS[pathname] ?? DEFAULT_BACKGROUND
+  const LEFT_NAV: NavItem[] = [
+    { to: '/meny', label: 'Meny' },
+    ...(tenant.features.reservations ? [{ to: '/boka-bord', label: 'Boka bord' }] : []),
+  ]
+  const RIGHT_NAV: NavItem[] = [
+    ...(tenant.branding.about ? [{ to: '/om-oss', label: 'Om oss' }] : []),
+    { to: '/kontakt', label: 'Kontakt' },
+  ]
 
   const closeMenu = () => setMenuOpen(false)
 
@@ -106,8 +83,12 @@ export function CustomerLayout() {
   }, [menuOpen])
 
   return (
-    <div className="landing" data-page={background.page}>
-      <img className="landing-bg" key={background.image} src={background.image} alt="" aria-hidden="true" />
+    <div className="landing" data-page="default">
+      {tenant.branding.heroImageUrl ? (
+        <img className="landing-bg" src={tenant.branding.heroImageUrl} alt="" aria-hidden="true" />
+      ) : (
+        <div className="landing-bg landing-bg--plain" aria-hidden="true" />
+      )}
       <div className="landing-scrim" aria-hidden="true" />
 
       <div className="site landing-content">
@@ -124,8 +105,12 @@ export function CustomerLayout() {
             </ul>
           </nav>
 
-          <Link className="site-header-brand" to="/" aria-label="Anar - startsida">
-            <img src={logo} alt="" width={72} height={72} />
+          <Link className="site-header-brand" to="/" aria-label={`${tenant.name} - startsida`}>
+            {tenant.branding.logoUrl ? (
+              <img src={tenant.branding.logoUrl} alt="" width={72} height={72} />
+            ) : (
+              <span className="site-header-wordmark">{tenant.name}</span>
+            )}
           </Link>
 
           <nav className="site-header-nav site-header-nav--right" aria-label="Huvudmeny höger">
@@ -202,15 +187,32 @@ export function CustomerLayout() {
 
         <OpeningHoursModal open={hoursOpen} onClose={() => setHoursOpen(false)} />
 
+        {config.locations.length > 1 && (
+          <div className="location-picker">
+            <label htmlFor="site-location">Restaurang</label>
+            <select
+              id="site-location"
+              value={current.locationId}
+              onChange={(e) => setLocationId(e.target.value)}
+            >
+              {config.locations.map((l) => (
+                <option key={l.locationId} value={l.locationId}>
+                  {l.name || tenant.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         <main className="site-main">
-          <Outlet />
+          <Outlet key={current.locationId} />
         </main>
 
         <footer className="site-footer">
           <div className="footer-cols">
             <div className="footer-brand">
               <h2>{location.name}</h2>
-              <p>{RESTAURANT.tagline}</p>
+              {tenant.branding.tagline && <p>{tenant.branding.tagline}</p>}
             </div>
             <div>
               <h3>Öppettider</h3>
@@ -224,28 +226,20 @@ export function CustomerLayout() {
             </div>
             <div>
               <h3>Adress &amp; kontakt</h3>
-              <p>{location.address}</p>
-              <p>{location.phone}</p>
-              <p>{location.email}</p>
+              {location.address && <p>{location.address}</p>}
+              {location.phone && <p><a href={`tel:${location.phone.replace(/[^\d+]/g, '')}`}>{location.phone}</a></p>}
+              {location.email && <p><a href={`mailto:${location.email}`}>{location.email}</a></p>}
             </div>
           </div>
           <div className="site-footer-main">
             <p className="site-footer-rights">
-              © {new Date().getFullYear()} ANAR AB. Alla rättigheter förbehållna.
+              © {new Date().getFullYear()} {legal.legalName}
+              {legal.orgNumber ? ` · org.nr ${legal.orgNumber}` : ''}
             </p>
-            <div className="site-footer-credit-block">
-              <p className="site-footer-credit">Denna hemsida är fullt utvecklad av IT Hjälparna Nordic AB</p>
-              <p className="site-footer-dev-site">
-                <a
-                  className="site-footer-dev-link"
-                  href="https://www.ithjalparna.se"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  www.ithjalparna.se
-                </a>
-              </p>
-            </div>
+            <nav className="site-footer-legal" aria-label="Juridiskt">
+              <Link to="/integritetspolicy">Integritetspolicy</Link>
+              {tenant.features.reservations && <Link to="/bokningsvillkor">Bokningsvillkor</Link>}
+            </nav>
           </div>
         </footer>
       </div>

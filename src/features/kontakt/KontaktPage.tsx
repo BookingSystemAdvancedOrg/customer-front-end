@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useLocationInfo } from '../../shared/useLocationInfo'
+import { useSite } from '../../shared/SiteContext'
 
 const SUBJECT_OPTIONS = [
   { value: 'rekommendation', label: 'Rekommendation' },
@@ -10,14 +11,13 @@ const SUBJECT_OPTIONS = [
 ]
 
 /**
- * Kontakt (Figma-förlaga: anars kontakt-sida, github.com/AryaEisa/anar).
- * Precis som originalet finns ingen meddelande-endpoint - formuläret öppnar
- * ett mailto:-utkast i besökarens e-postklient. Mottagaradressen kommer
- * från den publika platsinfon (useLocationInfo) i stället för att vara
- * hårdkodad, så den följer med om adressen ändras i admin.
+ * Kontakt. Det finns ingen meddelande-endpoint - formuläret öppnar ett
+ * mailto:-utkast i besökarens e-postklient, till den valda platsens (eller
+ * restaurangens) e-postadress från GET /site-config.
  */
 export default function KontaktPage() {
-  const { email } = useLocationInfo()
+  const { email, phone, address } = useLocationInfo()
+  const { config } = useSite()
   const [name, setName] = useState('')
   const [contactEmail, setContactEmail] = useState('')
   const [subject, setSubject] = useState('')
@@ -30,7 +30,7 @@ export default function KontaktPage() {
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    const mailSubject = `Kontakt Anar - ${subjectLabel}`
+    const mailSubject = `Kontakt ${config.tenant.name} - ${subjectLabel}`
     const mailBody = `Namn: ${name}\nE-post: ${contactEmail}\nÄmne: ${subjectLabel}\n\n${message}`
     window.location.href = `mailto:${email}?subject=${encodeURIComponent(mailSubject)}&body=${encodeURIComponent(mailBody)}`
   }
@@ -41,8 +41,20 @@ export default function KontaktPage() {
         <p className="hero-kicker">Hör av dig</p>
         <h1>Kontakt</h1>
         <p className="hero-sub">Skicka ett meddelande till oss. Vi återkommer så snart vi kan.</p>
+        {(phone || address) && (
+          <p className="hero-sub">
+            {[address, phone].filter(Boolean).join(' · ')}
+          </p>
+        )}
       </section>
 
+      {!email && (
+        <p className="notice" role="status">
+          {phone ? `Ring oss på ${phone}.` : 'Kontaktuppgifter saknas just nu.'}
+        </p>
+      )}
+
+      {email && (
       <form className="contact-form" onSubmit={handleSubmit}>
         <div className="contact-form-field">
           <label htmlFor="kontakt-name">Namn</label>
@@ -106,6 +118,7 @@ export default function KontaktPage() {
           Skicka
         </button>
       </form>
+      )}
     </>
   )
 }

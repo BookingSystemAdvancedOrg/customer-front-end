@@ -476,7 +476,7 @@
   padding: 0 5px;
   border-radius: 999px;
   background: var(--gold);
-  color: red !important; font-size: 20px !important;
+  color: var(--brand-dark);
   font-size: 11px;
   font-weight: 700;
 }
@@ -650,7 +650,7 @@
 .filter-pill.active {
   background: linear-gradient(145deg, var(--gold-bright) 0%, var(--gold-deep) 100%);
   border-color: var(--gold);
-  color: red !important; font-size: 20px !important;
+  color: var(--brand-dark);
   font-weight: 600;
 }
 
@@ -713,7 +713,7 @@
 .category-sidebar-item.active {
   background: linear-gradient(145deg, var(--gold-bright) 0%, var(--gold-deep) 100%);
   border-color: var(--gold);
-  color: red !important; font-size: 20px !important;
+  color: var(--brand-dark);
   font-weight: 600;
 }
 
@@ -1067,7 +1067,7 @@
 
 .floor-view-toggle button.active {
   background: linear-gradient(145deg, var(--gold-bright) 0%, var(--gold-deep) 100%);
-  color: red !important; font-size: 20px !important;
+  color: var(--brand-dark);
 }
 
 .f3d-scene {
@@ -1759,4 +1759,335 @@
   .site-footer-credit {
     text-align: center;
   }
+}
+
+/* --- Restaurangmall: start, varumärke, platsval ------------------------- */
+
+.site-boot {
+  display: grid;
+  place-content: center;
+  gap: 12px;
+  min-height: 100svh;
+  padding: 24px;
+  text-align: center;
+  font-family: var(--sans);
+  color: var(--ink);
+  background: var(--bg);
+}
+
+.site-boot h1 {
+  font: 600 clamp(28px, 5vw, 40px) / 1.1 var(--serif);
+}
+
+.landing-bg--plain {
+  background:
+    radial-gradient(ellipse 90% 70% at 50% 0%, color-mix(in srgb, var(--gold) 22%, transparent), transparent 60%),
+    linear-gradient(180deg, var(--surface) 0%, var(--bg) 100%);
+}
+
+.site-header-brand:has(.site-header-wordmark) {
+  text-decoration: none;
+}
+
+.site-header-wordmark {
+  display: inline-block;
+  max-width: 220px;
+  font: 600 clamp(22px, 2.6vw, 30px) / 1.05 var(--serif);
+  color: var(--gold-bright);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.location-picker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px 16px 0;
+  font-family: var(--sans);
+}
+
+.location-picker select {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
+
+.site-footer-legal {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  font-size: 14px;
+}
+
+.site-footer-legal a,
+.site-footer a {
+  color: var(--gold-bright);
+}
+
+/* --- Bokning ------------------------------------------------------------ */
+
+.booking {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: min(960px, 100%);
+  margin: 0 auto;
+  padding: 0 16px 48px;
+  font-family: var(--sans);
+}
+
+.booking-step {
+  /* fieldset defaults to min-width: min-content - would let the date row
+     stretch the whole form instead of scrolling. */
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+}
+
+.booking-step legend {
+  padding: 0 6px;
+  font: 600 22px/1.2 var(--serif);
+  color: var(--gold-bright);
+}
+
+.booking-dates,
+.booking-times,
+.booking-table-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.booking-dates {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scroll-snap-type: x proximity;
+}
+
+.booking-dates .filter-pill {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+  text-transform: capitalize;
+}
+
+.booking-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.booking-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.booking-field--wide {
+  grid-column: 1 / -1;
+}
+
+.booking-field input,
+.booking-field select,
+.booking-field textarea {
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--ink);
+  font: 16px/1.4 var(--sans);
+}
+
+.booking-field select {
+  max-width: 240px;
+}
+
+.booking-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.booking-check input {
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  accent-color: var(--gold);
+}
+
+.booking-check a {
+  color: var(--gold-bright);
+}
+
+.booking-summary-line {
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--surface-soft);
+  text-transform: none;
+}
+
+.btn-primary,
+.btn-secondary {
+  align-self: flex-start;
+  padding: 14px 26px;
+  border-radius: 999px;
+  font: 600 16px/1 var(--sans);
+  cursor: pointer;
+}
+
+.btn-primary {
+  border: 0;
+  background: var(--gold);
+  color: #140c08;
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.btn-secondary {
+  border: 1px solid var(--gold);
+  background: transparent;
+  color: var(--gold-bright);
+}
+
+.booking-confirmation {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: min(720px, 100%);
+  margin: 0 auto;
+  padding: 24px 16px 56px;
+  font-family: var(--sans);
+}
+
+.booking-confirmation h1 {
+  font: 600 clamp(32px, 5vw, 46px) / 1.1 var(--serif);
+}
+
+.booking-summary {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.booking-summary > div {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 12px;
+}
+
+.booking-summary dt {
+  color: var(--muted);
+}
+
+.booking-summary dd {
+  margin: 0;
+  text-transform: none;
+}
+
+.booking-summary dd::first-letter {
+  text-transform: uppercase;
+}
+
+.booking-manage-link {
+  overflow-wrap: anywhere;
+}
+
+.booking-manage-link a {
+  color: var(--gold-bright);
+}
+
+.booking-status {
+  font: 600 20px/1.2 var(--serif);
+  color: var(--gold-bright);
+}
+
+.booking-confirm-cancel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.booking-confirm-cancel p {
+  flex-basis: 100%;
+}
+
+.cell-muted {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* Bordsval på planritningen */
+.floor-svg-pick {
+  cursor: pointer;
+  outline: none;
+}
+
+.floor-svg-table.is-free {
+  fill: color-mix(in srgb, var(--gold) 35%, transparent);
+  stroke: var(--gold);
+}
+
+.floor-svg-table.is-selected {
+  fill: var(--gold);
+  stroke: var(--gold-bright);
+}
+
+.floor-svg-table.is-taken {
+  opacity: 0.25;
+}
+
+.floor-svg-pick:focus-visible .floor-svg-table {
+  stroke: #fff;
+  stroke-width: 0.08;
+}
+
+/* --- Textsidor (integritetspolicy, villkor, om oss) ---------------------- */
+
+.page-prose {
+  width: min(760px, 100%);
+  margin: 0 auto;
+  padding: 24px 16px 56px;
+  font-family: var(--sans);
+  line-height: 1.65;
+}
+
+.page-prose h1 {
+  font: 600 clamp(32px, 5vw, 46px) / 1.1 var(--serif);
+  margin-bottom: 8px;
+}
+
+.page-prose h2 {
+  margin: 28px 0 8px;
+  font: 600 24px/1.2 var(--serif);
+  color: var(--gold-bright);
+}
+
+.page-prose ul {
+  padding-left: 20px;
+}
+
+.page-prose li + li {
+  margin-top: 8px;
 }

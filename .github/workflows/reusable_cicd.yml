@@ -32,7 +32,7 @@ jobs:
       distribution_id: ${{ steps.vars.outputs.distribution_id }}
       aws_region: ${{ steps.vars.outputs.aws_region }}
       api_base_url: ${{ steps.vars.outputs.api_base_url }}
-      location_id: ${{ steps.vars.outputs.location_id }}
+      dev_tenant_slug: ${{ steps.vars.outputs.dev_tenant_slug }}
       menu_image_base_url: ${{ steps.vars.outputs.menu_image_base_url }}
     steps:
       - uses: actions/checkout@v4
@@ -80,10 +80,11 @@ jobs:
 
           # The VITE_ values are not secrets (they end up in the public JS
           # bundle either way) and, unlike the AWS values above, are allowed
-          # to be missing: a build without them still ships, just with the
-          # menu shown as unavailable client-side. Same pattern as
+          # to be missing: a build without them still ships. The site finds
+          # its restaurant at runtime (GET /site-config?host=); the dev slug
+          # only matters on *.cloudfront.net / localhost. Same pattern as
           # admin-front-end's reusable_cicd.yml.
-          for name in VITE_API_BASE_URL VITE_LOCATION_ID VITE_MENU_IMAGE_BASE_URL; do
+          for name in VITE_API_BASE_URL VITE_DEV_TENANT_SLUG VITE_MENU_IMAGE_BASE_URL; do
             var="${name}_${SUFFIX}"
             value="${!var:-}"
             if [ -z "$value" ] || [[ "$value" == *REPLACE_ME* ]]; then
@@ -123,7 +124,7 @@ jobs:
         run: npm run build
         env:
           VITE_API_BASE_URL: ${{ needs.config.outputs.api_base_url }}
-          VITE_LOCATION_ID: ${{ needs.config.outputs.location_id }}
+          VITE_DEV_TENANT_SLUG: ${{ needs.config.outputs.dev_tenant_slug }}
           VITE_MENU_IMAGE_BASE_URL: ${{ needs.config.outputs.menu_image_base_url }}
 
       - name: Verify dist/ output

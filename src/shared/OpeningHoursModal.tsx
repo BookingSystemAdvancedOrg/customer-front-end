@@ -3,11 +3,8 @@ import { createPortal } from 'react-dom'
 import { useLocationInfo } from './useLocationInfo'
 
 /**
- * Öppettider som modal (Figma-förlaga: anars site-header-dropdown +
- * opening-hours-modal). Backendens publika platsinfo ger bara EN
- * uppsättning öppettider per veckodag (ingen uppdelning i
- * lunch/middag/avhämtning som anars egna statiska data hade), så tabellen
- * är en enkel lista i stället för flikar per avdelning.
+ * Öppettider som modal: den valda platsens öppettider per veckodag
+ * (intilliggande dagar med samma tider ihopslagna).
  */
 export function OpeningHoursModal({
   open,

@@ -2,32 +2,24 @@
 <html lang="sv">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="manifest" href="/site.webmanifest" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!--
-      Skyddsnät: kundsajten är helt publik och skrivskyddad, så CSP:n låser
-      ner vad sidan får göra. connect-src tillåter bara API Gateway (och
-      'self' för dev-proxyn), img-src CDN:et för menybilder plus OSM:s
-      karttiles (Parkering-sidans Leaflet-karta). Inga externa skript alls.
-      frame-ancestors kan inte sättas i en meta-tagg - sätt den (och gärna
-      hela CSP:n) som riktiga svarshuvuden i CloudFronts response headers
-      policy också.
+      Skyddsnät: kundsajten är publik, så CSP:n låser ner vad sidan får
+      göra. connect-src: API:ts origin (sätts vid bygget) och 'self'
+      för dev-proxyn. img-src: https (restaurangernas egna logotyper och
+      bilder ligger på deras egna adresser). Inga externa skript, och
+      typsnitten ligger i bygget - inga anrop till Google.
+      frame-ancestors kan inte sättas i en meta-tagg - sätt den som riktigt
+      svarshuvud i CloudFronts response headers policy.
     -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; connect-src 'self' https://*.execute-api.eu-north-1.amazonaws.com; img-src 'self' data: https://*.cloudfront.net https://*.tile.openstreetmap.org; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; object-src 'none'; base-uri 'self'; form-action 'self'"
+      content="default-src 'self'; script-src 'self'; connect-src 'self' %API_ORIGIN%; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self' mailto:"
     />
     <meta name="referrer" content="no-referrer" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Outfit:wght@300;400;500;600&display=swap"
-      rel="stylesheet"
-    />
-    <title>Anar Restaurang & Bar</title>
+    <title>Restaurang</title>
   </head>
   <body>
     <div id="root"></div>

@@ -1,12 +1,12 @@
 /**
- * Skrivskyddat API-lager för kundsajten.
+ * API-lager för kundsajten.
  *
  * Säkerhetsmodell: sajten är helt publik. Den har ingen inloggning, inga
- * tokens, inga API-nycklar och ingen skrivbehörighet - den anropar bara
- * backendens publika GET-rutter (t.ex. GET /locations/{id}/menu, som API:ts
- * JWT-authorizer uttryckligen släpper igenom utan token). Därför exponerar
- * modulen enbart `apiGet`: det finns ingen väg att uttrycka POST/PUT/DELETE
- * härifrån, och ingen Authorization-header skickas någonsin.
+ * API-nycklar och inga cookies. Den läser publika rutter (sajtkonfiguration,
+ * meny, planritning, lediga tider) och skickar exakt två sorters skrivanrop:
+ * en gästs bokning och en gästs avbokning. Den enda "behörigheten" är
+ * gästens hanteringstoken för sin egen bokning, som skickas som header
+ * (X-Manage-Token) - aldrig i URL:en, så den hamnar inte i loggar.
  */
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as
@@ -14,10 +14,10 @@ export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as
   | undefined
 
 export function isApiConfigured(): boolean {
-  return Boolean(API_BASE_URL)
+  return Boolean(API_BASE_URL) && !API_BASE_URL?.includes('REPLACE_ME')
 }
 
-/** Samma feltyp som admin-appen: statuskoden bevaras för anroparna. */
+/** Statuskod + API:ts felkod (t.ex. 409 "table_taken") bevaras. */
 export class ApiError extends Error {
   status: number
 
@@ -41,19 +41,22 @@ async function toApiError(res: Response): Promise<ApiError> {
 /** Hur länge vi väntar på API:t innan anropet ges upp. */
 const REQUEST_TIMEOUT_MS = 15_000
 
-/**
- * Hämtar JSON från en publik GET-rutt. `path` ska börja med `/` och byggs
- * alltid ovanpå API_BASE_URL - anroparen kan inte peka om mot en annan host.
- */
-export async function apiGet<T>(path: string): Promise<T> {
-  if (!API_BASE_URL) {
-    throw new Error(
-      'VITE_API_BASE_URL är inte satt - se .env.example och README.',
-    )
+async function request<T>(
+  method: 'GET' | 'POST',
+  path: string,
+  { body, headers }: { body?: unknown; headers?: Record<string, string> } = {},
+): Promise<T> {
+  if (!isApiConfigured()) {
+    throw new Error('VITE_API_BASE_URL är inte satt - se .env.example och README.')
   }
   const res = await fetch(`${API_BASE_URL}${path}`, {
-    method: 'GET',
-    headers: { Accept: 'application/json' },
+    method,
+    headers: {
+      Accept: 'application/json',
+      ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+      ...headers,
+    },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
     // Inga cookies eller sparade inloggningar följer någonsin med anropet.
     credentials: 'omit',
     referrerPolicy: 'no-referrer',
@@ -63,4 +66,21 @@ export async function apiGet<T>(path: string): Promise<T> {
     throw await toApiError(res)
   }
   return (await res.json()) as T
+}
+
+/**
+ * Hämtar JSON från en publik GET-rutt. `path` ska börja med `/` och byggs
+ * alltid ovanpå API_BASE_URL - anroparen kan inte peka om mot en annan host.
+ */
+export function apiGet<T>(path: string, headers?: Record<string, string>): Promise<T> {
+  return request<T>('GET', path, { headers })
+}
+
+/** POST mot en publik rutt (bokning / avbokning). */
+export function apiPost<T>(
+  path: string,
+  body?: unknown,
+  headers?: Record<string, string>,
+): Promise<T> {
+  return request<T>('POST', path, { body, headers })
 }

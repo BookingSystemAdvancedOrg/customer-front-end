@@ -1,11 +1,8 @@
 {
-  "name": "Anar Restaurang & Bar",
-  "short_name": "Anar",
-  "icons": [
-    { "src": "/android-chrome-192x192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/android-chrome-512x512.png", "sizes": "512x512", "type": "image/png" }
-  ],
-  "theme_color": "#0a0606",
+  "name": "Restaurang",
+  "short_name": "Restaurang",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }],
+  "theme_color": "#170f0d",
   "background_color": "#0a0606",
   "display": "standalone"
 }

@@ -1,22 +1,23 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
+import '@fontsource/cormorant-garamond/500.css'
+import '@fontsource/cormorant-garamond/600.css'
+import '@fontsource/cormorant-garamond/500-italic.css'
+import '@fontsource/outfit/300.css'
+import '@fontsource/outfit/400.css'
+import '@fontsource/outfit/500.css'
+import '@fontsource/outfit/600.css'
 import App from './App'
-import { CartProvider } from './shared/cart'
-import { LocationInfoProvider } from './shared/locationInfo'
-import { RESTAURANT } from './shared/restaurant'
+import { SiteProvider } from './shared/SiteProvider'
 import './index.css'
-
-document.title = RESTAURANT.name
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
-      <LocationInfoProvider>
-        <CartProvider>
-          <App />
-        </CartProvider>
-      </LocationInfoProvider>
+      <SiteProvider>
+        <App />
+      </SiteProvider>
     </BrowserRouter>
   </StrictMode>,
 )

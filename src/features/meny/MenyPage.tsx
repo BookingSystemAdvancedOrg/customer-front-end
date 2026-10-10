@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { useSite } from '../../shared/SiteContext'
 import { CategoryNav } from './CategoryNav'
 import { DishImage } from './DishImage'
 import { useMenuList } from './useMenuList'
@@ -7,13 +8,13 @@ import { CATEGORY_LABEL, formatPrice, menuImageUrl } from './menuApi'
 /**
  * Menysidan: enbart läsning - hero, kategorinavigering (sidopanel på
  * skrivbord, dropdown på mobil, se CategoryNav) och rättkort med bild,
- * beskrivning och pris för EN kategori i taget. Ingen "Lägg till"-knapp
- * här; för att beställa går gästen till Beställ mat (BestallMatPage), som
- * visar samma publika GET /locations/{id}/menu men med varukorgen
- * inkopplad och identisk kategorinavigering.
+ * beskrivning och pris för EN kategori i taget, från den publika
+ * GET /locations/{id}/menu för vald plats.
  */
 export default function MenyPage() {
   const { configured, loading, error, filter, setFilter, visible } = useMenuList()
+  const { config } = useSite()
+  const tagline = config.tenant.branding.tagline
 
   return (
     <>
@@ -21,8 +22,7 @@ export default function MenyPage() {
         <p className="hero-kicker">À la carte</p>
         <h1>Vår Meny</h1>
         <p className="hero-sub">
-          Välkommen till Anar. Vi serverar persiska och afghanska rätter
-          lagade med ris, saffran, örter och en gästfrihet som känns äkta.
+          {tagline || `Välkommen till ${config.tenant.name}.`}
         </p>
       </section>
 
@@ -84,9 +84,11 @@ export default function MenyPage() {
         </p>
       </section>
 
-      <p className="menu-cta">
-        Vill du beställa direkt? <Link to="/bestall">Gå till Beställ mat →</Link>
-      </p>
+      {config.tenant.features.reservations && (
+        <p className="menu-cta">
+          Vill du äta hos oss? <Link to="/boka-bord">Boka bord →</Link>
+        </p>
+      )}
     </>
   )
 }

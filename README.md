@@ -1,35 +1,41 @@
 # customer-front-end
 this is the front end repository for the customers
 
-Kundernas publika sajt: startsida med öppettider/kontakt och menysidan som
-hämtar restaurangens meny från backend-API:t. Vite + React + TypeScript,
-samma struktur och designtokens som `admin-front-end`.
+Restaurangernas publika sajt - EN byggd sajt för alla restauranger
+(multi-tenant). Vid start frågar den API:t `GET /site-config?host=<domän>`
+vilken restaurang domänen tillhör och får namn, varumärke (logga, färger),
+aktiva funktioner, platser och juridisk person. Sidor: start, meny, boka bord
+(gästen väljer bord på planritningen), hantera/avboka bokning via länk,
+om oss, kontakt, integritetspolicy och bokningsvillkor. Vite + React +
+TypeScript.
 
 ## Kom igång lokalt
 
 ```bash
 npm install
-cp .env.example .env   # fyll i VITE_API_BASE_URL och VITE_LOCATION_ID
-npm run dev            # http://localhost:7071
+cp .env.example .env   # fyll i VITE_API_BASE_URL och VITE_DEV_TENANT_SLUG
+npm run dev            # http://localhost:7071/?restaurang=<slug>
 ```
 
-Restaurangens visningsuppgifter (namn, adress, öppettider) redigeras i
-`src/shared/restaurant.ts` tills backend har en publik plats-endpoint.
+Ingen restaurangs data finns i koden. Namn, adress, öppettider och
+varumärke redigeras i admin-panelen / sbs-admin och kommer från
+`/site-config`. En egen domän kopplas i sbs-admin (domänen måste vara
+`active`); i dev väljs restaurangen med `?restaurang=<slug>`.
 
 ## Säkerhetsmodell
 
-Sajten är **helt publik och skrivskyddad** - den är byggd så att den inte
-ens *kan* skriva:
+Sajten är **helt publik**:
 
 - **Inga hemligheter i repot eller bundeln.** Ingen Cognito-konfiguration,
   inga tokens, inga API-nycklar. Allt `VITE_`-prefixat är publikt per
   definition och behandlas så.
-- **Enbart publika GET-rutter.** API-lagret (`src/shared/api.ts`) exponerar
-  bara `apiGet` - det finns ingen kodväg för POST/PUT/DELETE och ingen
-  Authorization-header skickas någonsin. Enda rutten som används är
-  `GET /locations/{id}/menu`, som backend håller öppen utan inloggning.
-  Behörighetsgränsen ligger alltså kvar hos API:ts JWT-authorizer - den
-  här appen har inget att läcka.
+- **Bara publika rutter, två sorters skrivanrop.** API-lagret
+  (`src/shared/api.ts`) skickar aldrig cookies eller Authorization-header.
+  Skrivanropen är gästens bokning och gästens avbokning. Avbokning kräver
+  bokningens hanteringstoken, som står i länkens fragment (`#...`, når
+  aldrig servern som URL) och skickas som header `X-Manage-Token`.
+- **Varumärkesvärden saneras på servern** (färger `#RRGGBB`, bilder bara
+  `https://`), så en restaurangs inställningar kan inte injicera något.
 - **CSP i `index.html`** låser `connect-src` till API Gateway och `img-src`
   till menybildernas CDN; inga externa skript alls. Sätt gärna samma CSP
   (plus `frame-ancestors 'none'`) som riktiga svarshuvuden i CloudFronts
