@@ -4,7 +4,7 @@
  * Säkerhetsmodell: sajten är helt publik. Den har ingen inloggning, inga
  * API-nycklar och inga cookies. Den läser publika rutter (sajtkonfiguration,
  * meny, planritning, lediga tider) och skickar exakt två sorters skrivanrop:
- * en gästs bokning och en gästs avbokning. Den enda "behörigheten" är
+ * en gästs bokning (inkl. att slutföra kortgarantin) och en gästs avbokning. Den enda "behörigheten" är
  * gästens hanteringstoken för sin egen bokning, som skickas som header
  * (X-Manage-Token) - aldrig i URL:en, så den hamnar inte i loggar.
  */
@@ -20,11 +20,14 @@ export function isApiConfigured(): boolean {
 /** Statuskod + API:ts felkod (t.ex. 409 "table_taken") bevaras. */
 export class ApiError extends Error {
   status: number
+  /** Hela felsvaret (t.ex. {"error": "fee_applies", "fee": 30000}). */
+  body: Record<string, unknown>
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, body: Record<string, unknown> = {}) {
     super(message)
     this.name = 'ApiError'
     this.status = status
+    this.body = body
   }
 }
 
@@ -32,7 +35,7 @@ async function toApiError(res: Response): Promise<ApiError> {
   const text = await res.text().catch(() => '')
   try {
     const body = JSON.parse(text) as { error?: string; message?: string }
-    return new ApiError(res.status, body.error ?? body.message ?? text)
+    return new ApiError(res.status, body.error ?? body.message ?? text, body as Record<string, unknown>)
   } catch {
     return new ApiError(res.status, text || res.statusText)
   }

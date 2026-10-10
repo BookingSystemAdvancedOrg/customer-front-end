@@ -61,4 +61,36 @@ describe('ManageBookingPage', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('ofullständig')
     expect(fetchMock).not.toHaveBeenCalled()
   })
+
+  it('asks the guest to accept a late-cancellation fee before cancelling', async () => {
+    const user = userEvent.setup()
+    const late = { ...BOOKING, guarantee: { cardOnFile: true, noShowFee: 60000, lateCancelFee: 30000,
+      cancelCutoffHours: 24, currency: 'sek', cancellationFee: 30000 } }
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url.endsWith('/cancel')) {
+        expect(JSON.parse(String(init?.body))).toEqual({ acceptFee: true })
+        return json({ ...late, status: 'cancelled_charged', cancellable: false,
+          fee: { kind: 'late_cancel', status: 'succeeded', amount: 30000, refundedAmount: 0 } })
+      }
+      return json(late)
+    })
+    renderAt('#tok')
+    await user.click(await screen.findByRole('button', { name: 'Avboka' }))
+    const confirm = screen.getByRole('button', { name: 'Ja, avboka' })
+    expect(confirm).toBeDisabled()
+    await user.click(screen.getByRole('checkbox', { name: /300 kr/ }))
+    await user.click(confirm)
+    expect(await screen.findByText('Avbokad - avgift debiterad')).toBeInTheDocument()
+    expect(screen.getByText(/Debiterad avgift: 300 kr/)).toBeInTheDocument()
+  })
+
+  it('finishes a pending booking when the guest comes back from Stripe', async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.endsWith('/confirm')) return json({ ...BOOKING, status: 'reserved' })
+      return json({ ...BOOKING, status: 'pending' })
+    })
+    renderAt('#tok')
+    expect(await screen.findByText('Bokad')).toBeInTheDocument()
+  })
 })
+

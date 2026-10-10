@@ -2096,3 +2096,33 @@
 .page-prose li + li {
   margin-top: 8px;
 }
+
+/* --- Kortgaranti --------------------------------------------------------- */
+
+.guarantee-notice {
+  margin: 4px 0 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.14));
+  border-left: 3px solid var(--gold);
+  border-radius: 8px;
+  line-height: 1.5;
+  font-size: 0.95rem;
+}
+
+.guarantee-terms {
+  margin: 12px 0 20px;
+  padding-left: 1.2em;
+  line-height: 1.6;
+}
+
+.guarantee-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 8px 0 16px;
+  min-width: 0;
+}
+
+.fee-accept {
+  margin: 12px 0;
+}

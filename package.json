@@ -13,6 +13,8 @@
   "dependencies": {
     "@fontsource/cormorant-garamond": "^5.3.0",
     "@fontsource/outfit": "^5.3.0",
+    "@stripe/react-stripe-js": "^3.11.0",
+    "@stripe/stripe-js": "^7.10.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.2"

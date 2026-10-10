@@ -12,10 +12,12 @@ import {
   formatDate,
   getAvailability,
   manageLink,
+  needsCard,
   seatsOf,
   todayIn,
 } from './bookingApi'
 import type { Availability, AvailabilitySlot, GuestReservation } from './bookingApi'
+import { GuaranteeStep } from './GuaranteeStep'
 import { ApiError } from '../../shared/api'
 import { FloorPlanSvg } from './FloorPlanSvg'
 import { FloorPlan3D } from './FloorPlan3D'
@@ -49,6 +51,11 @@ function guestError(g: Guest): string | null {
  * GET /availability (samma regler som backend kontrollerar vid bokningen),
  * och bokningen görs med POST /reservations. Hann någon annan ta bordet får
  * gästen välja igen med uppdaterad ledighet.
+ *
+ * Kortgaranti: kräver platsen kort för sällskapets storlek visas villkoren
+ * innan gästen bokar, och efter bokningen (status "pending", bordet hålls i
+ * 20 minuter) Stripes inbäddade kortformulär. Först när kortet är bekräftat
+ * är bordet bokat.
  */
 export default function BokaBordPage() {
   const { config, location } = useSite()
@@ -80,6 +87,9 @@ export default function BokaBordPage() {
   const [formError, setFormError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [booked, setBooked] = useState<GuestReservation | null>(null)
+  const [pending, setPending] = useState<GuestReservation | null>(null)
+  const terms = location.guarantee ?? null
+  const cardNeeded = needsCard(terms, partySize, true)
 
   // Lediga tider för vald dag.
   useEffect(() => {
@@ -164,6 +174,8 @@ export default function BokaBordPage() {
       !slot ? 'Välj en tid.'
       : selected.size === 0 ? 'Välj minst ett bord.'
       : chosenSeats < partySize ? `Borden du valt har ${chosenSeats} platser - välj fler bord för ${partySize} personer.`
+      : cardNeeded && !config.stripe.publishableKey
+        ? `Onlinebokning för ${partySize} personer kräver kortgaranti, som inte är tillgänglig just nu. Ring oss på ${info.phone || 'restaurangen'}.`
       : guestError(guest)
     if (problem) {
       setFormError(problem)
@@ -185,7 +197,8 @@ export default function BokaBordPage() {
         marketingOptIn: guest.marketingOptIn,
         acceptTerms: true,
       })
-      setBooked(result)
+      if (result.status === 'pending' && result.setup) setPending(result)
+      else setBooked(result)
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } catch (err) {
       setFormError(bookingErrorMessage(err))
@@ -209,6 +222,22 @@ export default function BokaBordPage() {
     )
   }
 
+  if (pending && !booked) {
+    return (
+      <GuaranteeStep
+        booking={pending}
+        locationId={location.locationId}
+        publishableKey={config.stripe.publishableKey}
+        returnUrl={manageLink(window.location.origin, pending, location.locationId, pending.manageToken!)}
+        onConfirmed={(b) => {
+          setBooked({ ...b, manageToken: pending.manageToken })
+          setPending(null)
+          window.scrollTo({ top: 0, behavior: 'smooth' })
+        }}
+      />
+    )
+  }
+
   if (booked) {
     const link = booked.manageToken
       ? manageLink(window.location.origin, booked, location.locationId, booked.manageToken)
@@ -228,6 +257,9 @@ export default function BokaBordPage() {
           </div>
           {booked.location?.address && <div><dt>Adress</dt><dd>{booked.location.address}</dd></div>}
         </dl>
+        {booked.guarantee?.cardOnFile && (
+          <p className="booking-sent">Kortgarantin är sparad - inget har dragits från kortet.</p>
+        )}
         <p className="booking-sent">
           Vi skickar en bekräftelse till <strong>{guest.email.trim()}</strong> med en
           länk där du kan se och avboka din bokning.
@@ -400,13 +432,22 @@ export default function BokaBordPage() {
                 <Link to="/integritetspolicy" target="_blank">integritetspolicyn</Link>.
               </span>
             </label>
+            {cardNeeded && terms && (
+              <div className="guarantee-notice" role="note">
+                <strong>Kortgaranti krävs</strong> för sällskap om {terms.minPartySize} personer eller fler.
+                Inget dras nu.
+                {terms.noShowFeePerPerson > 0 && ` Uteblir ni debiteras ${terms.noShowFeePerPerson} kr per person.`}
+                {terms.lateCancelFeePerPerson > 0 &&
+                  ` Avbokning senare än ${terms.cancelCutoffHours} timmar före kostar ${terms.lateCancelFeePerPerson} kr per person.`}
+              </div>
+            )}
             <div className="booking-summary-line" aria-live="polite">
               {formatDate(date)} kl {slot.startTime}–{slot.endTime} · {partySize} personer · bord{' '}
               {[...selected].map((id) => labels.get(id) ?? id).join(', ')}
             </div>
             {formError && <p className="notice error" role="alert">{formError}</p>}
             <button type="submit" className="btn-primary" disabled={submitting}>
-              {submitting ? 'Bokar…' : 'Boka bordet'}
+              {submitting ? 'Bokar…' : cardNeeded ? 'Fortsätt till kortgaranti' : 'Boka bordet'}
             </button>
           </fieldset>
         )}

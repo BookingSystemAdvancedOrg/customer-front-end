@@ -16,6 +16,14 @@ import type { BusinessHours } from './locationApi'
  * utanför prod.
  */
 
+/** Kortgarantins villkor för en plats (null = inget kort krävs). Avgifter i kr. */
+export interface GuaranteeTerms {
+  minPartySize: number
+  noShowFeePerPerson: number
+  lateCancelFeePerPerson: number
+  cancelCutoffHours: number
+}
+
 export interface SiteLocation {
   locationId: string
   name: string | null
@@ -26,6 +34,7 @@ export interface SiteLocation {
   businessHours: BusinessHours
   bookingDurationHours: number | null
   maxPartySizeOnline: number | null
+  guarantee?: GuaranteeTerms | null
 }
 
 export interface SiteBranding {

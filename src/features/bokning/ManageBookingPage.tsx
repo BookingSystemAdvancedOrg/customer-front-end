@@ -3,20 +3,24 @@ import { useParams } from 'react-router-dom'
 import {
   bookingErrorMessage,
   cancelGuestReservation,
+  confirmGuestReservation,
   formatDate,
+  formatFee,
   getGuestReservation,
 } from '../boka/bookingApi'
 import type { GuestReservation } from '../boka/bookingApi'
+import { GuaranteeTermsText } from '../boka/GuaranteeStep'
 
 const STATUS_TEXT: Record<string, string> = {
-  pending: 'Väntar på bekräftelse',
+  pending: 'Väntar på kortgaranti',
+  expired: 'Inte slutförd - bordet släpptes',
   reserved: 'Bokad',
   arrived: 'Välkommen!',
   no_show: 'Ej uppdykt',
-  no_show_charged: 'Ej uppdykt',
+  no_show_charged: 'Ej uppdykt - avgift debiterad',
   no_show_charge_failed: 'Ej uppdykt',
   cancelled_no_charge: 'Avbokad',
-  cancelled_charged: 'Avbokad',
+  cancelled_charged: 'Avbokad - avgift debiterad',
   cancelled_charge_failed: 'Avbokad',
   cancelled_by_restaurant: 'Avbokad av restaurangen',
 }
@@ -43,12 +47,20 @@ export default function ManageBookingPage() {
     token ? null : 'Länken är ofullständig. Använd länken från din bokningsbekräftelse.',
   )
   const [confirming, setConfirming] = useState(false)
+  const [acceptFee, setAcceptFee] = useState(false)
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
     if (!token) return
     let cancelled = false
     getGuestReservation(locationId, reservationId, token)
+      // Tillbaka från Stripe (3-D Secure med omdirigering) eller fliken
+      // stängdes före bekräftelsen: slutför bokningen om kortet är klart.
+      .then((b) =>
+        b.status === 'pending'
+          ? confirmGuestReservation(locationId, reservationId, token).catch(() => b)
+          : b,
+      )
       .then((b) => !cancelled && setBooking(b))
       .catch((err: unknown) => !cancelled && setError(bookingErrorMessage(err)))
     return () => {
@@ -60,7 +72,7 @@ export default function ManageBookingPage() {
     setBusy(true)
     setError(null)
     try {
-      setBooking(await cancelGuestReservation(locationId, reservationId, token))
+      setBooking(await cancelGuestReservation(locationId, reservationId, token, acceptFee))
       setConfirming(false)
     } catch (err) {
       setError(bookingErrorMessage(err))
@@ -68,6 +80,8 @@ export default function ManageBookingPage() {
       setBusy(false)
     }
   }
+
+  const fee = booking?.guarantee?.cancellationFee ?? 0
 
   return (
     <section className="booking-confirmation">
@@ -85,6 +99,19 @@ export default function ManageBookingPage() {
             <div><dt>Antal</dt><dd>{booking.partySize} personer</dd></div>
             {booking.location?.address && <div><dt>Adress</dt><dd>{booking.location.address}</dd></div>}
           </dl>
+          {booking.status === 'pending' && (
+            <p className="notice" role="status">
+              Bokningen är inte klar: kortgarantin är inte bekräftad. Lägg in kortet där du bokade -
+              annars släpps bordet efter 20 minuter.
+            </p>
+          )}
+          {booking.guarantee?.cardOnFile && booking.cancellable && <GuaranteeTermsText booking={booking} />}
+          {booking.fee && booking.fee.status === 'succeeded' && (
+            <p className="cell-muted">
+              Debiterad avgift: {formatFee(booking.fee.amount)}
+              {booking.fee.refundedAmount > 0 && ` (återbetalt ${formatFee(booking.fee.refundedAmount)})`}.
+            </p>
+          )}
           {booking.cancellable && !confirming && (
             <button type="button" className="btn-secondary" onClick={() => setConfirming(true)}>
               Avboka
@@ -93,7 +120,16 @@ export default function ManageBookingPage() {
           {booking.cancellable && confirming && (
             <div className="booking-confirm-cancel" role="group" aria-label="Bekräfta avbokning">
               <p>Vill du avboka bordet {formatDate(booking.date)} kl {booking.startTime}?</p>
-              <button type="button" className="btn-primary" disabled={busy} onClick={() => void cancel()}>
+              {fee > 0 && (
+                <label className="booking-check fee-accept">
+                  <input type="checkbox" checked={acceptFee} onChange={(e) => setAcceptFee(e.target.checked)} />
+                  <span>
+                    Det är mindre än {booking.guarantee!.cancelCutoffHours} timmar kvar. Jag godkänner att{' '}
+                    <strong>{formatFee(fee)}</strong> debiteras mitt kort.
+                  </span>
+                </label>
+              )}
+              <button type="button" className="btn-primary" disabled={busy || (fee > 0 && !acceptFee)} onClick={() => void cancel()}>
                 {busy ? 'Avbokar…' : 'Ja, avboka'}
               </button>
               <button type="button" className="btn-secondary" disabled={busy} onClick={() => setConfirming(false)}>

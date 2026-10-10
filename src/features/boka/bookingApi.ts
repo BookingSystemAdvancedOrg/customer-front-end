@@ -6,6 +6,7 @@ import { apiGet, apiPost, ApiError } from '../../shared/api'
  *   GET  /locations/{l}/availability?date=          lediga tider + bord
  *   POST /locations/{l}/reservations                boka (gäst)
  *   GET  /locations/{l}/reservations/{r}/guest      min bokning (token)
+ *   POST /locations/{l}/reservations/{r}/confirm    kortgarantin klar (token)
  *   POST /locations/{l}/reservations/{r}/cancel     avboka (token)
  *
  * Gästens hanteringstoken skickas som X-Manage-Token-header.
@@ -63,6 +64,25 @@ export interface GuestReservation {
     email?: string | null
   }
   manageToken?: string
+  /** Kortgaranti: avgifter i öre och vad en avbokning NU skulle kosta. */
+  guarantee?: {
+    cardOnFile: boolean
+    noShowFee: number
+    lateCancelFee: number
+    cancelCutoffHours: number
+    currency: string
+    cancellationFee: number
+  }
+  /** En debiterad/försökt avgift. */
+  fee?: { kind: 'no_show' | 'late_cancel'; status: string; amount: number; refundedAmount: number }
+  /** Bara direkt efter en bokning som kräver kort (status pending). */
+  setup?: { clientSecret: string; stripeAccount: string; expiresAt: string }
+}
+
+/** 30000 (öre) -> "300 kr". */
+export function formatFee(ore: number): string {
+  const kr = ore / 100
+  return `${new Intl.NumberFormat('sv-SE', { maximumFractionDigits: kr % 1 ? 2 : 0 }).format(kr)} kr`
 }
 
 const path = (locationId: string) => `/locations/${encodeURIComponent(locationId)}`
@@ -85,6 +105,14 @@ export function bookingErrorMessage(err: unknown): string {
       return 'Bokningen har redan börjat och kan inte avbokas här. Ring restaurangen.'
     case 'not_cancellable':
       return 'Bokningen kan inte avbokas.'
+    case 'card_not_confirmed':
+      return 'Kortet är inte bekräftat än. Slutför kortuppgifterna och försök igen.'
+    case 'expired':
+      return 'Tiden för att lägga in kortet gick ut och bordet släpptes. Gör en ny bokning.'
+    case 'payment_unavailable':
+      return 'Kortbetalningen är inte tillgänglig just nu. Försök igen om en stund.'
+    case 'fee_applies':
+      return 'Avbokningen kostar en avgift. Godkänn avgiften för att avboka.'
   }
   if (err.status === 404) return 'Bokningen hittades inte. Kontrollera länken.'
   if (err.status === 400) return `Kontrollera uppgifterna: ${err.message}`
@@ -118,12 +146,35 @@ export function cancelGuestReservation(
   locationId: string,
   reservationId: string,
   token: string,
+  acceptFee = false,
 ): Promise<GuestReservation> {
   return apiPost<GuestReservation>(
     `${path(locationId)}/reservations/${encodeURIComponent(reservationId)}/cancel`,
+    acceptFee ? { acceptFee: true } : undefined,
+    { 'X-Manage-Token': token },
+  )
+}
+
+/** Gästen har bekräftat kortet hos Stripe - backend kontrollerar och bokar. */
+export function confirmGuestReservation(
+  locationId: string,
+  reservationId: string,
+  token: string,
+): Promise<GuestReservation> {
+  return apiPost<GuestReservation>(
+    `${path(locationId)}/reservations/${encodeURIComponent(reservationId)}/confirm`,
     undefined,
     { 'X-Manage-Token': token },
   )
+}
+
+/** Kräver platsens villkor kort för det här sällskapet? */
+export function needsCard(
+  terms: { minPartySize: number } | null | undefined,
+  partySize: number,
+  stripeReady: boolean,
+): boolean {
+  return Boolean(terms && stripeReady && partySize >= terms.minPartySize)
 }
 
 /** Länken gästen sparar: /bokning/<plats>/<id>#<token>. */
