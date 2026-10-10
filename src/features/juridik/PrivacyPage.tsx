@@ -19,7 +19,7 @@ export default function PrivacyPage() {
       <p>
         {legal.legalName}
         {legal.orgNumber ? ` (org.nr ${legal.orgNumber})` : ''}
-        {legal.address ? `, ${legal.address}` : ''} ansvarar för behandlingen av dina personuppgifter.
+        {typeof legal.address === 'string' && legal.address ? `, ${legal.address}` : ''} ansvarar för behandlingen av dina personuppgifter.
         {contact ? ` Kontakt: ${contact}.` : ''}
       </p>
 
