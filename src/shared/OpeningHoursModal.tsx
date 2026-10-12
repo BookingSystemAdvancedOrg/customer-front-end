@@ -13,7 +13,7 @@ export function OpeningHoursModal({
   open: boolean
   onClose: () => void
 }) {
-  const { openingHours } = useLocationInfo()
+  const { openingHours, specialDays } = useLocationInfo()
   const titleId = useId()
   const panelRef = useRef<HTMLDivElement>(null)
 
@@ -70,6 +70,21 @@ export function OpeningHoursModal({
             ))}
           </tbody>
         </table>
+        {specialDays.length > 0 && (
+          <>
+            <h3 className="opening-hours-special-heading">Avvikande öppettider</h3>
+            <table className="opening-hours-table">
+              <tbody>
+                {specialDays.map((row) => (
+                  <tr key={row.date}>
+                    <th scope="row">{row.label}</th>
+                    <td>{row.text}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
+        )}
       </div>
     </div>,
     document.body,

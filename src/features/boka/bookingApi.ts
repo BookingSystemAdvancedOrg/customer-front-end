@@ -17,11 +17,28 @@ export interface AvailableTable {
   seats: number
 }
 
+/** Ett sätt för sällskapet att boka tiden: ett bord eller en av
+ * restaurangens bordskombinationer. */
+export interface TableOption {
+  tableIds: string[]
+  seats: number
+}
+
 export interface AvailabilitySlot {
   startTime: string
   endTime: string
   layoutVersion: number | null
+  /** Borden i alternativen nedan (gästvyn, med partySize). */
   tables: AvailableTable[]
+  /** Det sällskapet får boka online, bästa passform först. */
+  options?: TableOption[]
+}
+
+/** En avvikande dag: stängt, andra öppettider eller ingen onlinebokning. */
+export interface DayStatus {
+  kind: 'closed' | 'hours' | 'no_online'
+  intervals?: { opensAt: string; closesAt: string }[]
+  note?: string
 }
 
 export interface Availability {
@@ -29,6 +46,8 @@ export interface Availability {
   date: string
   timezone: string
   slots: AvailabilitySlot[]
+  /** Bara på en avvikande dag. */
+  day?: DayStatus
 }
 
 export interface BookingRequest {
@@ -43,6 +62,8 @@ export interface BookingRequest {
   language?: 'sv' | 'en'
   marketingOptIn?: boolean
   acceptTerms: true
+  /** Token från säkerhetskontrollen (Cloudflare Turnstile) när den visas. */
+  turnstileToken?: string
 }
 
 export interface GuestReservation {
@@ -127,6 +148,10 @@ const VALIDATION_TEXT: [RegExp, (m: RegExpMatchArray) => string][] = [
   [/^email must be at most/, () => `E-postadressen får vara högst ${EMAIL_MAX} tecken.`],
   [/^notes must be at most/, () => `Meddelandet får vara högst ${NOTES_MAX} tecken.`],
   [/^acceptTerms must be true/, () => 'Du behöver godkänna bokningsvillkoren.'],
+  [/^online booking is closed for this date/, () => 'Onlinebokningen är stängd den dagen. Ring oss för att boka.'],
+  [/^tableIds are not offered online/, () => 'Bordet går inte att boka online för så många personer. Välj ett annat bord.'],
+  [/^turnstile token expired/, () => 'Säkerhetskontrollen hann gå ut. Bekräfta igen och tryck Boka.'],
+  [/^turnstile/, () => 'Bekräfta säkerhetskontrollen (rutan ovanför knappen) och försök igen.'],
   [/^(tableIds|at most \d+ tables)/, () => 'Välj bord igen.'],
 ]
 
@@ -137,8 +162,20 @@ export function staleSelection(err: unknown): 'time' | 'tables' | null {
   if (!(err instanceof ApiError)) return null
   if (err.status === 400 && /^startTime is not a bookable time/.test(err.message)) return 'time'
   if (err.status === 409) return 'tables'
-  if (err.status === 400 && /^tableIds contains a table that isn't bookable/.test(err.message)) return 'tables'
+  if (
+    err.status === 400 &&
+    (/^tableIds contains a table that isn't bookable/.test(err.message) ||
+      /^tableIds are not offered online/.test(err.message))
+  ) {
+    return 'tables'
+  }
   return null
+}
+
+/** Servern kräver säkerhetskontrollen men sidan visar den inte - sidan
+ * laddades innan kontrollen slogs på och behöver laddas om. */
+export function turnstileMissing(err: unknown): boolean {
+  return err instanceof ApiError && err.status === 400 && /^turnstile token is required/.test(err.message)
 }
 
 /** Svenska felmeddelanden för API:ts felkoder. */
@@ -169,6 +206,9 @@ export function bookingErrorMessage(err: unknown): string {
       return 'Avbokningen kostar en avgift. Godkänn avgiften för att avboka.'
   }
   if (err.status === 404) return 'Bokningen hittades inte. Kontrollera länken.'
+  if (err.status === 503 && err.message === 'verification_unavailable') {
+    return 'Säkerhetskontrollen svarar inte just nu. Försök igen om en stund.'
+  }
   if (err.status === 400) {
     for (const [pattern, text] of VALIDATION_TEXT) {
       const match = err.message.match(pattern)
@@ -180,8 +220,23 @@ export function bookingErrorMessage(err: unknown): string {
   return 'Bokningen kunde inte genomföras just nu. Försök igen om en stund.'
 }
 
-export function getAvailability(locationId: string, date: string): Promise<Availability> {
-  return apiGet<Availability>(`${path(locationId)}/availability?date=${encodeURIComponent(date)}`)
+/** Lediga tider för ett sällskap: varje tid listar borden (eller
+ * bordskombinationerna) sällskapet får boka online. */
+export function getAvailability(locationId: string, date: string, partySize: number): Promise<Availability> {
+  return apiGet<Availability>(
+    `${path(locationId)}/availability?date=${encodeURIComponent(date)}&partySize=${partySize}`,
+  )
+}
+
+/** Gästens text för en avvikande dag, eller null. */
+export function dayMessage(day: DayStatus | null | undefined, phone: string): string | null {
+  if (!day) return null
+  const note = day.note ? ` (${day.note})` : ''
+  const call = phone ? ` Ring oss på ${phone}.` : ''
+  if (day.kind === 'closed') return `Vi har stängt den dagen${note}.`
+  if (day.kind === 'no_online') return `Den dagen går det inte att boka online${note}.${call}`
+  const hours = (day.intervals ?? []).map((i) => `${i.opensAt}–${i.closesAt}`).join(', ')
+  return `Avvikande öppettider den dagen: ${hours}${note}.`
 }
 
 export function createReservation(

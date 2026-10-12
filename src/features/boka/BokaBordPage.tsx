@@ -12,18 +12,20 @@ import {
   bookableDates,
   bookingErrorMessage,
   createReservation,
+  dayMessage,
   formatDate,
   getAvailability,
   manageLink,
   needsCard,
   normalizePhone,
-  seatsOf,
   staleSelection,
   todayIn,
+  turnstileMissing,
   validEmail,
 } from './bookingApi'
-import type { Availability, AvailabilitySlot, GuestReservation } from './bookingApi'
+import type { Availability, AvailabilitySlot, GuestReservation, TableOption } from './bookingApi'
 import { GuaranteeStep } from './GuaranteeStep'
+import { TurnstileWidget } from './TurnstileWidget'
 import { ApiError } from '../../shared/api'
 import { FloorPlanSvg } from './FloorPlanSvg'
 import { FloorPlan3D } from './FloorPlan3D'
@@ -54,17 +56,23 @@ function guestError(g: Guest): string | null {
   return null
 }
 
-/** Ryms sällskapet vid tidens lediga bord? */
-function fits(slot: AvailabilitySlot, partySize: number): boolean {
-  return slot.tables.reduce((sum, t) => sum + t.seats, 0) >= partySize
+/** Samma bord (ett bord eller samma kombination)? */
+function sameTables(a: TableOption | null, b: TableOption | null): boolean {
+  return Boolean(a && b && a.tableIds.join('+') === b.tableIds.join('+'))
 }
 
 /**
  * Boka bord: datum och sällskap -> tid -> bord på planritningen -> dina
  * uppgifter -> bekräftelse. Lediga tider och bord kommer från
- * GET /availability (samma regler som backend kontrollerar vid bokningen),
- * och bokningen görs med POST /reservations. Hann någon annan ta bordet får
+ * GET /availability?partySize= (samma regler som backend kontrollerar vid
+ * bokningen): varje tid listar bara bord - eller restaurangens
+ * bordskombinationer - som passar sällskapet, så gästen väljer bland dem.
+ * Bokningen görs med POST /reservations. Hann någon annan ta bordet får
  * gästen välja igen med uppdaterad ledighet.
+ *
+ * Avvikande dagar (stängt, andra tider, ingen onlinebokning) förklaras vid
+ * tiderna och syns i datumlistan. Säkerhetskontrollen (Turnstile) visas
+ * ovanför Boka-knappen när plattformen har den påslagen.
  *
  * Kortgaranti: kräver platsen kort för sällskapets storlek visas villkoren
  * innan gästen bokar, och efter bokningen (status "pending", bordet hålls i
@@ -85,7 +93,7 @@ export default function BokaBordPage() {
   // som visas ligger kvar under tiden - bara en ny dag visar "Hämtar…".
   const [refresh, setRefresh] = useState(0)
   const [tick, setTick] = useState(0)
-  const slotsKey = `${location.locationId}|${date}`
+  const slotsKey = `${location.locationId}|${date}|${partySize}`
   const [fetched, setFetched] = useState<{
     key: string
     availability: Availability | null
@@ -96,7 +104,9 @@ export default function BokaBordPage() {
   const slotsError = current?.error ?? null
   const loadingSlots = enabled && current === null
   const [startTime, setStartTime] = useState<string | null>(null)
-  const [selected, setSelected] = useState<Set<string>>(new Set())
+  // Det valda bordet - eller den valda bordskombinationen - för tiden.
+  const [option, setOption] = useState<TableOption | null>(null)
+  const selected = useMemo(() => new Set(option?.tableIds ?? []), [option])
   // Förklaring när en vald tid eller ett valt bord försvann vid en omhämtning.
   const [slotNotice, setSlotNotice] = useState<{ step: 'time' | 'tables'; text: string } | null>(null)
   const [floors, setFloors] = useState<FloorGroup[] | null>(null)
@@ -109,12 +119,19 @@ export default function BokaBordPage() {
   const [pending, setPending] = useState<GuestReservation | null>(null)
   const terms = location.guarantee ?? null
   const cardNeeded = needsCard(terms, partySize, true)
+  const turnstileSiteKey = config.turnstile?.siteKey ?? null
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
+  const [turnstileReset, setTurnstileReset] = useState(0)
+  const specialByDate = useMemo(
+    () => new Map((location.specialDays ?? []).map((d) => [d.date, d] as const)),
+    [location.specialDays],
+  )
 
   // Gästens senaste val - läses när en ny lista kommer, utan att varje
   // klick startar en ny hämtning.
-  const latest = useRef({ startTime, selected, partySize })
+  const latest = useRef({ startTime, option })
   useEffect(() => {
-    latest.current = { startTime, selected, partySize }
+    latest.current = { startTime, option }
   })
 
   const choosing = enabled && !booked && !pending
@@ -130,24 +147,22 @@ export default function BokaBordPage() {
   useEffect(() => {
     if (!enabled) return
     let cancelled = false
-    getAvailability(location.locationId, date)
+    getAvailability(location.locationId, date, partySize)
       .then((a) => {
         if (cancelled) return
         setFetched({ key: slotsKey, availability: a, error: null })
         const cur = latest.current
         if (!cur.startTime) return
-        const still = a.slots.find((s) => s.startTime === cur.startTime && fits(s, cur.partySize))
+        const still = a.slots.find((s) => s.startTime === cur.startTime)
         if (!still) {
           setStartTime(null)
-          setSelected(new Set())
+          setOption(null)
           setSlotNotice({ step: 'time', text: `${cur.startTime} går inte att boka längre. Välj en annan tid.` })
           return
         }
-        const free = new Set(still.tables.map((t) => t.tableId))
-        const kept = [...cur.selected].filter((id) => free.has(id))
-        if (kept.length !== cur.selected.size) {
-          setSelected(new Set(kept))
-          setSlotNotice({ step: 'tables', text: 'Ett bord du valt har hunnit bokas. Välj bord igen.' })
+        if (cur.option && !(still.options ?? []).some((o) => sameTables(o, cur.option))) {
+          setOption(null)
+          setSlotNotice({ step: 'tables', text: 'Bordet du valt har hunnit bokas. Välj bord igen.' })
         }
       })
       .catch((err: unknown) => {
@@ -168,7 +183,7 @@ export default function BokaBordPage() {
     return () => {
       cancelled = true
     }
-  }, [enabled, location.locationId, date, slotsKey, refresh, tick])
+  }, [enabled, location.locationId, date, partySize, slotsKey, refresh, tick])
 
   // Planritningen (för bordsvalet).
   useEffect(() => {
@@ -187,16 +202,16 @@ export default function BokaBordPage() {
     }
   }, [enabled, location.locationId])
 
-  const slots = useMemo(
-    () => (availability?.slots ?? []).filter((s) => fits(s, partySize)),
-    [availability, partySize],
-  )
+  const slots = availability?.slots ?? []
   const slot: AvailabilitySlot | null = slots.find((s) => s.startTime === startTime) ?? null
+  // Bord som ingår i något alternativ för sällskapet - bara de går att välja.
   const free = useMemo(
     () => new Map((slot?.tables ?? []).map((t) => [t.tableId, t.seats] as const)),
     [slot],
   )
-  const chosenSeats = slot ? seatsOf(slot.tables, [...selected]) : 0
+  const options = slot?.options ?? []
+  const day = availability?.day ?? null
+  const dayText = dayMessage(day, info.phone)
   const allTables = useMemo(
     () => (floors ?? []).flatMap((g) => g.elements.filter((e): e is LayoutTableElement => e.type === 'table')),
     [floors],
@@ -207,7 +222,7 @@ export default function BokaBordPage() {
   // Byter man dag, tid eller sällskap gäller inte gamla bordsval längre.
   function choose(change: () => void) {
     change()
-    setSelected(new Set())
+    setOption(null)
     setFormError(null)
     setSlotNotice(null)
   }
@@ -221,33 +236,46 @@ export default function BokaBordPage() {
   }
 
   function choosePartySize(n: number) {
+    // Ett annat sällskap får andra bord (och kanske andra tider): välj om.
     choose(() => {
       setPartySize(n)
-      // Ryms inte det nya sällskapet vid den valda tiden är tiden inte vald längre.
-      const offered = (availability?.slots ?? []).some((s) => s.startTime === startTime && fits(s, n))
-      if (!offered) setStartTime(null)
+      setStartTime(null)
     })
   }
 
-  function toggleTable(tableId: string) {
+  /** Ett klick på ett bord väljer bordet - eller, om det bara går att boka
+   * tillsammans med andra, den kombination det ingår i. */
+  function pickTable(tableId: string) {
     setSlotNotice(null)
-    setSelected((prev) => {
-      const next = new Set(prev)
-      if (next.has(tableId)) next.delete(tableId)
-      else next.add(tableId)
-      return next
-    })
+    setFormError(null)
+    if (option?.tableIds.includes(tableId)) {
+      setOption(null)
+      return
+    }
+    setOption(
+      options.find((o) => o.tableIds.length === 1 && o.tableIds[0] === tableId) ??
+        options.find((o) => o.tableIds.includes(tableId)) ??
+        null,
+    )
+  }
+
+  function pickOption(o: TableOption) {
+    setSlotNotice(null)
+    setFormError(null)
+    setOption(sameTables(o, option) ? null : o)
   }
 
   async function submit(e: FormEvent) {
     e.preventDefault()
     const problem =
       !slot ? 'Välj en tid.'
-      : selected.size === 0 ? 'Välj minst ett bord.'
-      : chosenSeats < partySize ? `Borden du valt har ${chosenSeats} platser - välj fler bord för ${partySize} personer.`
+      : !option ? 'Välj ett bord.'
       : cardNeeded && !config.stripe.publishableKey
         ? `Onlinebokning för ${partySize} personer kräver kortgaranti, som inte är tillgänglig just nu. Ring oss på ${info.phone || 'restaurangen'}.`
       : guestError(guest)
+      ?? (turnstileSiteKey && !turnstileToken
+        ? 'Bekräfta säkerhetskontrollen (rutan ovanför knappen).'
+        : null)
     if (problem) {
       setFormError(problem)
       return
@@ -258,7 +286,7 @@ export default function BokaBordPage() {
       const result = await createReservation(location.locationId, {
         date,
         startTime: slot!.startTime,
-        tableIds: [...selected],
+        tableIds: option!.tableIds,
         partySize,
         name: guest.name.trim(),
         email: guest.email.trim(),
@@ -267,18 +295,29 @@ export default function BokaBordPage() {
         language: 'sv',
         marketingOptIn: guest.marketingOptIn,
         acceptTerms: true,
+        ...(turnstileToken ? { turnstileToken } : {}),
       })
       if (result.status === 'pending' && result.setup) setPending(result)
       else setBooked(result)
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } catch (err) {
-      setFormError(bookingErrorMessage(err))
+      setFormError(
+        !turnstileSiteKey && turnstileMissing(err)
+          ? 'Sidan behöver laddas om. Ladda om sidan och försök igen.'
+          : bookingErrorMessage(err),
+      )
+      if (turnstileSiteKey) {
+        // Säkerhetskontrollens token kan vara förbrukad (den gäller ett
+        // försök) - widgeten tar fram en ny.
+        setTurnstileToken(null)
+        setTurnstileReset((n) => n + 1)
+      }
       const stale = staleSelection(err)
       if (stale) {
         // Tiden passerade 30-minutersgränsen eller bordet hann bokas: välj
         // igen ur en nyhämtad lista.
         if (stale === 'time') setStartTime(null)
-        setSelected(new Set())
+        setOption(null)
         setSlotNotice(null)
         setRefresh((n) => n + 1)
       }
@@ -387,17 +426,23 @@ export default function BokaBordPage() {
             Fler än {maxParty}? Ring oss på {info.phone || 'restaurangen'}.
           </p>
           <div className="booking-dates" role="group" aria-label="Välj datum">
-            {dates.map((d) => (
-              <button
-                key={d}
-                type="button"
-                className={`filter-pill${d === date ? ' active' : ''}`}
-                aria-pressed={d === date}
-                onClick={() => chooseDate(d)}
-              >
-                {d === today ? 'Idag' : formatDate(d)}
-              </button>
-            ))}
+            {dates.map((d) => {
+              const special = specialByDate.get(d)
+              const mark =
+                special?.kind === 'closed' ? 'Stängt' : special?.kind === 'no_online' ? 'Ring oss' : null
+              return (
+                <button
+                  key={d}
+                  type="button"
+                  className={`filter-pill${d === date ? ' active' : ''}${mark ? ' is-special' : ''}`}
+                  aria-pressed={d === date}
+                  onClick={() => chooseDate(d)}
+                >
+                  {d === today ? 'Idag' : formatDate(d)}
+                  {mark && <span className="pill-note"> · {mark}</span>}
+                </button>
+              )
+            })}
           </div>
         </fieldset>
 
@@ -405,7 +450,8 @@ export default function BokaBordPage() {
           <legend>2. Välj tid</legend>
           {loadingSlots && <p className="notice" role="status">Hämtar lediga tider…</p>}
           {slotsError && <p className="notice error" role="alert">{slotsError}</p>}
-          {!loadingSlots && !slotsError && slots.length === 0 && (
+          {!loadingSlots && dayText && <p className="notice" role="status">{dayText}</p>}
+          {!loadingSlots && !slotsError && slots.length === 0 && (!day || day.kind === 'hours') && (
             <p className="notice" role="status">
               Inga lediga tider för {partySize} personer {formatDate(date)}. Prova en annan dag.
             </p>
@@ -430,8 +476,8 @@ export default function BokaBordPage() {
           <fieldset className="booking-step">
             <legend>3. Välj bord</legend>
             <p className="cell-muted">
-              Klicka på ett ledigt bord. Sällskapet behöver {partySize} platser
-              {selected.size > 0 && ` - valda bord har ${chosenSeats}`}.
+              Klicka på ett bord. Här visas bara bord som passar {partySize}{' '}
+              {partySize === 1 ? 'person' : 'personer'}.
             </p>
             {slotNotice?.step === 'tables' && <p className="notice" role="status">{slotNotice.text}</p>}
             {floors && floors.length > 1 && (
@@ -456,29 +502,29 @@ export default function BokaBordPage() {
                   <button type="button" className={view === '3d' ? 'active' : ''} aria-pressed={view === '3d'} onClick={() => setView('3d')}>3D</button>
                 </div>
                 {view === '2d' ? (
-                  <FloorPlanSvg group={activeFloor} free={free} selected={selected} onToggle={toggleTable} />
+                  <FloorPlanSvg group={activeFloor} free={free} selected={selected} onToggle={pickTable} />
                 ) : (
                   <FloorPlan3D group={activeFloor} />
                 )}
               </>
             )}
             <div className="booking-table-list" role="group" aria-label="Lediga bord">
-              {slot.tables.map((t) => (
+              {options.map((o) => (
                 <button
-                  key={t.tableId}
+                  key={o.tableIds.join('+')}
                   type="button"
-                  className={`filter-pill${selected.has(t.tableId) ? ' active' : ''}`}
-                  aria-pressed={selected.has(t.tableId)}
-                  onClick={() => toggleTable(t.tableId)}
+                  className={`filter-pill${sameTables(o, option) ? ' active' : ''}`}
+                  aria-pressed={sameTables(o, option)}
+                  onClick={() => pickOption(o)}
                 >
-                  Bord {labels.get(t.tableId) ?? t.tableId} · {t.seats} pl
+                  Bord {o.tableIds.map((id) => labels.get(id) ?? id).join(' + ')} · {o.seats} pl
                 </button>
               ))}
             </div>
           </fieldset>
         )}
 
-        {slot && selected.size > 0 && (
+        {slot && option && (
           <fieldset className="booking-step">
             <legend>4. Dina uppgifter</legend>
             <div className="booking-grid">
@@ -521,15 +567,22 @@ export default function BokaBordPage() {
             )}
             <div className="booking-summary-line" aria-live="polite">
               {formatDate(date)} kl {slot.startTime}–{slot.endTime} · {partySize} personer · bord{' '}
-              {[...selected].map((id) => labels.get(id) ?? id).join(', ')}
+              {option.tableIds.map((id) => labels.get(id) ?? id).join(' + ')}
             </div>
+            {turnstileSiteKey && (
+              <TurnstileWidget
+                siteKey={turnstileSiteKey}
+                resetKey={turnstileReset}
+                onToken={setTurnstileToken}
+              />
+            )}
             {formError && <p className="notice error" role="alert">{formError}</p>}
             <button type="submit" className="btn-primary" disabled={submitting}>
               {submitting ? 'Bokar…' : cardNeeded ? 'Fortsätt till kortgaranti' : 'Boka bordet'}
             </button>
           </fieldset>
         )}
-        {formError && !(slot && selected.size > 0) && (
+        {formError && !(slot && option) && (
           <p className="notice error" role="alert">{formError}</p>
         )}
       </form>

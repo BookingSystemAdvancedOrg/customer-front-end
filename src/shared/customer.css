@@ -2126,3 +2126,24 @@
 .fee-accept {
   margin: 12px 0;
 }
+
+/* Bokning: säkerhetskontrollen och markerade dagar i datumlistan. */
+.booking-turnstile {
+  margin: 12px 0;
+  min-height: 65px;
+}
+
+.filter-pill .pill-note {
+  font-size: 0.85em;
+  opacity: 0.75;
+}
+
+.filter-pill.is-special:not(.active) {
+  border-style: dashed;
+}
+
+.opening-hours-special-heading {
+  margin: 20px 0 8px;
+  font-size: 1rem;
+}
+

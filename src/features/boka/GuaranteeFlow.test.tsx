@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import BokaBordPage from './BokaBordPage'
 import { WithSite } from '../../test/siteFixture'
-import { json, siteConfig } from '../../test/siteData'
+import { guestView, json, partyOf, siteConfig } from '../../test/siteData'
 
 // Stripe.js is never loaded in tests: a fake Payment Element and stripe.confirmSetup.
 const confirmSetup = vi.fn()
@@ -43,8 +43,9 @@ beforeEach(() => {
   confirmSetup.mockReset()
   fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
     if (url.includes('/availability')) {
-      return json({ locationId: 'loc-1', date: 'x', timezone: 'Europe/Stockholm',
-        slots: [{ startTime: '18:00', endTime: '20:00', layoutVersion: 1, tables: [{ tableId: 'table-b', seats: 4 }] }] })
+      return json(guestView({ locationId: 'loc-1', date: 'x', timezone: 'Europe/Stockholm',
+        slots: [{ startTime: '18:00', endTime: '20:00', layoutVersion: 1, tables: [{ tableId: 'table-b', seats: 4 }] }] },
+      partyOf(url)))
     }
     if (url.includes('/layout/active')) return json(LAYOUT)
     if (url.endsWith('/reservations') && init?.method === 'POST') return json(PENDING, 201)

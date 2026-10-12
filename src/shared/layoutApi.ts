@@ -53,6 +53,8 @@ export interface LayoutTableElement extends LayoutElementBase {
   shape: 'rect' | 'round'
   seats: number
   zone: string
+  /** Bordets egen etikett, om restaurangen satt en. */
+  label?: string
 }
 
 export type LayoutElement =
@@ -177,8 +179,9 @@ export function groupElementsByFloor(layout: PublicActiveLayout): FloorGroup[] {
  * ett eget fält i API:t, men openapi.yaml garanterar att `elements` kommer i
  * "stored snapshot order", så att räkna i den ordningen (utan att sortera om
  * den) ger samma nummer på samma fysiska bord här som i admin — annars visar
- * kund och personal olika nummer för samma bord.
+ * kund och personal olika nummer för samma bord. Har bordet en egen etikett
+ * (`label`) används den - admin gör likadant (admin shared/tables.ts).
  */
 export function labelTables(elements: LayoutTableElement[]): Map<string, string> {
-  return new Map(elements.map((table, i) => [table.elementId, `${i + 1}`]))
+  return new Map(elements.map((table, i) => [table.elementId, table.label?.trim() || `${i + 1}`]))
 }

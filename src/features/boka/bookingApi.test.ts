@@ -5,12 +5,15 @@ import {
   bookingErrorMessage,
   cancelGuestReservation,
   createReservation,
+  dayMessage,
   formatDate,
+  getAvailability,
   getGuestReservation,
   manageLink,
   normalizePhone,
   staleSelection,
   todayIn,
+  turnstileMissing,
   validEmail,
 } from './bookingApi'
 import { json } from '../../test/siteData'
@@ -133,3 +136,47 @@ describe('requests', () => {
     )
   })
 })
+
+describe('table rules, special days and the bot check', () => {
+  it('asks for the party size with the times', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(json({ slots: [] }))
+    vi.stubGlobal('fetch', fetchMock)
+    await getAvailability('loc 1', '2026-09-20', 4)
+    expect(fetchMock.mock.calls[0][0]).toBe('https://api.test/locations/loc%201/availability?date=2026-09-20&partySize=4')
+  })
+
+  it.each([
+    ['online booking is closed for this date', 'stängd den dagen'],
+    ['tableIds are not offered online for this party size', 'Välj ett annat bord'],
+    ['turnstile token is required', 'Bekräfta säkerhetskontrollen'],
+    ['turnstile verification failed', 'Bekräfta säkerhetskontrollen'],
+    ['turnstile token expired', 'hann gå ut'],
+  ])('explains %s in Swedish', (message, text) => {
+    expect(bookingErrorMessage(new ApiError(400, message))).toContain(text)
+  })
+
+  it('a check that cannot be made is not the guest\'s fault', () => {
+    expect(bookingErrorMessage(new ApiError(503, 'verification_unavailable'))).toContain('svarar inte')
+  })
+
+  it('a table no longer offered means picking a table again', () => {
+    expect(staleSelection(new ApiError(400, 'tableIds are not offered online for this party size'))).toBe('tables')
+  })
+
+  it('knows when the server wants a bot check the page does not show', () => {
+    expect(turnstileMissing(new ApiError(400, 'turnstile token is required'))).toBe(true)
+    expect(turnstileMissing(new ApiError(400, 'turnstile verification failed'))).toBe(false)
+    expect(turnstileMissing(new ApiError(409, 'table_taken'))).toBe(false)
+    expect(turnstileMissing(new Error('x'))).toBe(false)
+  })
+
+  it('describes special days for guests', () => {
+    expect(dayMessage(undefined, '08-1')).toBeNull()
+    expect(dayMessage({ kind: 'closed', note: 'Julafton' }, '08-1')).toBe('Vi har stängt den dagen (Julafton).')
+    expect(dayMessage({ kind: 'no_online' }, '08-1')).toBe('Den dagen går det inte att boka online. Ring oss på 08-1.')
+    expect(dayMessage({ kind: 'hours', intervals: [{ opensAt: '17:00', closesAt: '22:00' }] }, '')).toBe(
+      'Avvikande öppettider den dagen: 17:00–22:00.',
+    )
+  })
+})
+

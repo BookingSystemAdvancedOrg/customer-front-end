@@ -24,6 +24,15 @@ export interface GuaranteeTerms {
   cancelCutoffHours: number
 }
 
+/** Avvikande dag (stängt, andra öppettider, ingen onlinebokning) - de
+ * närmaste 60 dagarna. */
+export interface SpecialDay {
+  date: string
+  kind: 'closed' | 'hours' | 'no_online'
+  intervals?: { opensAt: string; closesAt: string }[]
+  note?: string
+}
+
 export interface SiteLocation {
   locationId: string
   name: string | null
@@ -35,6 +44,7 @@ export interface SiteLocation {
   bookingDurationHours: number | null
   maxPartySizeOnline: number | null
   guarantee?: GuaranteeTerms | null
+  specialDays?: SpecialDay[]
 }
 
 export interface SiteBranding {

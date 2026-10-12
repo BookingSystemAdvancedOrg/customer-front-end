@@ -89,3 +89,21 @@ describe('businessHoursToRows', () => {
     expect(rows[1]).toEqual({ days: 'Tis–Sön', hours: 'Stängt' })
   })
 })
+
+describe('specialDayRows', () => {
+  it('describes each special day for the opening hours', async () => {
+    const { specialDayRows } = await loadLocationApi()
+    const rows = specialDayRows([
+      { date: '2026-12-24', kind: 'closed', note: 'Julafton' },
+      { date: '2026-12-31', kind: 'hours', intervals: [{ opensAt: '17:00', closesAt: '23:59' }] },
+      { date: '2026-10-16', kind: 'no_online' },
+    ])
+    expect(rows.map((r) => r.text)).toEqual([
+      'Stängt (Julafton)', '17:00–23:59', 'Vanliga tider, ingen onlinebokning',
+    ])
+    // The exact abbreviation depends on the ICU version ("dec" / "dec.").
+    expect(rows[0].label).toMatch(/^tors 24 dec/)
+    expect(rows[2].label).toMatch(/^fre 16 okt/)
+  })
+})
+

@@ -3,7 +3,21 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import BokaBordPage, { SLOTS_REFRESH_MS } from './BokaBordPage'
 import { WithSite } from '../../test/siteFixture'
-import { json, siteConfig } from '../../test/siteData'
+import { guestView, json, partyOf, siteConfig } from '../../test/siteData'
+
+// The bot check widget (Cloudflare) is never loaded in tests: a button hands
+// the page a token, and every reset is recorded.
+const turnstileResets: number[] = []
+vi.mock('./TurnstileWidget', () => ({
+  TurnstileWidget: ({ resetKey, onToken }: { resetKey: number; onToken: (t: string | null) => void }) => {
+    turnstileResets.push(resetKey)
+    return (
+      <button type="button" onClick={() => onToken(`token-${resetKey}`)}>
+        Jag är inte en robot
+      </button>
+    )
+  },
+}))
 
 const LAYOUT = {
   floors: [],
@@ -25,7 +39,8 @@ function availability(tables = [{ tableId: 'table-a', seats: 2 }, { tableId: 'ta
 
 let fetchMock: ReturnType<typeof vi.fn>
 let bookingResponse: () => Response
-let availabilityBody: ReturnType<typeof availability>
+let availabilityBody: ReturnType<typeof availability> & { day?: unknown }
+let combos: { tableIds: string[]; minParty: number; maxParty: number }[] = []
 const availabilityCalls = () => fetchMock.mock.calls.filter(([url]) => String(url).includes('/availability')).length
 
 beforeEach(() => {
@@ -37,8 +52,10 @@ beforeEach(() => {
       manageToken: 'tok123',
     }, 201)
   availabilityBody = availability()
+  combos = []
+  turnstileResets.length = 0
   fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
-    if (url.includes('/availability')) return json(availabilityBody)
+    if (url.includes('/availability')) return json(guestView(availabilityBody, partyOf(url), combos))
     if (url.includes('/layout/active')) return json(LAYOUT)
     if (url.endsWith('/reservations') && init?.method === 'POST') return bookingResponse()
     return json({ error: 'not found' }, 404)
@@ -91,15 +108,37 @@ describe('BokaBordPage', () => {
     expect(screen.getByRole('button', { name: '18:00' })).toBeInTheDocument()
   })
 
-  it('requires enough seats before the details step', async () => {
+  it('offers only the tables that fit the party, and asks the server for that party', async () => {
     const user = userEvent.setup()
     render(<WithSite><BokaBordPage /></WithSite>)
     await user.selectOptions(screen.getByLabelText('Antal personer'), '3')
     await user.click(await screen.findByRole('button', { name: '18:00' }))
-    await user.click(screen.getByRole('button', { name: /Bord 1 · 2 pl/ }))
+    expect(screen.queryByRole('button', { name: /Bord 1 · 2 pl/ })).toBeNull()
+    expect(screen.getByRole('button', { name: /Bord 2 · 4 pl/ })).toBeInTheDocument()
+    const last = fetchMock.mock.calls.filter(([url]) => String(url).includes('/availability')).at(-1)!
+    expect(String(last[0])).toContain('partySize=3')
+  })
+
+  it('books a combination the restaurant set up as one choice', async () => {
+    const user = userEvent.setup()
+    combos = [{ tableIds: ['table-a', 'table-b'], minParty: 5, maxParty: 6 }]
+    bookingResponse = () => json({
+      reservationId: 'r1', status: 'reserved', date: '2026-09-20', startTime: '18:00', endTime: '20:00',
+      partySize: 6, tableIds: ['table-a', 'table-b'], customerName: 'Anna', cancellable: true, manageToken: 't',
+    }, 201)
+    render(<WithSite><BokaBordPage /></WithSite>)
+    await user.selectOptions(screen.getByLabelText('Antal personer'), '6')
+    await user.click(await screen.findByRole('button', { name: '18:00' }))
+    await user.click(screen.getByRole('button', { name: 'Bord 1 + 2 · 6 pl' }))
     await user.type(screen.getByLabelText('Namn'), 'Anna')
+    await user.type(screen.getByLabelText('E-post'), 'anna@example.se')
+    await user.type(screen.getByLabelText('Telefon'), '0701234567')
+    await user.click(screen.getByRole('checkbox', { name: /bokningsvillkoren/ }))
     await user.click(screen.getByRole('button', { name: 'Boka bordet' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent('2 platser')
+
+    await screen.findByRole('heading', { name: 'Ditt bord är bokat' })
+    const post = fetchMock.mock.calls.find(([, init]) => init?.method === 'POST')!
+    expect(JSON.parse(post[1].body).tableIds).toEqual(['table-a', 'table-b'])
   })
 
   it('asks to pick again when the table was just taken, with fresh availability', async () => {
@@ -153,12 +192,11 @@ describe('BokaBordPage', () => {
     expect(screen.queryByText('Hämtar lediga tider…')).toBeNull()
   })
 
-  it('drops only a chosen table that someone else booked', async () => {
+  it('drops a chosen table that someone else booked, keeps the time', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     render(<WithSite><BokaBordPage /></WithSite>)
     await user.click(await screen.findByRole('button', { name: '18:00' }))
-    await user.click(screen.getByRole('button', { name: /Bord 1 · 2 pl/ }))
     await user.click(screen.getByRole('button', { name: /Bord 2 · 4 pl/ }))
 
     availabilityBody = availability([{ tableId: 'table-a', seats: 2 }])
@@ -166,10 +204,11 @@ describe('BokaBordPage', () => {
       await vi.advanceTimersByTimeAsync(SLOTS_REFRESH_MS)
     })
 
-    expect(await screen.findByText('Ett bord du valt har hunnit bokas. Välj bord igen.')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Bord 1 · 2 pl/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(await screen.findByText('Bordet du valt har hunnit bokas. Välj bord igen.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Bord 1 · 2 pl/ })).toHaveAttribute('aria-pressed', 'false')
     expect(screen.queryByRole('button', { name: /Bord 2 · 4 pl/ })).toBeNull()
     expect(screen.getByRole('button', { name: '18:00' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.queryByLabelText('Namn')).toBeNull()
   })
 
   it('asks for a new time when the booking is refused for passing the 30-minute limit', async () => {
@@ -207,13 +246,13 @@ describe('BokaBordPage', () => {
     expect(screen.queryByRole('status', { name: /går inte att boka/ })).toBeNull()
   })
 
-  it('a bigger party that does not fit the chosen time unselects it', async () => {
+  it('another party size asks for a new time', async () => {
     const user = userEvent.setup()
     render(<WithSite><BokaBordPage /></WithSite>)
     await user.click(await screen.findByRole('button', { name: '20:00' }))
     await user.selectOptions(screen.getByLabelText('Antal personer'), '3')
     await user.selectOptions(screen.getByLabelText('Antal personer'), '2')
-    expect(screen.getByRole('button', { name: '20:00' })).toHaveAttribute('aria-pressed', 'false')
+    expect(await screen.findByRole('button', { name: '20:00' })).toHaveAttribute('aria-pressed', 'false')
   })
 
   it('checks the phone number like the server does before sending', async () => {
@@ -265,4 +304,67 @@ describe('BokaBordPage', () => {
 
     expect(availabilityCalls()).toBe(before)
   })
+
+  it('explains a closed day and a day without online booking', async () => {
+    const user = userEvent.setup()
+    availabilityBody = { ...availability(), slots: [], day: { kind: 'closed', note: 'Privat fest' } }
+    render(<WithSite><BokaBordPage /></WithSite>)
+    expect(await screen.findByText('Vi har stängt den dagen (Privat fest).')).toBeInTheDocument()
+    expect(screen.queryByText(/Inga lediga tider/)).toBeNull()
+
+    availabilityBody = { ...availability(), slots: [], day: { kind: 'no_online' } }
+    const days = within(screen.getByRole('group', { name: 'Välj datum' })).getAllByRole('button')
+    await user.click(days[1])
+    expect(await screen.findByText(/Den dagen går det inte att boka online\. Ring oss på 08-123 456 78\./))
+      .toBeInTheDocument()
+  })
+
+  it('marks closed days in the date list', async () => {
+    const config = siteConfig()
+    const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Stockholm' }).format(new Date())
+    const [y, m, d] = today.split('-').map(Number)
+    const later = new Date(Date.UTC(y, m - 1, d + 2)).toISOString().slice(0, 10)
+    config.locations[0].specialDays = [{ date: later, kind: 'closed', note: 'Julafton' }]
+    render(<WithSite config={config}><BokaBordPage /></WithSite>)
+    const days = within(screen.getByRole('group', { name: 'Välj datum' })).getAllByRole('button')
+    expect(days[2]).toHaveTextContent('Stängt')
+    expect(days[1]).not.toHaveTextContent('Stängt')
+  })
+
+  it('sends the bot check token and asks for a new one after a failed attempt', async () => {
+    const user = userEvent.setup()
+    const config = siteConfig()
+    config.turnstile = { siteKey: '1x00000000000000000000AA' }
+    bookingResponse = () => json({ error: 'table_taken' }, 409)
+    render(<WithSite config={config}><BokaBordPage /></WithSite>)
+    await chooseAndFill(user)
+    await user.click(screen.getByRole('checkbox', { name: /bokningsvillkoren/ }))
+
+    await user.click(screen.getByRole('button', { name: 'Boka bordet' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Bekräfta säkerhetskontrollen')
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false)
+
+    await user.click(screen.getByRole('button', { name: 'Jag är inte en robot' }))
+    await user.click(screen.getByRole('button', { name: 'Boka bordet' }))
+    const post = fetchMock.mock.calls.find(([, init]) => init?.method === 'POST')!
+    expect(JSON.parse(post[1].body).turnstileToken).toBe('token-0')
+    expect(await screen.findByRole('alert')).toHaveTextContent('hann bokas av någon annan')
+
+    // The token was used up: picking again shows a fresh widget, the old token isn't sent.
+    await user.click(await screen.findByRole('button', { name: /Bord 2 · 4 pl/ }))
+    expect(turnstileResets.at(-1)).toBe(1)
+    await user.click(screen.getByRole('button', { name: 'Boka bordet' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Bekräfta säkerhetskontrollen')
+  })
+
+  it('asks for a reload when the server wants a bot check this page does not show', async () => {
+    const user = userEvent.setup()
+    bookingResponse = () => json({ error: 'turnstile token is required' }, 400)
+    render(<WithSite config={siteConfig()}><BokaBordPage /></WithSite>)
+    await chooseAndFill(user)
+    await user.click(screen.getByRole('checkbox', { name: /bokningsvillkoren/ }))
+    await user.click(screen.getByRole('button', { name: 'Boka bordet' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Ladda om sidan')
+  })
 })
+

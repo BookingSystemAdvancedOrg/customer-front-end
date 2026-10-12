@@ -128,3 +128,29 @@ export function businessHoursToRows(hours: BusinessHours): OpeningHoursRow[] {
   }
   return rows
 }
+
+/** En avvikande dag som rad i öppettiderna: "tors 24 dec" + "Stängt (Julafton)". */
+export interface SpecialDayRow {
+  date: string
+  label: string
+  text: string
+}
+
+export function specialDayRows(
+  days: { date: string; kind: 'closed' | 'hours' | 'no_online'; intervals?: DayHoursRange[]; note?: string }[],
+): SpecialDayRow[] {
+  return days.map((d) => {
+    const [y, m, day] = d.date.split('-').map(Number)
+    const label = new Intl.DateTimeFormat('sv-SE', {
+      weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC',
+    }).format(new Date(Date.UTC(y, m - 1, day)))
+    const base =
+      d.kind === 'closed'
+        ? 'Stängt'
+        : d.kind === 'hours'
+          ? (d.intervals ?? []).map((i) => `${i.opensAt}–${i.closesAt}`).join(', ')
+          : 'Vanliga tider, ingen onlinebokning'
+    return { date: d.date, label, text: d.note ? `${base} (${d.note})` : base }
+  })
+}
+

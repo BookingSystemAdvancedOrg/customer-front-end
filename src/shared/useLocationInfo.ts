@@ -1,5 +1,5 @@
-import { businessHoursToRows } from './locationApi'
-import type { OpeningHoursRow } from './locationApi'
+import { businessHoursToRows, specialDayRows } from './locationApi'
+import type { OpeningHoursRow, SpecialDayRow } from './locationApi'
 import { useSite } from './SiteContext'
 
 export interface LocationInfo {
@@ -9,6 +9,8 @@ export interface LocationInfo {
   phone: string
   email: string
   openingHours: OpeningHoursRow[]
+  /** Avvikande dagar de närmaste 60 dagarna. */
+  specialDays: SpecialDayRow[]
 }
 
 /**
@@ -25,5 +27,6 @@ export function useLocationInfo(): LocationInfo {
     phone: location.phoneNumber ?? config.legal.contactPhone ?? '',
     email: location.email ?? config.legal.contactEmail ?? '',
     openingHours: businessHoursToRows(location.businessHours ?? {}),
+    specialDays: specialDayRows(location.specialDays ?? []),
   }
 }

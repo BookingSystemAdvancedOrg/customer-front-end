@@ -205,4 +205,10 @@ describe('labelTables', () => {
     expect(labels.get('zzz-last-alphabetically')).toBe('1')
     expect(labels.get('aaa-first-alphabetically')).toBe('2')
   })
+
+  it('använder bordets egen etikett när den finns', async () => {
+    const { labelTables } = await loadLayoutApi()
+    const labels = labelTables([table('a'), { ...table('b'), label: 'Bar' }, table('c')])
+    expect([...labels.values()]).toEqual(['1', 'Bar', '3'])
+  })
 })
