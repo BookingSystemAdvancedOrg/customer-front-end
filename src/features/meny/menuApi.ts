@@ -40,6 +40,8 @@ export interface PublicMenuItem {
   category: MenuCategory
   imageKey: string
   active?: boolean
+  /** Innehåller alkohol: kan bara beställas vid bordet. */
+  alcohol?: boolean
 }
 
 /* --- Bildvisning ---------------------------------------------------------- */

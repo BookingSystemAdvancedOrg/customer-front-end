@@ -49,8 +49,11 @@ export function TurnstileWidget({
   siteKey,
   resetKey,
   onToken,
+  action = 'booking',
 }: {
   siteKey: string
+  /** Formuläret widgeten sitter på - servern godtar bara rätt sort. */
+  action?: 'booking' | 'order'
   /** Ändras efter varje bokningsförsök - den gamla token är förbrukad. */
   resetKey: number
   onToken: (token: string | null) => void
@@ -72,7 +75,7 @@ export function TurnstileWidget({
         if (cancelled || !container.current) return
         widgetId.current = turnstile.render(container.current, {
           sitekey: siteKey,
-          action: 'booking',
+          action,
           language: 'sv',
           'refresh-expired': 'auto',
           callback: (token: string) => onTokenRef.current(token),
@@ -91,7 +94,7 @@ export function TurnstileWidget({
       // Widgetens token följer inte med till nästa gång den visas.
       onTokenRef.current(null)
     }
-  }, [siteKey])
+  }, [siteKey, action])
 
   useEffect(() => {
     if (lastReset.current === resetKey) return

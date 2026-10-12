@@ -45,6 +45,8 @@ export interface SiteLocation {
   maxPartySizeOnline: number | null
   guarantee?: GuaranteeTerms | null
   specialDays?: SpecialDay[]
+  /** Hur man kan beställa här (null/saknas = ingen beställning). */
+  ordering?: { pickup: boolean; table: boolean; prepMinutes: number } | null
 }
 
 export interface SiteBranding {

@@ -34,6 +34,7 @@ export function CustomerLayout() {
   const LEFT_NAV: NavItem[] = [
     { to: '/meny', label: 'Meny' },
     ...(tenant.features.reservations ? [{ to: '/boka-bord', label: 'Boka bord' }] : []),
+    ...(tenant.features.ordering && current.ordering?.pickup ? [{ to: '/bestall', label: 'Beställ' }] : []),
   ]
   const RIGHT_NAV: NavItem[] = [
     ...(tenant.branding.about ? [{ to: '/om-oss', label: 'Om oss' }] : []),
