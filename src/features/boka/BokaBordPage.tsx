@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useSite } from '../../shared/SiteContext'
@@ -6,6 +6,9 @@ import { useLocationInfo } from '../../shared/useLocationInfo'
 import { getPublicActiveLayout, groupElementsByFloor, labelTables } from '../../shared/layoutApi'
 import type { FloorGroup, LayoutTableElement } from '../../shared/layoutApi'
 import {
+  EMAIL_MAX,
+  NAME_MAX,
+  NOTES_MAX,
   bookableDates,
   bookingErrorMessage,
   createReservation,
@@ -13,8 +16,11 @@ import {
   getAvailability,
   manageLink,
   needsCard,
+  normalizePhone,
   seatsOf,
+  staleSelection,
   todayIn,
+  validEmail,
 } from './bookingApi'
 import type { Availability, AvailabilitySlot, GuestReservation } from './bookingApi'
 import { GuaranteeStep } from './GuaranteeStep'
@@ -23,6 +29,9 @@ import { FloorPlanSvg } from './FloorPlanSvg'
 import { FloorPlan3D } from './FloorPlan3D'
 
 const DEFAULT_MAX_PARTY = 12
+/** Hur ofta lediga tider hämtas om medan gästen väljer (tider inom 30
+ * minuter försvinner ur listan när klockan går). */
+export const SLOTS_REFRESH_MS = 60_000
 
 interface Guest {
   name: string
@@ -39,10 +48,15 @@ const EMPTY_GUEST: Guest = {
 
 function guestError(g: Guest): string | null {
   if (!g.name.trim()) return 'Fyll i ditt namn.'
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(g.email.trim())) return 'Fyll i en giltig e-postadress.'
-  if (g.phone.replace(/[^\d]/g, '').length < 8) return 'Fyll i ett giltigt telefonnummer.'
+  if (!validEmail(g.email)) return 'Fyll i en giltig e-postadress.'
+  if (!normalizePhone(g.phone)) return 'Fyll i ett giltigt telefonnummer, t.ex. 070-123 45 67.'
   if (!g.acceptTerms) return 'Du behöver godkänna bokningsvillkoren.'
   return null
+}
+
+/** Ryms sällskapet vid tidens lediga bord? */
+function fits(slot: AvailabilitySlot, partySize: number): boolean {
+  return slot.tables.reduce((sum, t) => sum + t.seats, 0) >= partySize
 }
 
 /**
@@ -67,8 +81,11 @@ export default function BokaBordPage() {
 
   const [partySize, setPartySize] = useState(2)
   const [date, setDate] = useState(today)
+  // Hämta om: efter en nekad bokning (refresh) och varje minut (tick). Listan
+  // som visas ligger kvar under tiden - bara en ny dag visar "Hämtar…".
   const [refresh, setRefresh] = useState(0)
-  const slotsKey = `${location.locationId}|${date}|${refresh}`
+  const [tick, setTick] = useState(0)
+  const slotsKey = `${location.locationId}|${date}`
   const [fetched, setFetched] = useState<{
     key: string
     availability: Availability | null
@@ -80,6 +97,8 @@ export default function BokaBordPage() {
   const loadingSlots = enabled && current === null
   const [startTime, setStartTime] = useState<string | null>(null)
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  // Förklaring när en vald tid eller ett valt bord försvann vid en omhämtning.
+  const [slotNotice, setSlotNotice] = useState<{ step: 'time' | 'tables'; text: string } | null>(null)
   const [floors, setFloors] = useState<FloorGroup[] | null>(null)
   const [floorId, setFloorId] = useState<string | null>(null)
   const [view, setView] = useState<'2d' | '3d'>('2d')
@@ -91,29 +110,65 @@ export default function BokaBordPage() {
   const terms = location.guarantee ?? null
   const cardNeeded = needsCard(terms, partySize, true)
 
-  // Lediga tider för vald dag.
+  // Gästens senaste val - läses när en ny lista kommer, utan att varje
+  // klick startar en ny hämtning.
+  const latest = useRef({ startTime, selected, partySize })
+  useEffect(() => {
+    latest.current = { startTime, selected, partySize }
+  })
+
+  const choosing = enabled && !booked && !pending
+  useEffect(() => {
+    if (!choosing) return
+    const timer = window.setInterval(() => setTick((n) => n + 1), SLOTS_REFRESH_MS)
+    return () => window.clearInterval(timer)
+  }, [choosing])
+
+  // Lediga tider för vald dag. Försvinner den valda tiden (eller ett valt
+  // bord) i en ny lista tas valet bort med en förklaring - annars skulle
+  // gästen fylla i allt och få nej när bokningen skickas.
   useEffect(() => {
     if (!enabled) return
     let cancelled = false
     getAvailability(location.locationId, date)
       .then((a) => {
-        if (!cancelled) setFetched({ key: slotsKey, availability: a, error: null })
+        if (cancelled) return
+        setFetched({ key: slotsKey, availability: a, error: null })
+        const cur = latest.current
+        if (!cur.startTime) return
+        const still = a.slots.find((s) => s.startTime === cur.startTime && fits(s, cur.partySize))
+        if (!still) {
+          setStartTime(null)
+          setSelected(new Set())
+          setSlotNotice({ step: 'time', text: `${cur.startTime} går inte att boka längre. Välj en annan tid.` })
+          return
+        }
+        const free = new Set(still.tables.map((t) => t.tableId))
+        const kept = [...cur.selected].filter((id) => free.has(id))
+        if (kept.length !== cur.selected.size) {
+          setSelected(new Set(kept))
+          setSlotNotice({ step: 'tables', text: 'Ett bord du valt har hunnit bokas. Välj bord igen.' })
+        }
       })
       .catch((err: unknown) => {
         if (cancelled) return
-        setFetched({
-          key: slotsKey,
-          availability: null,
-          error:
-            err instanceof ApiError && err.status === 400
-              ? 'Den dagen går inte att boka online.'
-              : bookingErrorMessage(err),
-        })
+        const refused = err instanceof ApiError && err.status === 400
+        setFetched((prev) =>
+          // En misslyckad omhämtning (nätet) behåller listan - bokningen
+          // kontrolleras ändå igen av servern.
+          !refused && prev?.key === slotsKey && prev.availability
+            ? prev
+            : {
+                key: slotsKey,
+                availability: null,
+                error: refused ? 'Den dagen går inte att boka online.' : bookingErrorMessage(err),
+              },
+        )
       })
     return () => {
       cancelled = true
     }
-  }, [enabled, location.locationId, date, slotsKey])
+  }, [enabled, location.locationId, date, slotsKey, refresh, tick])
 
   // Planritningen (för bordsvalet).
   useEffect(() => {
@@ -133,10 +188,7 @@ export default function BokaBordPage() {
   }, [enabled, location.locationId])
 
   const slots = useMemo(
-    () =>
-      (availability?.slots ?? []).filter(
-        (s) => s.tables.reduce((sum, t) => sum + t.seats, 0) >= partySize,
-      ),
+    () => (availability?.slots ?? []).filter((s) => fits(s, partySize)),
     [availability, partySize],
   )
   const slot: AvailabilitySlot | null = slots.find((s) => s.startTime === startTime) ?? null
@@ -157,9 +209,28 @@ export default function BokaBordPage() {
     change()
     setSelected(new Set())
     setFormError(null)
+    setSlotNotice(null)
+  }
+
+  function chooseDate(d: string) {
+    // En annan dag har egna tider - välj tid igen.
+    choose(() => {
+      setDate(d)
+      setStartTime(null)
+    })
+  }
+
+  function choosePartySize(n: number) {
+    choose(() => {
+      setPartySize(n)
+      // Ryms inte det nya sällskapet vid den valda tiden är tiden inte vald längre.
+      const offered = (availability?.slots ?? []).some((s) => s.startTime === startTime && fits(s, n))
+      if (!offered) setStartTime(null)
+    })
   }
 
   function toggleTable(tableId: string) {
+    setSlotNotice(null)
     setSelected((prev) => {
       const next = new Set(prev)
       if (next.has(tableId)) next.delete(tableId)
@@ -202,8 +273,13 @@ export default function BokaBordPage() {
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } catch (err) {
       setFormError(bookingErrorMessage(err))
-      if (err instanceof ApiError && err.status === 409) {
+      const stale = staleSelection(err)
+      if (stale) {
+        // Tiden passerade 30-minutersgränsen eller bordet hann bokas: välj
+        // igen ur en nyhämtad lista.
+        if (stale === 'time') setStartTime(null)
         setSelected(new Set())
+        setSlotNotice(null)
         setRefresh((n) => n + 1)
       }
     } finally {
@@ -301,7 +377,7 @@ export default function BokaBordPage() {
           <legend>1. När och hur många?</legend>
           <label className="booking-field">
             <span>Antal personer</span>
-            <select value={partySize} onChange={(e) => choose(() => setPartySize(Number(e.target.value)))}>
+            <select value={partySize} onChange={(e) => choosePartySize(Number(e.target.value))}>
               {Array.from({ length: maxParty }, (_, i) => i + 1).map((n) => (
                 <option key={n} value={n}>{n} {n === 1 ? 'person' : 'personer'}</option>
               ))}
@@ -317,7 +393,7 @@ export default function BokaBordPage() {
                 type="button"
                 className={`filter-pill${d === date ? ' active' : ''}`}
                 aria-pressed={d === date}
-                onClick={() => choose(() => setDate(d))}
+                onClick={() => chooseDate(d)}
               >
                 {d === today ? 'Idag' : formatDate(d)}
               </button>
@@ -334,6 +410,7 @@ export default function BokaBordPage() {
               Inga lediga tider för {partySize} personer {formatDate(date)}. Prova en annan dag.
             </p>
           )}
+          {slotNotice?.step === 'time' && <p className="notice" role="status">{slotNotice.text}</p>}
           <div className="booking-times" role="group" aria-label="Välj tid">
             {slots.map((s) => (
               <button
@@ -356,6 +433,7 @@ export default function BokaBordPage() {
               Klicka på ett ledigt bord. Sällskapet behöver {partySize} platser
               {selected.size > 0 && ` - valda bord har ${chosenSeats}`}.
             </p>
+            {slotNotice?.step === 'tables' && <p className="notice" role="status">{slotNotice.text}</p>}
             {floors && floors.length > 1 && (
               <div className="filter-row" role="group" aria-label="Välj våning">
                 {floors.map((g) => (
@@ -406,11 +484,11 @@ export default function BokaBordPage() {
             <div className="booking-grid">
               <label className="booking-field">
                 <span>Namn</span>
-                <input autoComplete="name" value={guest.name} onChange={(e) => setGuest({ ...guest, name: e.target.value })} />
+                <input autoComplete="name" maxLength={NAME_MAX} value={guest.name} onChange={(e) => setGuest({ ...guest, name: e.target.value })} />
               </label>
               <label className="booking-field">
                 <span>E-post</span>
-                <input type="email" autoComplete="email" value={guest.email} onChange={(e) => setGuest({ ...guest, email: e.target.value })} />
+                <input type="email" autoComplete="email" maxLength={EMAIL_MAX} value={guest.email} onChange={(e) => setGuest({ ...guest, email: e.target.value })} />
               </label>
               <label className="booking-field">
                 <span>Telefon</span>
@@ -418,7 +496,7 @@ export default function BokaBordPage() {
               </label>
               <label className="booking-field booking-field--wide">
                 <span>Meddelande till restaurangen (valfritt)</span>
-                <textarea maxLength={500} rows={3} placeholder="Allergier, barnstol, firande…" value={guest.notes} onChange={(e) => setGuest({ ...guest, notes: e.target.value })} />
+                <textarea maxLength={NOTES_MAX} rows={3} placeholder="Allergier, barnstol, firande…" value={guest.notes} onChange={(e) => setGuest({ ...guest, notes: e.target.value })} />
               </label>
             </div>
             <label className="booking-check">

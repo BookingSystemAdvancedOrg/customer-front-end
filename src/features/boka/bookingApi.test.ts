@@ -8,7 +8,10 @@ import {
   formatDate,
   getGuestReservation,
   manageLink,
+  normalizePhone,
+  staleSelection,
   todayIn,
+  validEmail,
 } from './bookingApi'
 import { json } from '../../test/siteData'
 
@@ -41,8 +44,55 @@ describe('errors', () => {
     [new ApiError(404, 'not found'), 'hittades inte'],
     [new ApiError(400, 'phone must be valid'), 'phone must be valid'],
     [new ApiError(503, 'x'), 'kunde inte genomföras'],
+    [new ApiError(400, 'startTime is not a bookable time for this date'), 'Tiden går inte att boka längre'],
+    [new ApiError(400, "tableIds contains a table that isn't bookable at this time"), 'Välj bord igen'],
+    [new ApiError(400, 'phone must be a valid phone number, e.g. +46701234567'), 'giltigt telefonnummer'],
+    [new ApiError(400, 'partySize must be at most 8 for online bookings'), 'högst 8 personer'],
+    [new ApiError(400, 'date must not be in the past'), 'redan passerat'],
   ])('%s', (err, text) => {
     expect(bookingErrorMessage(err)).toContain(text)
+  })
+
+  it('never shows the server English for known refusals', () => {
+    for (const message of [
+      'startTime is not a bookable time for this date',
+      'the selected tables seat 2; choose more tables for 3 guests',
+      'email must be a valid email address',
+      'phone is required',
+      'notes must be at most 500 characters',
+    ]) {
+      expect(bookingErrorMessage(new ApiError(400, message))).not.toMatch(/Kontrollera uppgifterna/)
+    }
+  })
+
+  it('tells which choice went stale', () => {
+    expect(staleSelection(new ApiError(400, 'startTime is not a bookable time for this date'))).toBe('time')
+    expect(staleSelection(new ApiError(409, 'table_taken'))).toBe('tables')
+    expect(staleSelection(new ApiError(400, "tableIds contains a table that isn't bookable at this time"))).toBe('tables')
+    expect(staleSelection(new ApiError(400, 'phone is required'))).toBeNull()
+    expect(staleSelection(new Error('x'))).toBeNull()
+  })
+})
+
+describe('guest fields (same rules as the server)', () => {
+  it.each([
+    ['070-123 45 67', '+46701234567'],
+    ['0701234567', '+46701234567'],
+    ['+46 (0)70 123 45 67', '+46701234567'],
+    ['0046701234567', '+46701234567'],
+    ['+358 40 123 4567', '+358401234567'],
+  ])('accepts %s', (raw, expected) => {
+    expect(normalizePhone(raw)).toBe(expected)
+  })
+
+  it.each(['', '12345678', '070-12', '+0701234567', 'telefon'])('rejects %s', (raw) => {
+    expect(normalizePhone(raw)).toBeNull()
+  })
+
+  it('checks e-mail addresses', () => {
+    expect(validEmail(' anna@example.se ')).toBe(true)
+    expect(validEmail('anna@example')).toBe(false)
+    expect(validEmail(`${'a'.repeat(250)}@x.se`)).toBe(false)
   })
 })
 
