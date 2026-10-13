@@ -85,6 +85,20 @@ describe('BestallPage', () => {
     expect(sessionStorage.getItem(`order-token:${'o'.repeat(32)}`)).toBe('tok')
   })
 
+  it('blocks an order above 50 000 kr before sending it', async () => {
+    const user = userEvent.setup()
+    MENU.items.push({ menuItemId: 'car', name: 'Porsche', description: '', price: 3500000, category: 'mains', imageKey: 'k' })
+    try {
+      render(<WithSite config={config()} path="/bestall"><BestallPage /></WithSite>)
+      await user.click(await screen.findByRole('button', { name: 'Lägg till Porsche' }))
+      expect(screen.getByRole('alert')).toHaveTextContent('för stor för att betalas online (högst 50 000 kr)')
+      expect(screen.getByRole('button', { name: /^Betala/ })).toBeDisabled()
+      expect(postedOrder()).toBeNull()
+    } finally {
+      MENU.items.pop()
+    }
+  })
+
   it('never goes above 20 of a dish', async () => {
     const user = userEvent.setup()
     render(<WithSite config={config()} path="/bestall"><BestallPage /></WithSite>)

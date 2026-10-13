@@ -15,6 +15,9 @@ import { apiGet, apiPost, ApiError } from '../../shared/api'
 export const MAX_QUANTITY = 20
 export const MAX_LINES = 30
 export const NOTES_MAX = 300
+/** Högsta belopp för en beställning (öre) - samma skrivfelsspärr som servern
+ * (shared/orders.py MAX_ORDER_ORE). */
+export const MAX_ORDER_ORE = 5_000_000
 
 export type OrderMode = 'pickup' | 'table'
 
@@ -174,8 +177,10 @@ export function forgetTableCode(): void {
 
 /** 28550 (öre) -> "285,50 kr". */
 export function kronor(ore: number): string {
-  const text = (ore / 100).toFixed(2).replace('.', ',')
-  return `${text.endsWith(',00') ? text.slice(0, -3) : text} kr`
+  const [whole, decimals] = (ore / 100).toFixed(2).split('.')
+  // Svensk tusengruppering med hårt mellanslag: 3 500 000 kr.
+  const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, '\u00a0')
+  return `${decimals === '00' ? grouped : `${grouped},${decimals}`} kr`
 }
 
 export function clock(iso: string | undefined): string {
@@ -210,6 +215,10 @@ const ORDER_ERRORS: Record<string, string> = {
   payment_unavailable: 'Betalningen är inte tillgänglig just nu. Försök igen om en stund.',
   verification_unavailable: 'Säkerhetskontrollen svarar inte just nu. Försök igen om en stund.',
   too_many_requests: 'För många försök. Vänta en stund och försök igen.',
+  'order total is too large': 'Beställningen är för stor för att betalas online (högst 50 000 kr). Kontakta restaurangen.',
+  'order total must be more than 0 kr': 'Varukorgen är tom. Lägg till en rätt först.',
+  'items must be a non-empty list': 'Varukorgen är tom. Lägg till en rätt först.',
+  'acceptTerms must be true': 'Godkänn villkoren för att betala.',
 }
 
 export function orderErrorMessage(err: unknown): string {
@@ -221,6 +230,7 @@ export function orderErrorMessage(err: unknown): string {
   if (/^phone/.test(err.message)) return 'Fyll i ett giltigt mobilnummer, t.ex. 070-123 45 67.'
   if (/^email/.test(err.message)) return 'Fyll i en giltig e-postadress.'
   if (/^name/.test(err.message)) return 'Fyll i ditt namn.'
+  if (/^quantity|^items may have/.test(err.message)) return `Högst ${MAX_QUANTITY} av varje rätt och ${MAX_LINES} olika rätter per beställning.`
   if (/^turnstile token expired/.test(err.message)) return 'Säkerhetskontrollen hann gå ut. Bekräfta igen.'
   if (/^turnstile/.test(err.message)) return 'Bekräfta säkerhetskontrollen och försök igen.'
   if (err.status === 404) return 'Beställningen hittades inte. Kontrollera länken.'

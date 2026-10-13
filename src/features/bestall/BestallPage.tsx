@@ -11,6 +11,7 @@ import { CATEGORY_LABEL, getPublicMenu, groupByCategory, menuImageUrl } from '..
 import type { PublicMenuItem } from '../meny/menuApi'
 import {
   MAX_LINES,
+  MAX_ORDER_ORE,
   MAX_QUANTITY,
   NOTES_MAX,
   clearCart,
@@ -102,6 +103,7 @@ export default function BestallPage() {
       Boolean(l.dish) && !(mode === 'pickup' && l.dish!.alcohol))
   const total = lines.reduce((sum, l) => sum + ore(l.dish.price) * l.quantity, 0)
   const groups = groupByCategory(menu ?? [])
+  const tooLarge = total > MAX_ORDER_ORE
   const open = Boolean(ordering?.open && ordering[mode])
   const tableLabel = ordering?.forTable?.label
 
@@ -296,12 +298,18 @@ export default function BestallPage() {
               <TurnstileWidget siteKey={turnstileSiteKey} resetKey={turnstileReset} action="order"
                 onToken={setTurnstileToken} />
             )}
-            {error && (
+            {tooLarge && (
+              <p className="notice error" role="alert">
+                Beställningen är för stor för att betalas online (högst {kronor(MAX_ORDER_ORE)}). Minska antalet eller
+                kontakta restaurangen.
+              </p>
+            )}
+            {error && !tooLarge && (
               <p className="notice error" role="alert">
                 {error}
               </p>
             )}
-            <button type="submit" className="btn-primary" disabled={!open || busy || lines.length === 0}>
+            <button type="submit" className="btn-primary" disabled={!open || busy || lines.length === 0 || tooLarge}>
               {busy ? 'Skickar…' : `Betala ${kronor(total)}`}
             </button>
           </form>
