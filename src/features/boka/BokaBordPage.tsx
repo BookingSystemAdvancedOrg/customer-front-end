@@ -341,6 +341,7 @@ export default function BokaBordPage() {
     return (
       <GuaranteeStep
         booking={pending}
+        guest={{ name: guest.name.trim(), email: guest.email.trim(), phone: normalizePhone(guest.phone) }}
         locationId={location.locationId}
         publishableKey={config.stripe.publishableKey}
         returnUrl={manageLink(window.location.origin, pending, location.locationId, pending.manageToken!)}

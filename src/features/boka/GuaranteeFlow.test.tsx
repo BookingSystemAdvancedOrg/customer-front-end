@@ -7,10 +7,12 @@ import { guestView, json, partyOf, siteConfig } from '../../test/siteData'
 
 // Stripe.js is never loaded in tests: a fake Payment Element and stripe.confirmSetup.
 const confirmSetup = vi.fn()
+const paymentElementOptions = vi.fn()
 vi.mock('@stripe/stripe-js', () => ({ loadStripe: vi.fn(async () => ({})) }))
 vi.mock('@stripe/react-stripe-js', () => ({
   Elements: ({ children }: { children: React.ReactNode }) => <div data-testid="elements">{children}</div>,
-  PaymentElement: ({ onReady }: { onReady?: () => void }) => {
+  PaymentElement: ({ onReady, options }: { onReady?: () => void; options?: unknown }) => {
+    paymentElementOptions(options)
     onReady?.()
     return <div>Kortformulär</div>
   },
@@ -41,6 +43,7 @@ function config() {
 let fetchMock: ReturnType<typeof vi.fn>
 beforeEach(() => {
   confirmSetup.mockReset()
+  paymentElementOptions.mockReset()
   fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
     if (url.includes('/availability')) {
       return json(guestView({ locationId: 'loc-1', date: 'x', timezone: 'Europe/Stockholm',
@@ -91,6 +94,18 @@ describe('card guarantee', () => {
     const confirmCall = fetchMock.mock.calls.find(([url]) => String(url).endsWith('/confirm'))!
     expect((confirmCall[1].headers as Record<string, string>)['X-Manage-Token']).toBe('tok')
     expect(screen.getByRole('link', { name: /\/bokning\/loc-1\/r1#tok$/ })).toBeInTheDocument()
+  })
+
+  it('turns Stripe Link off and gives Stripe the booking\'s name, email and phone', async () => {
+    const user = userEvent.setup()
+    await bookThree(user)
+    await user.click(screen.getByRole('button', { name: 'Fortsätt till kortgaranti' }))
+    await screen.findByRole('button', { name: 'Spara kortet och boka' })
+
+    expect(paymentElementOptions).toHaveBeenLastCalledWith(expect.objectContaining({
+      wallets: { link: 'never' },
+      defaultValues: { billingDetails: { name: 'Anna', email: 'anna@example.se', phone: '+46701234567' } },
+    }))
   })
 
   it('keeps the guest on the card step when Stripe declines', async () => {

@@ -15,7 +15,22 @@ import type { GuestReservation } from './bookingApi'
  *
  * Kortuppgifterna går direkt från webbläsaren till Stripe i en iframe -
  * de passerar aldrig vår server.
+ *
+ * Stripe Link är avstängt här (wallets.link = 'never'): Link skickar en
+ * sms-kod till numret på gästens Link-konto - inte till numret i
+ * bokningen - vilket bara förvirrar när det enda som händer är att ett kort
+ * sparas. Namn, e-post och telefon från bokningsformuläret fylls i hos
+ * Stripe (defaultValues), så kortet och en eventuell 3-D Secure-kontroll
+ * hör till samma person och nummer som bokningen.
  */
+
+/** Gästens uppgifter från bokningsformuläret. */
+export interface GuaranteeGuest {
+  name: string
+  email: string
+  /** E.164 (+46701234567). */
+  phone: string | null
+}
 
 // En Stripe-instans per (nyckel, konto) - loadStripe laddar js.stripe.com en gång.
 const stripeCache = new Map<string, Promise<Stripe | null>>()
@@ -55,11 +70,13 @@ export function GuaranteeTermsText({ booking }: { booking: GuestReservation }) {
 
 function CardForm({
   booking,
+  guest,
   locationId,
   returnUrl,
   onConfirmed,
 }: {
   booking: GuestReservation
+  guest?: GuaranteeGuest
   locationId: string
   returnUrl: string
   onConfirmed: (b: GuestReservation) => void
@@ -95,7 +112,22 @@ function CardForm({
 
   return (
     <form onSubmit={submit} className="guarantee-form">
-      <PaymentElement onReady={() => setReady(true)} options={{ layout: 'tabs' }} />
+      <PaymentElement
+        onReady={() => setReady(true)}
+        options={{
+          layout: 'tabs',
+          wallets: { link: 'never' },
+          defaultValues: guest
+            ? {
+                billingDetails: {
+                  name: guest.name,
+                  email: guest.email,
+                  ...(guest.phone ? { phone: guest.phone } : {}),
+                },
+              }
+            : undefined,
+        }}
+      />
       {error && <p className="notice error" role="alert">{error}</p>}
       <button type="submit" className="btn-primary" disabled={!stripe || !ready || busy}>
         {busy ? 'Bekräftar…' : 'Spara kortet och boka'}
@@ -106,12 +138,14 @@ function CardForm({
 
 export function GuaranteeStep({
   booking,
+  guest,
   locationId,
   publishableKey,
   returnUrl,
   onConfirmed,
 }: {
   booking: GuestReservation
+  guest?: GuaranteeGuest
   locationId: string
   publishableKey: string | null
   returnUrl: string
@@ -154,7 +188,7 @@ export function GuaranteeStep({
             appearance: { theme: 'night', variables: { colorPrimary: '#c9a24a', borderRadius: '8px' } },
           }}
         >
-          <CardForm booking={booking} locationId={locationId} returnUrl={returnUrl} onConfirmed={onConfirmed} />
+          <CardForm booking={booking} guest={guest} locationId={locationId} returnUrl={returnUrl} onConfirmed={onConfirmed} />
         </Elements>
       )}
       <p className="cell-muted">Kortuppgifterna hanteras av Stripe och sparas aldrig hos oss.</p>
