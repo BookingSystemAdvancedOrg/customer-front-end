@@ -35,6 +35,7 @@ export function CustomerLayout() {
     { to: '/meny', label: 'Meny' },
     ...(tenant.features.reservations ? [{ to: '/boka-bord', label: 'Boka bord' }] : []),
     ...(tenant.features.ordering && current.ordering?.pickup ? [{ to: '/bestall', label: 'Beställ' }] : []),
+    ...(tenant.features.catering && current.catering ? [{ to: '/catering', label: 'Catering' }] : []),
   ]
   const RIGHT_NAV: NavItem[] = [
     ...(tenant.branding.about ? [{ to: '/om-oss', label: 'Om oss' }] : []),

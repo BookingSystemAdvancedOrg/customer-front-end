@@ -53,7 +53,7 @@ export function TurnstileWidget({
 }: {
   siteKey: string
   /** Formuläret widgeten sitter på - servern godtar bara rätt sort. */
-  action?: 'booking' | 'order'
+  action?: 'booking' | 'order' | 'catering'
   /** Ändras efter varje bokningsförsök - den gamla token är förbrukad. */
   resetKey: number
   onToken: (token: string | null) => void

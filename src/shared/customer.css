@@ -2253,3 +2253,153 @@
     max-height: none;
   }
 }
+
+/* Catering: kalkylen (/catering) och gästens förfrågan (/catering/<plats>/<id>) */
+.catering-dishes {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 24px;
+  padding: 0;
+  list-style: none;
+}
+
+.catering-dishes li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 84px;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.catering-dishes .dish-desc {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.catering-dishes input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-soft);
+  color: var(--ink);
+  font: inherit;
+  text-align: right;
+}
+
+.catering-details {
+  display: grid;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.catering-type {
+  display: grid;
+  gap: 8px;
+}
+
+.catering-discount {
+  color: var(--gold-bright);
+}
+
+.catering-request {
+  max-width: 720px;
+}
+
+.catering-offer {
+  margin-top: 24px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.catering-offer h2 {
+  margin: 0 0 10px;
+  font-family: var(--serif);
+  color: var(--gold-bright);
+}
+
+.catering-offer code {
+  overflow-wrap: anywhere;
+}
+
+.catering-message {
+  margin: 0 0 12px;
+  font-style: italic;
+  color: var(--gold-bright);
+}
+
+.catering-terms {
+  margin-top: 10px;
+  color: var(--muted);
+}
+
+.catering-terms summary {
+  cursor: pointer;
+  color: var(--ink);
+}
+
+.catering-terms p {
+  white-space: pre-wrap;
+}
+
+.catering-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-top: 20px;
+}
+
+.catering-actions > p,
+.catering-actions > label {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.bankid-box {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  margin-top: 20px;
+  padding: 20px;
+  border: 1px solid var(--gold);
+  border-radius: 14px;
+  background: var(--surface);
+  text-align: center;
+}
+
+.bankid-hint {
+  margin: 0;
+  font-weight: 500;
+}
+
+.bankid-qr {
+  width: min(240px, 100%);
+  height: auto;
+  padding: 8px;
+  border-radius: 10px;
+  background: #fff;
+}
+
+@media (max-width: 560px) {
+  .catering-dishes li {
+    grid-template-columns: minmax(0, 1fr) 72px;
+  }
+
+  .catering-dishes .dish-price {
+    grid-column: 1;
+    grid-row: 2;
+    font-size: 14px;
+  }
+
+  .catering-dishes input {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+}

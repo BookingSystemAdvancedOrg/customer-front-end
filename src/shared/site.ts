@@ -47,6 +47,8 @@ export interface SiteLocation {
   specialDays?: SpecialDay[]
   /** Hur man kan beställa här (null/saknas = ingen beställning). */
   ordering?: { pickup: boolean; table: boolean; prepMinutes: number } | null
+  /** Cateringkalkylen är påslagen för platsen (cateringSettings.enabled). */
+  catering?: boolean
 }
 
 export interface SiteBranding {
