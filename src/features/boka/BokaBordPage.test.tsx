@@ -39,6 +39,7 @@ function availability(tables = [{ tableId: 'table-a', seats: 2 }, { tableId: 'ta
 
 let fetchMock: ReturnType<typeof vi.fn>
 let bookingResponse: () => Response
+let holdResponse: () => Response
 let availabilityBody: ReturnType<typeof availability> & { day?: unknown }
 let combos: { tableIds: string[]; minParty: number; maxParty: number }[] = []
 const availabilityCalls = () => fetchMock.mock.calls.filter(([url]) => String(url).includes('/availability')).length
@@ -51,6 +52,12 @@ beforeEach(() => {
       location: { locationId: 'loc-1', name: 'Testkrogen City', address: 'Gatan 1' },
       manageToken: 'tok123',
     }, 201)
+  holdResponse = () =>
+    json({
+      holdId: 'h'.repeat(32), manageToken: 'tok123', expiresAt: '2026-09-08T12:15:00Z', holdMinutes: 15,
+      date: '2026-09-20', startTime: '18:00', endTime: '20:00', tableIds: ['table-b'], partySize: 3,
+      cardRequired: false,
+    }, 201)
   availabilityBody = availability()
   combos = []
   turnstileResets.length = 0
@@ -58,6 +65,8 @@ beforeEach(() => {
     if (url.includes('/availability')) return json(guestView(availabilityBody, partyOf(url), combos))
     if (url.includes('/layout/active')) return json(LAYOUT)
     if (url.endsWith('/reservations') && init?.method === 'POST') return bookingResponse()
+    if (url.endsWith('/holds') && init?.method === 'POST') return holdResponse()
+    if (url.includes('/holds/') && init?.method === 'DELETE') return json({ released: true })
     return json({ error: 'not found' }, 404)
   })
   vi.stubGlobal('fetch', fetchMock)
@@ -68,12 +77,21 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-async function chooseAndFill(user: ReturnType<typeof userEvent.setup>) {
+const posts = (path: string) =>
+  fetchMock.mock.calls.filter(([url, init]) => String(url).endsWith(path) && init?.method === 'POST')
+const deletes = () => fetchMock.mock.calls.filter(([, init]) => init?.method === 'DELETE')
+
+async function chooseTable(user: ReturnType<typeof userEvent.setup>) {
   await user.selectOptions(screen.getByLabelText('Antal personer'), '3')
   await user.click(await screen.findByRole('button', { name: '18:00' }))
   // Only tables free at 18:00 are selectable; pick table-b (4 seats).
   await user.click(screen.getByRole('button', { name: /Bord 2 · 4 pl/ }))
-  await user.type(screen.getByLabelText('Namn'), 'Anna')
+}
+
+async function chooseAndFill(user: ReturnType<typeof userEvent.setup>) {
+  await chooseTable(user)
+  await user.click(screen.getByRole('button', { name: 'Bekräfta bord' }))
+  await user.type(await screen.findByLabelText('Namn'), 'Anna')
   await user.type(screen.getByLabelText('E-post'), 'anna@example.se')
   await user.type(screen.getByLabelText('Telefon'), '0701234567')
 }
@@ -91,11 +109,14 @@ describe('BokaBordPage', () => {
     await user.click(screen.getByRole('button', { name: 'Boka bordet' }))
 
     expect(await screen.findByRole('heading', { name: 'Ditt bord är bokat' })).toBeInTheDocument()
-    const post = fetchMock.mock.calls.find(([, init]) => init?.method === 'POST')!
+    const [hold] = posts('/holds')
+    expect(JSON.parse(hold[1].body)).toEqual({ date: expect.any(String), startTime: '18:00', tableIds: ['table-b'], partySize: 3 })
+    const [post] = posts('/reservations')
     expect(JSON.parse(post[1].body)).toMatchObject({
-      startTime: '18:00', tableIds: ['table-b'], partySize: 3, name: 'Anna',
+      startTime: '18:00', tableIds: ['table-b'], partySize: 3, name: 'Anna', holdId: 'h'.repeat(32),
       email: 'anna@example.se', phone: '0701234567', acceptTerms: true, marketingOptIn: false,
     })
+    expect((post[1].headers as Record<string, string>)['X-Manage-Token']).toBe('tok123')
     expect(screen.getByRole('link', { name: /\/bokning\/loc-1\/r1#tok123$/ })).toBeInTheDocument()
   })
 
@@ -130,26 +151,25 @@ describe('BokaBordPage', () => {
     await user.selectOptions(screen.getByLabelText('Antal personer'), '6')
     await user.click(await screen.findByRole('button', { name: '18:00' }))
     await user.click(screen.getByRole('button', { name: 'Bord 1 + 2 · 6 pl' }))
-    await user.type(screen.getByLabelText('Namn'), 'Anna')
+    await user.click(screen.getByRole('button', { name: 'Bekräfta bord' }))
+    await user.type(await screen.findByLabelText('Namn'), 'Anna')
     await user.type(screen.getByLabelText('E-post'), 'anna@example.se')
     await user.type(screen.getByLabelText('Telefon'), '0701234567')
     await user.click(screen.getByRole('checkbox', { name: /bokningsvillkoren/ }))
     await user.click(screen.getByRole('button', { name: 'Boka bordet' }))
 
     await screen.findByRole('heading', { name: 'Ditt bord är bokat' })
-    const post = fetchMock.mock.calls.find(([, init]) => init?.method === 'POST')!
-    expect(JSON.parse(post[1].body).tableIds).toEqual(['table-a', 'table-b'])
+    expect(JSON.parse(posts('/holds')[0][1].body).tableIds).toEqual(['table-a', 'table-b'])
   })
 
   it('asks to pick again when the table was just taken, with fresh availability', async () => {
     const user = userEvent.setup()
-    bookingResponse = () => json({ error: 'table_taken' }, 409)
+    holdResponse = () => json({ error: 'table_taken' }, 409)
     render(<WithSite><BokaBordPage /></WithSite>)
-    await chooseAndFill(user)
-    await user.click(screen.getByRole('checkbox', { name: /bokningsvillkoren/ }))
+    await chooseTable(user)
     const before = fetchMock.mock.calls.filter(([url]) => String(url).includes('/availability')).length
 
-    await user.click(screen.getByRole('button', { name: 'Boka bordet' }))
+    await user.click(screen.getByRole('button', { name: 'Bekräfta bord' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('hann bokas av någon annan')
     await waitFor(() =>
@@ -211,26 +231,20 @@ describe('BokaBordPage', () => {
     expect(screen.queryByLabelText('Namn')).toBeNull()
   })
 
-  it('asks for a new time when the booking is refused for passing the 30-minute limit', async () => {
+  it('asks for a new time when the table is refused for passing the 30-minute limit', async () => {
     const user = userEvent.setup()
-    bookingResponse = () => json({ error: 'startTime is not a bookable time for this date' }, 400)
+    holdResponse = () => json({ error: 'startTime is not a bookable time for this date' }, 400)
     render(<WithSite><BokaBordPage /></WithSite>)
-    await chooseAndFill(user)
-    await user.click(screen.getByRole('checkbox', { name: /bokningsvillkoren/ }))
+    await chooseTable(user)
     const before = availabilityCalls()
 
-    await user.click(screen.getByRole('button', { name: 'Boka bordet' }))
+    await user.click(screen.getByRole('button', { name: 'Bekräfta bord' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Tiden går inte att boka längre. Välj en annan tid.')
     expect(screen.getByRole('alert')).not.toHaveTextContent('startTime')
     await waitFor(() => expect(availabilityCalls()).toBe(before + 1))
     expect(screen.getByRole('button', { name: '18:00' })).toHaveAttribute('aria-pressed', 'false')
     expect(screen.queryByLabelText('Namn')).toBeNull()
-
-    // Uppgifterna finns kvar till nästa försök.
-    await user.click(screen.getByRole('button', { name: '18:00' }))
-    await user.click(screen.getByRole('button', { name: /Bord 2 · 4 pl/ }))
-    expect(screen.getByLabelText('Namn')).toHaveValue('Anna')
   })
 
   it('starts a new day without a chosen time', async () => {
@@ -261,7 +275,8 @@ describe('BokaBordPage', () => {
     await user.selectOptions(screen.getByLabelText('Antal personer'), '3')
     await user.click(await screen.findByRole('button', { name: '18:00' }))
     await user.click(screen.getByRole('button', { name: /Bord 2 · 4 pl/ }))
-    await user.type(screen.getByLabelText('Namn'), 'Anna')
+    await user.click(screen.getByRole('button', { name: 'Bekräfta bord' }))
+    await user.type(await screen.findByLabelText('Namn'), 'Anna')
     await user.type(screen.getByLabelText('E-post'), 'anna@example.se')
     await user.type(screen.getByLabelText('Telefon'), '12345678')
     await user.click(screen.getByRole('checkbox', { name: /bokningsvillkoren/ }))
@@ -269,7 +284,7 @@ describe('BokaBordPage', () => {
     await user.click(screen.getByRole('button', { name: 'Boka bordet' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Fyll i ett giltigt telefonnummer, t.ex. 070-123 45 67.')
-    expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false)
+    expect(posts('/reservations')).toHaveLength(0)
   })
 
   it('keeps the times when a refresh fails on the network', async () => {
@@ -331,40 +346,110 @@ describe('BokaBordPage', () => {
     expect(days[1]).not.toHaveTextContent('Stängt')
   })
 
-  it('sends the bot check token and asks for a new one after a failed attempt', async () => {
+  it('sends the bot check token when confirming the table and asks for a new one after a failed attempt', async () => {
     const user = userEvent.setup()
     const config = siteConfig()
     config.turnstile = { siteKey: '1x00000000000000000000AA' }
-    bookingResponse = () => json({ error: 'table_taken' }, 409)
+    holdResponse = () => json({ error: 'table_taken' }, 409)
     render(<WithSite config={config}><BokaBordPage /></WithSite>)
-    await chooseAndFill(user)
-    await user.click(screen.getByRole('checkbox', { name: /bokningsvillkoren/ }))
+    await chooseTable(user)
 
-    await user.click(screen.getByRole('button', { name: 'Boka bordet' }))
+    await user.click(screen.getByRole('button', { name: 'Bekräfta bord' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('Bekräfta säkerhetskontrollen')
-    expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false)
+    expect(posts('/holds')).toHaveLength(0)
 
     await user.click(screen.getByRole('button', { name: 'Jag är inte en robot' }))
-    await user.click(screen.getByRole('button', { name: 'Boka bordet' }))
-    const post = fetchMock.mock.calls.find(([, init]) => init?.method === 'POST')!
-    expect(JSON.parse(post[1].body).turnstileToken).toBe('token-0')
+    await user.click(screen.getByRole('button', { name: 'Bekräfta bord' }))
+    expect(JSON.parse(posts('/holds')[0][1].body).turnstileToken).toBe('token-0')
     expect(await screen.findByRole('alert')).toHaveTextContent('hann bokas av någon annan')
 
     // The token was used up: picking again shows a fresh widget, the old token isn't sent.
     await user.click(await screen.findByRole('button', { name: /Bord 2 · 4 pl/ }))
     expect(turnstileResets.at(-1)).toBe(1)
-    await user.click(screen.getByRole('button', { name: 'Boka bordet' }))
+    await user.click(screen.getByRole('button', { name: 'Bekräfta bord' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('Bekräfta säkerhetskontrollen')
   })
 
   it('asks for a reload when the server wants a bot check this page does not show', async () => {
     const user = userEvent.setup()
-    bookingResponse = () => json({ error: 'turnstile token is required' }, 400)
+    holdResponse = () => json({ error: 'turnstile token is required' }, 400)
     render(<WithSite config={siteConfig()}><BokaBordPage /></WithSite>)
-    await chooseAndFill(user)
-    await user.click(screen.getByRole('checkbox', { name: /bokningsvillkoren/ }))
-    await user.click(screen.getByRole('button', { name: 'Boka bordet' }))
+    await chooseTable(user)
+    await user.click(screen.getByRole('button', { name: 'Bekräfta bord' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('Ladda om sidan')
+  })
+
+  describe('the table is held for 15 minutes', () => {
+    it('counts down and locks the earlier steps while the guest fills in the form', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true })
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      render(<WithSite><BokaBordPage /></WithSite>)
+      await chooseAndFill(user)
+
+      expect(screen.getByRole('timer')).toHaveTextContent('Bord 2 hålls åt dig i 15:00')
+      expect(screen.getByRole('button', { name: '18:00' })).toBeDisabled()
+      expect(screen.getByLabelText('Antal personer')).toBeDisabled()
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(61_000)
+      })
+      expect(screen.getByRole('timer')).toHaveTextContent('13:59')
+    })
+
+    it('when the time runs out the tables are let go and everything starts over', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true })
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      render(<WithSite><BokaBordPage /></WithSite>)
+      await chooseAndFill(user)
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(15 * 60_000 + 1000)
+      })
+
+      expect(await screen.findByRole('alert')).toHaveTextContent('Tiden för att slutföra bokningen (15 minuter) gick ut')
+      const [del] = deletes()
+      expect(String(del[0])).toContain(`/holds/${'h'.repeat(32)}`)
+      expect((del[1].headers as Record<string, string>)['X-Manage-Token']).toBe('tok123')
+      expect(screen.queryByLabelText('Namn')).toBeNull()
+      expect(screen.queryByRole('timer')).toBeNull()
+      expect(screen.getByLabelText('Antal personer')).toHaveValue('2')
+      expect(screen.getByLabelText('Antal personer')).toBeEnabled()
+      expect(await screen.findByRole('button', { name: '18:00' })).toHaveAttribute('aria-pressed', 'false')
+      expect(posts('/reservations')).toHaveLength(0)
+    })
+
+    it('Byt bord lets go of the tables and goes back to choosing', async () => {
+      const user = userEvent.setup()
+      render(<WithSite><BokaBordPage /></WithSite>)
+      await chooseAndFill(user)
+
+      await user.click(screen.getByRole('button', { name: 'Byt bord' }))
+
+      expect(deletes()).toHaveLength(1)
+      expect(screen.queryByLabelText('Namn')).toBeNull()
+      expect(screen.getByRole('button', { name: '18:00' })).toHaveAttribute('aria-pressed', 'true')
+      expect(await screen.findByRole('button', { name: /Bord 2 · 4 pl/ })).toHaveAttribute('aria-pressed', 'false')
+    })
+
+    it('starts over when the server says the hold already ran out', async () => {
+      const user = userEvent.setup()
+      bookingResponse = () => json({ error: 'hold_expired' }, 409)
+      render(<WithSite><BokaBordPage /></WithSite>)
+      await chooseAndFill(user)
+      await user.click(screen.getByRole('checkbox', { name: /bokningsvillkoren/ }))
+      await user.click(screen.getByRole('button', { name: 'Boka bordet' }))
+
+      expect(await screen.findByRole('alert')).toHaveTextContent('gick ut och bordet släpptes')
+      expect(screen.queryByLabelText('Namn')).toBeNull()
+    })
+
+    it('lets go of the tables when the guest leaves the page', async () => {
+      const user = userEvent.setup()
+      const { unmount } = render(<WithSite><BokaBordPage /></WithSite>)
+      await chooseAndFill(user)
+      unmount()
+      const [del] = deletes()
+      expect((del[1] as RequestInit).keepalive).toBe(true)
+    })
   })
 })
 

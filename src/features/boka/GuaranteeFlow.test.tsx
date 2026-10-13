@@ -52,6 +52,12 @@ beforeEach(() => {
     }
     if (url.includes('/layout/active')) return json(LAYOUT)
     if (url.endsWith('/reservations') && init?.method === 'POST') return json(PENDING, 201)
+    if (url.endsWith('/holds') && init?.method === 'POST') {
+      return json({ holdId: 'r1', manageToken: 'tok', expiresAt: PENDING.setup.expiresAt, holdMinutes: 15,
+        date: '2026-09-20', startTime: '18:00', endTime: '20:00', tableIds: ['table-b'], partySize: 3,
+        cardRequired: true }, 201)
+    }
+    if (url.includes('/holds/') && init?.method === 'DELETE') return json({ released: true })
     if (url.endsWith('/confirm')) {
       return json({ ...PENDING, status: 'reserved', setup: undefined, manageToken: undefined,
         guarantee: { ...PENDING.guarantee, cardOnFile: true } })
@@ -67,7 +73,8 @@ async function bookThree(user: ReturnType<typeof userEvent.setup>) {
   await user.selectOptions(screen.getByLabelText('Antal personer'), '3')
   await user.click(await screen.findByRole('button', { name: '18:00' }))
   await user.click(screen.getByRole('button', { name: /Bord 1 · 4 pl/ }))
-  await user.type(screen.getByLabelText('Namn'), 'Anna')
+  await user.click(screen.getByRole('button', { name: 'Bekräfta bord' }))
+  await user.type(await screen.findByLabelText('Namn'), 'Anna')
   await user.type(screen.getByLabelText('E-post'), 'anna@example.se')
   await user.type(screen.getByLabelText('Telefon'), '0701234567')
   await user.click(screen.getByRole('checkbox', { name: /bokningsvillkoren/ }))
@@ -125,7 +132,8 @@ describe('card guarantee', () => {
     await user.selectOptions(screen.getByLabelText('Antal personer'), '2')
     await user.click(await screen.findByRole('button', { name: '18:00' }))
     await user.click(screen.getByRole('button', { name: /Bord 1 · 4 pl/ }))
+    await user.click(screen.getByRole('button', { name: 'Bekräfta bord' }))
+    expect(await screen.findByRole('button', { name: 'Boka bordet' })).toBeInTheDocument()
     expect(screen.queryByRole('note')).toBeNull()
-    expect(screen.getByRole('button', { name: 'Boka bordet' })).toBeInTheDocument()
   })
 })

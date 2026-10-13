@@ -10,20 +10,24 @@ import {
   NAME_MAX,
   NOTES_MAX,
   bookableDates,
+  HOLD_EXPIRED_TEXT,
   bookingErrorMessage,
+  clockText,
   createReservation,
   dayMessage,
   formatDate,
   getAvailability,
+  holdTables,
   manageLink,
   needsCard,
   normalizePhone,
+  releaseHold,
   staleSelection,
   todayIn,
   turnstileMissing,
   validEmail,
 } from './bookingApi'
-import type { Availability, AvailabilitySlot, GuestReservation, TableOption } from './bookingApi'
+import type { Availability, AvailabilitySlot, GuestReservation, TableHold, TableOption } from './bookingApi'
 import { GuaranteeStep } from './GuaranteeStep'
 import { TurnstileWidget } from './TurnstileWidget'
 import { ApiError } from '../../shared/api'
@@ -56,6 +60,26 @@ function guestError(g: Guest): string | null {
   return null
 }
 
+/** Hur länge bordet hålls - visas medan gästen fyller i uppgifterna och kortet. */
+function HoldBanner({ secondsLeft, tables, onChange }: {
+  secondsLeft: number
+  tables: string
+  onChange?: () => void
+}) {
+  const urgent = secondsLeft <= 120
+  return (
+    <div className={`hold-banner${urgent ? ' urgent' : ''}`} role="timer" aria-label={`Bordet hålls i ${clockText(secondsLeft)}`}>
+      <span>
+        Bord {tables} hålls åt dig i <strong className="hold-clock">{clockText(secondsLeft)}</strong>
+        {urgent ? ' - slutför bokningen snart.' : '.'}
+      </span>
+      {onChange && (
+        <button type="button" className="btn-secondary" onClick={onChange}>Byt bord</button>
+      )}
+    </div>
+  )
+}
+
 /** Samma bord (ett bord eller samma kombination)? */
 function sameTables(a: TableOption | null, b: TableOption | null): boolean {
   return Boolean(a && b && a.tableIds.join('+') === b.tableIds.join('+'))
@@ -75,9 +99,15 @@ function sameTables(a: TableOption | null, b: TableOption | null): boolean {
  * ovanför Boka-knappen när plattformen har den påslagen.
  *
  * Kortgaranti: kräver platsen kort för sällskapets storlek visas villkoren
- * innan gästen bokar, och efter bokningen (status "pending", bordet hålls i
- * 20 minuter) Stripes inbäddade kortformulär. Först när kortet är bekräftat
- * är bordet bokat.
+ * innan gästen bokar, och efter bokningen (status "pending") Stripes
+ * inbäddade kortformulär. Först när kortet är bekräftat är bordet bokat.
+ *
+ * Bordet hålls: när gästen bekräftar sina bord (POST /holds, med
+ * säkerhetskontrollen) är de spärrade för alla andra i 15 minuter medan
+ * uppgifterna - och kortet - fylls i. En nedräkning visas. Går tiden ut
+ * släpps borden (DELETE /holds/{id}; servern släpper dem ändå själv) och
+ * gästen börjar om från början med allt nollställt. "Byt bord" släpper
+ * dem direkt, liksom att lämna sidan.
  */
 export default function BokaBordPage() {
   const { config, location } = useSite()
@@ -117,6 +147,15 @@ export default function BokaBordPage() {
   const [submitting, setSubmitting] = useState(false)
   const [booked, setBooked] = useState<GuestReservation | null>(null)
   const [pending, setPending] = useState<GuestReservation | null>(null)
+  // Borden som hålls åt gästen och när tiden går ut (lokal klocka, räknad
+  // från svaret - inte från serverns tidsstämpel, så en fel klocka i
+  // telefonen inte ger fel nedräkning).
+  const [hold, setHold] = useState<TableHold | null>(null)
+  const [deadline, setDeadline] = useState<number | null>(null)
+  const [now, setNow] = useState(() => Date.now())
+  const [holding, setHolding] = useState(false)
+  const [restartNotice, setRestartNotice] = useState<string | null>(null)
+  const secondsLeft = deadline === null ? null : Math.max(0, Math.ceil((deadline - now) / 1000))
   const terms = location.guarantee ?? null
   const cardNeeded = needsCard(terms, partySize, true)
   const turnstileSiteKey = config.turnstile?.siteKey ?? null
@@ -133,6 +172,66 @@ export default function BokaBordPage() {
   useEffect(() => {
     latest.current = { startTime, option }
   })
+
+  // Nollställ allt och börja om (tiden gick ut).
+  function restart(text: string) {
+    setHold(null)
+    setDeadline(null)
+    setPending(null)
+    setPartySize(2)
+    setDate(today)
+    setStartTime(null)
+    setOption(null)
+    setGuest(EMPTY_GUEST)
+    setFormError(null)
+    setSlotNotice(null)
+    setTurnstileToken(null)
+    setTurnstileReset((n) => n + 1)
+    setRefresh((n) => n + 1)
+    setRestartNotice(text)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  // Det som släpps om gästen lämnar sidan: bara ett hållet bord som inte
+  // blivit en bokning.
+  const holdRef = useRef<TableHold | null>(null)
+  const expired = useRef(false)
+  const onExpire = useRef<() => void>(() => {})
+  useEffect(() => {
+    holdRef.current = hold && !booked && !pending ? hold : null
+    onExpire.current = () => {
+      if (expired.current || !hold) return
+      expired.current = true
+      void releaseHold(location.locationId, hold).catch(() => undefined)
+      restart(HOLD_EXPIRED_TEXT)
+    }
+  })
+
+  // Nedräkningen: en gång i sekunden; vid 0 släpps borden.
+  useEffect(() => {
+    if (deadline === null) return
+    expired.current = false
+    const timer = window.setInterval(() => {
+      const t = Date.now()
+      setNow(t)
+      if (t >= deadline) onExpire.current()
+    }, 1000)
+    return () => window.clearInterval(timer)
+  }, [deadline])
+
+  // Lämnar gästen sidan släpps borden direkt (annars när tiden gått ut).
+  useEffect(() => {
+    const letGo = () => {
+      const h = holdRef.current
+      if (h) void releaseHold(location.locationId, h, { keepalive: true }).catch(() => undefined)
+      holdRef.current = null
+    }
+    window.addEventListener('pagehide', letGo)
+    return () => {
+      window.removeEventListener('pagehide', letGo)
+      letGo()
+    }
+  }, [location.locationId])
 
   const choosing = enabled && !booked && !pending
   useEffect(() => {
@@ -265,17 +364,76 @@ export default function BokaBordPage() {
     setOption(sameTables(o, option) ? null : o)
   }
 
-  async function submit(e: FormEvent) {
-    e.preventDefault()
+  /** Bekräfta bord: borden spärras för andra i 15 minuter. */
+  async function confirmTables() {
     const problem =
       !slot ? 'Välj en tid.'
       : !option ? 'Välj ett bord.'
       : cardNeeded && !config.stripe.publishableKey
         ? `Onlinebokning för ${partySize} personer kräver kortgaranti, som inte är tillgänglig just nu. Ring oss på ${info.phone || 'restaurangen'}.`
-      : guestError(guest)
-      ?? (turnstileSiteKey && !turnstileToken
+      : turnstileSiteKey && !turnstileToken
         ? 'Bekräfta säkerhetskontrollen (rutan ovanför knappen).'
-        : null)
+        : null
+    if (problem) {
+      setFormError(problem)
+      return
+    }
+    setHolding(true)
+    setFormError(null)
+    setRestartNotice(null)
+    try {
+      const held = await holdTables(location.locationId, {
+        date,
+        startTime: slot!.startTime,
+        tableIds: option!.tableIds,
+        partySize,
+        ...(turnstileToken ? { turnstileToken } : {}),
+      })
+      setHold(held)
+      setNow(Date.now())
+      setDeadline(Date.now() + held.holdMinutes * 60_000)
+    } catch (err) {
+      setFormError(
+        !turnstileSiteKey && turnstileMissing(err)
+          ? 'Sidan behöver laddas om. Ladda om sidan och försök igen.'
+          : bookingErrorMessage(err),
+      )
+      const stale = staleSelection(err)
+      if (stale) {
+        // Tiden passerade 30-minutersgränsen eller bordet hann tas: välj
+        // igen ur en nyhämtad lista.
+        if (stale === 'time') setStartTime(null)
+        setOption(null)
+        setSlotNotice(null)
+        setRefresh((n) => n + 1)
+      }
+    } finally {
+      // Säkerhetskontrollens token gäller ett försök - widgeten tar fram en ny.
+      if (turnstileSiteKey) {
+        setTurnstileToken(null)
+        setTurnstileReset((n) => n + 1)
+      }
+      setHolding(false)
+    }
+  }
+
+  /** Byt bord: släpp de hållna borden och välj igen. */
+  function changeTables() {
+    if (hold) void releaseHold(location.locationId, hold).catch(() => undefined)
+    setHold(null)
+    setDeadline(null)
+    setOption(null)
+    setFormError(null)
+    setRefresh((n) => n + 1)
+  }
+
+  async function submit(e: FormEvent) {
+    e.preventDefault()
+    if (!hold) {
+      setFormError('Bekräfta ditt bord först.')
+      return
+    }
+    const problem = guestError(guest)
     if (problem) {
       setFormError(problem)
       return
@@ -283,44 +441,39 @@ export default function BokaBordPage() {
     setSubmitting(true)
     setFormError(null)
     try {
-      const result = await createReservation(location.locationId, {
-        date,
-        startTime: slot!.startTime,
-        tableIds: option!.tableIds,
-        partySize,
-        name: guest.name.trim(),
-        email: guest.email.trim(),
-        phone: guest.phone.trim(),
-        notes: guest.notes.trim() || undefined,
-        language: 'sv',
-        marketingOptIn: guest.marketingOptIn,
-        acceptTerms: true,
-        ...(turnstileToken ? { turnstileToken } : {}),
-      })
-      if (result.status === 'pending' && result.setup) setPending(result)
-      else setBooked(result)
+      const result = await createReservation(
+        location.locationId,
+        {
+          date: hold.date,
+          startTime: hold.startTime,
+          tableIds: hold.tableIds,
+          partySize: hold.partySize,
+          name: guest.name.trim(),
+          email: guest.email.trim(),
+          phone: guest.phone.trim(),
+          notes: guest.notes.trim() || undefined,
+          language: 'sv',
+          marketingOptIn: guest.marketingOptIn,
+          acceptTerms: true,
+          holdId: hold.holdId,
+        },
+        hold.manageToken,
+      )
+      if (result.status === 'pending' && result.setup) {
+        // Kortsteget fortsätter på samma klocka.
+        setPending(result)
+      } else {
+        setBooked(result)
+        setHold(null)
+        setDeadline(null)
+      }
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } catch (err) {
-      setFormError(
-        !turnstileSiteKey && turnstileMissing(err)
-          ? 'Sidan behöver laddas om. Ladda om sidan och försök igen.'
-          : bookingErrorMessage(err),
-      )
-      if (turnstileSiteKey) {
-        // Säkerhetskontrollens token kan vara förbrukad (den gäller ett
-        // försök) - widgeten tar fram en ny.
-        setTurnstileToken(null)
-        setTurnstileReset((n) => n + 1)
+      if (err instanceof ApiError && err.message === 'hold_expired') {
+        restart(HOLD_EXPIRED_TEXT)
+        return
       }
-      const stale = staleSelection(err)
-      if (stale) {
-        // Tiden passerade 30-minutersgränsen eller bordet hann bokas: välj
-        // igen ur en nyhämtad lista.
-        if (stale === 'time') setStartTime(null)
-        setOption(null)
-        setSlotNotice(null)
-        setRefresh((n) => n + 1)
-      }
+      setFormError(bookingErrorMessage(err))
     } finally {
       setSubmitting(false)
     }
@@ -337,8 +490,12 @@ export default function BokaBordPage() {
     )
   }
 
+  const heldTables = hold ? hold.tableIds.map((id) => labels.get(id) ?? id).join(' + ') : ''
+
   if (pending && !booked) {
     return (
+      <>
+      {hold && secondsLeft !== null && <HoldBanner secondsLeft={secondsLeft} tables={heldTables} />}
       <GuaranteeStep
         booking={pending}
         guest={{ name: guest.name.trim(), email: guest.email.trim(), phone: normalizePhone(guest.phone) }}
@@ -348,9 +505,12 @@ export default function BokaBordPage() {
         onConfirmed={(b) => {
           setBooked({ ...b, manageToken: pending.manageToken })
           setPending(null)
+          setHold(null)
+          setDeadline(null)
           window.scrollTo({ top: 0, behavior: 'smooth' })
         }}
       />
+      </>
     )
   }
 
@@ -410,10 +570,11 @@ export default function BokaBordPage() {
         <p className="hero-kicker">{info.name}</p>
         <h1>Boka bord</h1>
         <p className="hero-sub">Välj dag, tid och bord - bekräftelsen kommer direkt.</p>
+        {restartNotice && <p className="notice error" role="alert">{restartNotice}</p>}
       </section>
 
       <form className="booking" onSubmit={submit} noValidate>
-        <fieldset className="booking-step">
+        <fieldset className="booking-step" disabled={Boolean(hold) || holding}>
           <legend>1. När och hur många?</legend>
           <label className="booking-field">
             <span>Antal personer</span>
@@ -447,7 +608,7 @@ export default function BokaBordPage() {
           </div>
         </fieldset>
 
-        <fieldset className="booking-step">
+        <fieldset className="booking-step" disabled={Boolean(hold) || holding}>
           <legend>2. Välj tid</legend>
           {loadingSlots && <p className="notice" role="status">Hämtar lediga tider…</p>}
           {slotsError && <p className="notice error" role="alert">{slotsError}</p>}
@@ -474,7 +635,7 @@ export default function BokaBordPage() {
         </fieldset>
 
         {slot && (
-          <fieldset className="booking-step">
+          <fieldset className="booking-step" disabled={Boolean(hold) || holding}>
             <legend>3. Välj bord</legend>
             <p className="cell-muted">
               Klicka på ett bord. Här visas bara bord som passar {partySize}{' '}
@@ -522,10 +683,36 @@ export default function BokaBordPage() {
                 </button>
               ))}
             </div>
+            {option && !hold && (
+              <div className="booking-confirm-tables">
+                <p className="booking-summary-line" aria-live="polite">
+                  {formatDate(date)} kl {slot.startTime}–{slot.endTime} · {partySize} personer · bord{' '}
+                  {option.tableIds.map((id) => labels.get(id) ?? id).join(' + ')}
+                </p>
+                <p className="cell-muted">
+                  När du bekräftar hålls bordet åt dig i 15 minuter medan du fyller i dina uppgifter.
+                </p>
+                {turnstileSiteKey && (
+                  <TurnstileWidget
+                    siteKey={turnstileSiteKey}
+                    resetKey={turnstileReset}
+                    onToken={setTurnstileToken}
+                  />
+                )}
+                {formError && <p className="notice error" role="alert">{formError}</p>}
+                <button type="button" className="btn-primary" disabled={holding} onClick={() => void confirmTables()}>
+                  {holding ? 'Bekräftar…' : 'Bekräfta bord'}
+                </button>
+              </div>
+            )}
           </fieldset>
         )}
 
-        {slot && option && (
+        {hold && secondsLeft !== null && (
+          <HoldBanner secondsLeft={secondsLeft} tables={heldTables} onChange={changeTables} />
+        )}
+
+        {hold && (
           <fieldset className="booking-step">
             <legend>4. Dina uppgifter</legend>
             <div className="booking-grid">
@@ -567,23 +754,16 @@ export default function BokaBordPage() {
               </div>
             )}
             <div className="booking-summary-line" aria-live="polite">
-              {formatDate(date)} kl {slot.startTime}–{slot.endTime} · {partySize} personer · bord{' '}
-              {option.tableIds.map((id) => labels.get(id) ?? id).join(' + ')}
+              {formatDate(hold.date)} kl {hold.startTime}–{hold.endTime} · {hold.partySize} personer · bord{' '}
+              {heldTables}
             </div>
-            {turnstileSiteKey && (
-              <TurnstileWidget
-                siteKey={turnstileSiteKey}
-                resetKey={turnstileReset}
-                onToken={setTurnstileToken}
-              />
-            )}
             {formError && <p className="notice error" role="alert">{formError}</p>}
             <button type="submit" className="btn-primary" disabled={submitting}>
               {submitting ? 'Bokar…' : cardNeeded ? 'Fortsätt till kortgaranti' : 'Boka bordet'}
             </button>
           </fieldset>
         )}
-        {formError && !(slot && option) && (
+        {formError && !hold && !(slot && option) && (
           <p className="notice error" role="alert">{formError}</p>
         )}
       </form>

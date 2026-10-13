@@ -1,4 +1,4 @@
-import { apiGet, apiPost, ApiError } from '../../shared/api'
+import { apiDelete, apiGet, apiPost, ApiError } from '../../shared/api'
 
 /**
  * Klient mot bokningsrutterna (backend docs/RESERVATIONS.md):
@@ -63,6 +63,31 @@ export interface BookingRequest {
   marketingOptIn?: boolean
   acceptTerms: true
   /** Token från säkerhetskontrollen (Cloudflare Turnstile) när den visas. */
+  turnstileToken?: string
+  /** Bordet hålls redan (POST /holds) - bokningen tar över det. */
+  holdId?: string
+}
+
+/** Valda bord som hålls åt gästen medan uppgifterna fylls i (15 min). */
+export interface TableHold {
+  holdId: string
+  /** Gästens token för hållet - och sedan för bokningen. */
+  manageToken: string
+  expiresAt: string
+  holdMinutes: number
+  date: string
+  startTime: string
+  endTime: string
+  tableIds: string[]
+  partySize: number
+  cardRequired: boolean
+}
+
+export interface HoldRequest {
+  date: string
+  startTime: string
+  tableIds: string[]
+  partySize: number
   turnstileToken?: string
 }
 
@@ -187,6 +212,8 @@ export function bookingErrorMessage(err: unknown): string {
     return 'Något gick fel. Försök igen.'
   }
   switch (err.message) {
+    case 'hold_expired':
+      return 'Tiden för att slutföra bokningen gick ut och bordet släpptes. Börja om.'
     case 'table_taken':
       return 'Bordet hann bokas av någon annan. Välj ett annat bord eller en annan tid.'
     case 'availability_changed':
@@ -242,8 +269,31 @@ export function dayMessage(day: DayStatus | null | undefined, phone: string): st
 export function createReservation(
   locationId: string,
   request: BookingRequest,
+  holdToken?: string,
 ): Promise<GuestReservation> {
-  return apiPost<GuestReservation>(`${path(locationId)}/reservations`, request)
+  return apiPost<GuestReservation>(
+    `${path(locationId)}/reservations`,
+    request,
+    holdToken ? { 'X-Manage-Token': holdToken } : undefined,
+  )
+}
+
+/** Gästen bekräftade sina bord: de hålls i 15 minuter medan uppgifterna fylls i. */
+export function holdTables(locationId: string, request: HoldRequest): Promise<TableHold> {
+  return apiPost<TableHold>(`${path(locationId)}/holds`, request)
+}
+
+/** Släpp hållna bord (tiden gick ut, gästen bytte bord eller lämnade sidan). */
+export function releaseHold(
+  locationId: string,
+  hold: Pick<TableHold, 'holdId' | 'manageToken'>,
+  { keepalive = false }: { keepalive?: boolean } = {},
+): Promise<{ released: boolean }> {
+  return apiDelete<{ released: boolean }>(
+    `${path(locationId)}/holds/${encodeURIComponent(hold.holdId)}`,
+    { 'X-Manage-Token': hold.manageToken },
+    { keepalive },
+  )
 }
 
 export function getGuestReservation(
@@ -329,3 +379,12 @@ export function bookableDates(today: string, days = 21): string[] {
 export function seatsOf(tables: AvailableTable[], ids: string[]): number {
   return tables.filter((t) => ids.includes(t.tableId)).reduce((sum, t) => sum + t.seats, 0)
 }
+
+/** mm:ss för nedräkningen när bordet hålls. */
+export function clockText(seconds: number): string {
+  const s = Math.max(0, seconds)
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+}
+
+export const HOLD_EXPIRED_TEXT =
+  'Tiden för att slutföra bokningen (15 minuter) gick ut och bordet släpptes. Börja om här.'

@@ -3,8 +3,9 @@
  *
  * Säkerhetsmodell: sajten är helt publik. Den har ingen inloggning, inga
  * API-nycklar och inga cookies. Den läser publika rutter (sajtkonfiguration,
- * meny, planritning, lediga tider) och skickar exakt två sorters skrivanrop:
- * en gästs bokning (inkl. att slutföra kortgarantin) och en gästs avbokning. Den enda "behörigheten" är
+ * meny, planritning, lediga tider) och skickar gästens egna skrivanrop:
+ * hålla valt bord (15 min) och släppa det, bokningen (inkl. att slutföra
+ * kortgarantin) och avbokningen. Den enda "behörigheten" är
  * gästens hanteringstoken för sin egen bokning, som skickas som header
  * (X-Manage-Token) - aldrig i URL:en, så den hamnar inte i loggar.
  */
@@ -45,9 +46,9 @@ async function toApiError(res: Response): Promise<ApiError> {
 const REQUEST_TIMEOUT_MS = 15_000
 
 async function request<T>(
-  method: 'GET' | 'POST',
+  method: 'GET' | 'POST' | 'DELETE',
   path: string,
-  { body, headers }: { body?: unknown; headers?: Record<string, string> } = {},
+  { body, headers, keepalive }: { body?: unknown; headers?: Record<string, string>; keepalive?: boolean } = {},
 ): Promise<T> {
   if (!isApiConfigured()) {
     throw new Error('VITE_API_BASE_URL är inte satt - se .env.example och README.')
@@ -63,7 +64,8 @@ async function request<T>(
     // Inga cookies eller sparade inloggningar följer någonsin med anropet.
     credentials: 'omit',
     referrerPolicy: 'no-referrer',
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    // keepalive: anropet hinner iväg även när sidan stängs (släppa ett bord).
+    ...(keepalive ? { keepalive: true } : { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) }),
   })
   if (!res.ok) {
     throw await toApiError(res)
@@ -86,4 +88,13 @@ export function apiPost<T>(
   headers?: Record<string, string>,
 ): Promise<T> {
   return request<T>('POST', path, { body, headers })
+}
+
+/** DELETE mot en publik rutt (släppa ett hållet bord). */
+export function apiDelete<T>(
+  path: string,
+  headers?: Record<string, string>,
+  { keepalive = false }: { keepalive?: boolean } = {},
+): Promise<T> {
+  return request<T>('DELETE', path, { headers, keepalive })
 }

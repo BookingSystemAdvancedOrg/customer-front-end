@@ -2403,3 +2403,48 @@
     grid-row: 1 / span 2;
   }
 }
+
+/* Bordet hålls (15 min) medan gästen fyller i uppgifterna */
+.booking-confirm-tables {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.booking-confirm-tables .btn-primary {
+  justify-self: start;
+}
+
+.hold-banner {
+  position: sticky;
+  top: calc(var(--header-h) + 8px);
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--gold);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.hold-clock {
+  font-variant-numeric: tabular-nums;
+  color: var(--gold-bright);
+}
+
+.hold-banner.urgent {
+  border-color: var(--danger);
+}
+
+.hold-banner.urgent .hold-clock {
+  color: var(--danger);
+}
+
+.booking-step:disabled {
+  opacity: 0.55;
+}
