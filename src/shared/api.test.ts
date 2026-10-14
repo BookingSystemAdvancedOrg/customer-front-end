@@ -68,3 +68,53 @@ describe('apiGet', () => {
     expect((err as Error).message).toBe('location not found')
   })
 })
+
+describe('omförsök', () => {
+  const status = (code: number, headers: Record<string, string> = {}) =>
+    new Response(JSON.stringify({ error: 'x' }), { status: code, headers })
+
+  it('försöker igen när API Gateway svarar 429 (även för en beställning)', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(status(429))
+      .mockResolvedValueOnce(okResponse({ orderId: 'o1' }))
+    vi.stubGlobal('fetch', fetchMock)
+    const { apiPost } = await loadApi('https://api.example.com')
+
+    await expect(apiPost('/order', { a: 1 })).resolves.toEqual({ orderId: 'o1' })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('försöker inte igen vid vår egen spärr (429 med lång Retry-After)', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(status(429, { 'Retry-After': '600' }))
+    vi.stubGlobal('fetch', fetchMock)
+    const { apiPost } = await loadApi('https://api.example.com')
+
+    await expect(apiPost('/order', {})).rejects.toMatchObject({ status: 429 })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('läsningar försöker igen vid 503 och tappad anslutning, högst tre gånger', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(status(503))
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValueOnce(okResponse({ items: [] }))
+    vi.stubGlobal('fetch', fetchMock)
+    const { apiGet } = await loadApi('https://api.example.com')
+
+    await expect(apiGet('/x')).resolves.toEqual({ items: [] })
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+
+    fetchMock.mockReset().mockImplementation(() => Promise.resolve(status(503)))
+    await expect(apiGet('/x')).rejects.toMatchObject({ status: 503 })
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+  })
+
+  it('skrivanrop försöker inte igen vid 503 - de kan redan ha gått igenom', async () => {
+    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(status(503)))
+    vi.stubGlobal('fetch', fetchMock)
+    const { apiPost } = await loadApi('https://api.example.com')
+
+    await expect(apiPost('/order', {})).rejects.toMatchObject({ status: 503 })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+})
