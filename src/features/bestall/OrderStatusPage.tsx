@@ -10,7 +10,7 @@ const PAYMENT_WAIT_MS = 3 * 60_000
 
 const FINAL = new Set<GuestOrder['status']>(['completed', 'cancelled', 'failed'])
 
-/** Token ur länkens #-del (sms/mejl), annars den fliken fick vid beställningen. */
+/** Token ur länkens #-del (kvittomejlet), annars den fliken fick vid beställningen. */
 function tokenFor(orderId: string): string {
   try {
     const fromHash = decodeURIComponent(window.location.hash.replace(/^#/, ''))
@@ -51,7 +51,7 @@ const STEPS: { status: GuestOrder['status']; label: string }[] = [
 
 /**
  * Gästens beställning: /bestallning/<plats>/<id>. Hit skickar Stripe
- * tillbaka gästen efter betalningen, och hit leder länken i sms/mejl.
+ * tillbaka gästen efter betalningen, och hit leder länken i kvittomejlet.
  * Sidan frågar var femte sekund tills beställningen är klar.
  */
 export default function OrderStatusPage() {
@@ -59,7 +59,7 @@ export default function OrderStatusPage() {
   const [token] = useState(() => tokenFor(orderId))
   const [order, setOrder] = useState<GuestOrder | null>(null)
   const [error, setError] = useState<string | null>(
-    token ? null : 'Länken är ofullständig. Använd länken i ditt sms eller kvitto.',
+    token ? null : 'Länken är ofullständig. Använd länken i ditt kvitto (mejlet).',
   )
   const [startedAt] = useState(() => Date.now())
   const [gaveUp, setGaveUp] = useState(false)
@@ -120,7 +120,7 @@ export default function OrderStatusPage() {
           )}
           {order.status === 'pending_payment' && gaveUp && (
             <p className="notice" role="status">
-              Vi har inte fått besked om betalningen än. Har du betalat kommer ett sms och ett kvitto
+              Vi har inte fått besked om betalningen än. Har du betalat kommer ett kvitto via mejl
               så snart den är bekräftad.
             </p>
           )}
