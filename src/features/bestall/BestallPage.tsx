@@ -162,7 +162,7 @@ export default function BestallPage() {
         <p className="hero-sub">
           {mode === 'table'
             ? `Beställ och betala här - vi serverar vid ${tableLabel ? (/^bord/i.test(tableLabel) ? tableLabel : `bord ${tableLabel}`) : 'ditt bord'}.`
-            : `Beställ och betala här, hämta hos ${config.tenant.name}. Du får ett sms när maten är klar.`}
+            : `Beställ och betala här, hämta hos ${config.tenant.name}. Du får ett sms när köket börjar laga den och när maten är klar.`}
         </p>
       </section>
 
@@ -271,7 +271,7 @@ export default function BestallPage() {
                 onChange={(e) => setGuest({ ...guest, name: e.target.value })} />
             </label>
             <label className="booking-field">
-              Mobilnummer {mode === 'pickup' ? '(sms när maten är klar)' : '(sms-bekräftelse)'}
+              Mobilnummer {mode === 'pickup' ? '(sms när köket börjar och när maten är klar)' : '(sms när köket börjar)'}
               <input type="tel" autoComplete="tel" placeholder="070-123 45 67" value={guest.phone}
                 onChange={(e) => setGuest({ ...guest, phone: e.target.value })} />
             </label>
