@@ -24,6 +24,17 @@ export interface TableOption {
   seats: number
 }
 
+/** Varför ett bord inte går att välja för sällskapet vid tiden. */
+export type TableReason = 'booked' | 'blocked' | 'phone' | 'too_small' | 'too_large' | 'unavailable'
+
+export interface TableUnavailable {
+  tableId: string
+  reason: TableReason
+  /** Sällskapsstorlekarna bordet tar online (bara vid too_small / too_large). */
+  minParty?: number
+  maxParty?: number
+}
+
 export interface AvailabilitySlot {
   startTime: string
   endTime: string
@@ -32,6 +43,59 @@ export interface AvailabilitySlot {
   tables: AvailableTable[]
   /** Det sällskapet får boka online, bästa passform först. */
   options?: TableOption[]
+  /** Varför övriga bord inte går att välja (gästvyn). */
+  unavailable?: TableUnavailable[]
+}
+
+function people(n: number): string {
+  return `${n} ${n === 1 ? 'person' : 'personer'}`
+}
+
+function sizeRange(u: TableUnavailable): string {
+  const { minParty: min, maxParty: max } = u
+  if (min && max) return min === max ? people(min) : `${min}–${max} personer`
+  return ''
+}
+
+/** Kort text på bordet i planritningen. */
+export function tableBadge(u: TableUnavailable): string {
+  switch (u.reason) {
+    case 'booked': return 'Bokat'
+    case 'blocked': return 'Spärrat'
+    case 'phone': return 'Ring oss'
+    case 'too_small':
+    case 'too_large': {
+      const { minParty: min, maxParty: max } = u
+      return min && max ? (min === max ? `${min} pers` : `${min}–${max} pers`) : 'Passar ej'
+    }
+    default: return 'Ej ledigt'
+  }
+}
+
+/** Förklaringen när gästen trycker på ett bord som inte går att välja. */
+export function tableReasonText(
+  u: TableUnavailable,
+  { label, partySize, startTime, phone, hasCombinations }: {
+    label: string; partySize: number; startTime: string; phone?: string; hasCombinations: boolean
+  },
+): string {
+  const table = `Bord ${label}`
+  const party = `Ni är ${people(partySize)}`
+  switch (u.reason) {
+    case 'booked':
+      return `${table} är redan bokat kl ${startTime}. Välj ett annat bord eller en annan tid.`
+    case 'blocked':
+      return `${table} är spärrat av restaurangen kl ${startTime} och kan inte bokas online.`
+    case 'phone':
+      return `${table} bokas bara via telefon${phone ? ` - ring ${phone}` : ''}.`
+    case 'too_small':
+      return `${table} tar ${sizeRange(u)} - ${party.toLowerCase()}. Välj ett större bord${
+        hasCombinations ? ' eller bord som ställs ihop' : ''}.`
+    case 'too_large':
+      return `${table} är till för ${sizeRange(u)} - ${party.toLowerCase()}. Välj ett mindre bord, så räcker de stora borden till större sällskap.`
+    default:
+      return `${table} går inte att boka för ${people(partySize)} kl ${startTime}.`
+  }
 }
 
 /** En avvikande dag: stängt, andra öppettider eller ingen onlinebokning. */

@@ -23,11 +23,12 @@ import {
   normalizePhone,
   releaseHold,
   staleSelection,
+  tableReasonText,
   todayIn,
   turnstileMissing,
   validEmail,
 } from './bookingApi'
-import type { Availability, AvailabilitySlot, GuestReservation, TableHold, TableOption } from './bookingApi'
+import type { Availability, AvailabilitySlot, GuestReservation, TableHold, TableOption, TableUnavailable } from './bookingApi'
 import { GuaranteeStep } from './GuaranteeStep'
 import { TurnstileWidget } from './TurnstileWidget'
 import { ApiError } from '../../shared/api'
@@ -77,6 +78,19 @@ function HoldBanner({ secondsLeft, tables, onChange }: {
         <button type="button" className="btn-secondary" onClick={onChange}>Byt bord</button>
       )}
     </div>
+  )
+}
+
+/** Färgförklaringen under planritningen. */
+function FloorLegend() {
+  return (
+    <ul className="floor-legend" aria-label="Förklaring">
+      <li><span className="floor-legend-swatch is-free" aria-hidden="true" />Ledigt - passar er</li>
+      <li><span className="floor-legend-swatch is-selected" aria-hidden="true" />Valt</li>
+      <li><span className="floor-legend-swatch is-booked" aria-hidden="true" />Bokat</li>
+      <li><span className="floor-legend-swatch is-blocked" aria-hidden="true" />Spärrat av restaurangen</li>
+      <li><span className="floor-legend-swatch is-unfit" aria-hidden="true" />Passar inte ert sällskap</li>
+    </ul>
   )
 }
 
@@ -139,6 +153,8 @@ export default function BokaBordPage() {
   const selected = useMemo(() => new Set(option?.tableIds ?? []), [option])
   // Förklaring när en vald tid eller ett valt bord försvann vid en omhämtning.
   const [slotNotice, setSlotNotice] = useState<{ step: 'time' | 'tables'; text: string } | null>(null)
+  // Förklaringen när gästen trycker på ett bord som inte går att välja.
+  const [tableInfo, setTableInfo] = useState<string | null>(null)
   const [floors, setFloors] = useState<FloorGroup[] | null>(null)
   const [floorId, setFloorId] = useState<string | null>(null)
   const [view, setView] = useState<'2d' | '3d'>('2d')
@@ -309,6 +325,11 @@ export default function BokaBordPage() {
     [slot],
   )
   const options = slot?.options ?? []
+  const unavailable = useMemo(
+    () => new Map((slot?.unavailable ?? []).map((u) => [u.tableId, u] as const)),
+    [slot],
+  )
+  const hasCombinations = options.some((o) => o.tableIds.length > 1)
   const day = availability?.day ?? null
   const dayText = dayMessage(day, info.phone)
   const allTables = useMemo(
@@ -324,6 +345,24 @@ export default function BokaBordPage() {
     setOption(null)
     setFormError(null)
     setSlotNotice(null)
+    setTableInfo(null)
+  }
+
+  function reasonText(u: TableUnavailable): string {
+    return tableReasonText(u, {
+      label: labels.get(u.tableId) ?? u.tableId,
+      partySize,
+      startTime: slot?.startTime ?? '',
+      phone: info.phone,
+      hasCombinations,
+    })
+  }
+
+  /** Ett tryck på ett bord som inte går att välja: förklara varför. */
+  function explainTable(tableId: string) {
+    const u = unavailable.get(tableId)
+    const label = labels.get(tableId) ?? tableId
+    setTableInfo(u ? reasonText(u) : `Bord ${label} går inte att välja vid den här tiden.`)
   }
 
   function chooseDate(d: string) {
@@ -347,6 +386,7 @@ export default function BokaBordPage() {
   function pickTable(tableId: string) {
     setSlotNotice(null)
     setFormError(null)
+    setTableInfo(null)
     if (option?.tableIds.includes(tableId)) {
       setOption(null)
       return
@@ -361,6 +401,7 @@ export default function BokaBordPage() {
   function pickOption(o: TableOption) {
     setSlotNotice(null)
     setFormError(null)
+    setTableInfo(null)
     setOption(sameTables(o, option) ? null : o)
   }
 
@@ -585,6 +626,7 @@ export default function BokaBordPage() {
             </select>
           </label>
           <p className="cell-muted">
+            Antalet personer avgör vilka bord du kan välja - varje bord tar ett visst antal gäster.
             Fler än {maxParty}? Ring oss på {info.phone || 'restaurangen'}.
           </p>
           <div className="booking-dates" role="group" aria-label="Välj datum">
@@ -638,8 +680,9 @@ export default function BokaBordPage() {
           <fieldset className="booking-step" disabled={Boolean(hold) || holding}>
             <legend>3. Välj bord</legend>
             <p className="cell-muted">
-              Klicka på ett bord. Här visas bara bord som passar {partySize}{' '}
-              {partySize === 1 ? 'person' : 'personer'}.
+              Välj ett av de markerade borden - de är lediga kl {slot.startTime} och passar{' '}
+              {partySize} {partySize === 1 ? 'person' : 'personer'}. Bord som är bokade, spärrade av
+              restaurangen eller har fel storlek för ert sällskap går inte att välja. Tryck på dem för att se varför.
             </p>
             {slotNotice?.step === 'tables' && <p className="notice" role="status">{slotNotice.text}</p>}
             {floors && floors.length > 1 && (
@@ -664,12 +707,23 @@ export default function BokaBordPage() {
                   <button type="button" className={view === '3d' ? 'active' : ''} aria-pressed={view === '3d'} onClick={() => setView('3d')}>3D</button>
                 </div>
                 {view === '2d' ? (
-                  <FloorPlanSvg group={activeFloor} free={free} selected={selected} onToggle={pickTable} />
+                  <>
+                    <FloorPlanSvg
+                      group={activeFloor}
+                      free={free}
+                      selected={selected}
+                      onToggle={pickTable}
+                      unavailable={unavailable}
+                      onExplain={explainTable}
+                    />
+                    <FloorLegend />
+                  </>
                 ) : (
                   <FloorPlan3D group={activeFloor} />
                 )}
               </>
             )}
+            {tableInfo && <p className="notice table-info" role="status">{tableInfo}</p>}
             <div className="booking-table-list" role="group" aria-label="Lediga bord">
               {options.map((o) => (
                 <button
@@ -679,16 +733,32 @@ export default function BokaBordPage() {
                   aria-pressed={sameTables(o, option)}
                   onClick={() => pickOption(o)}
                 >
-                  Bord {o.tableIds.map((id) => labels.get(id) ?? id).join(' + ')} · {o.seats} pl
+                  Bord {o.tableIds.map((id) => labels.get(id) ?? id).join(' + ')} · {o.seats} platser
+                  {o.tableIds.length > 1 && <span className="pill-note"> · ställs ihop</span>}
                 </button>
               ))}
             </div>
+            {unavailable.size > 0 && (
+              <details className="table-reasons">
+                <summary>Varför kan jag inte välja vissa bord? ({unavailable.size})</summary>
+                <ul>
+                  {[...unavailable.values()].map((u) => (
+                    <li key={u.tableId}>{reasonText(u)}</li>
+                  ))}
+                </ul>
+              </details>
+            )}
             {option && !hold && (
               <div className="booking-confirm-tables">
                 <p className="booking-summary-line" aria-live="polite">
                   {formatDate(date)} kl {slot.startTime}–{slot.endTime} · {partySize} personer · bord{' '}
                   {option.tableIds.map((id) => labels.get(id) ?? id).join(' + ')}
                 </p>
+                {option.tableIds.length > 1 && (
+                  <p className="cell-muted">
+                    Borden {option.tableIds.map((id) => labels.get(id) ?? id).join(' och ')} ställs ihop för ert sällskap.
+                  </p>
+                )}
                 <p className="cell-muted">
                   När du bekräftar hålls bordet åt dig i 15 minuter medan du fyller i dina uppgifter.
                 </p>

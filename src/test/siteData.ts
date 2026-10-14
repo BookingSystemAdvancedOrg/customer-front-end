@@ -51,6 +51,7 @@ interface TestSlot {
   endTime: string
   layoutVersion: number
   tables: TestTable[]
+  unavailable?: { tableId: string; reason: string; minParty?: number; maxParty?: number }[]
 }
 
 /**
@@ -83,7 +84,24 @@ export function guestView(
     options.sort((a, b) => a.seats - b.seats || a.tableIds.length - b.tableIds.length)
     if (options.length === 0) return []
     const offered = new Set(options.flatMap((o) => o.tableIds))
-    return [{ ...slot, tables: slot.tables.filter((t) => offered.has(t.tableId)), options }]
+    // Som backend: varför övriga bord inte går att välja. Bokade/spärrade
+    // bord anges i testdatan (slot.unavailable); fria bord som inte passar
+    // får sin storleksanledning.
+    const unavailable = [
+      ...(slot.unavailable ?? []),
+      ...slot.tables
+        .filter((t) => !offered.has(t.tableId))
+        .map((t) => {
+          const minParty = Math.max(1, Math.ceil(t.seats / 2))
+          return { tableId: t.tableId, minParty, maxParty: t.seats, reason: partySize > t.seats ? 'too_small' : 'too_large' }
+        }),
+    ].sort((a, b) => a.tableId.localeCompare(b.tableId))
+    return [{
+      ...slot,
+      tables: slot.tables.filter((t) => offered.has(t.tableId)),
+      options,
+      ...(unavailable.length ? { unavailable } : {}),
+    }]
   })
   return { ...body, slots }
 }

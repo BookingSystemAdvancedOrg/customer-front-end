@@ -2063,6 +2063,103 @@
   opacity: 0.25;
 }
 
+/* Bord som inte går att välja - tryck förklarar varför. */
+.floor-svg-explain {
+  cursor: help;
+  outline: none;
+}
+
+.floor-svg-table.is-booked {
+  fill: rgba(120, 120, 120, 0.35);
+  stroke: rgba(160, 160, 160, 0.6);
+}
+
+.floor-svg-table.is-blocked {
+  fill: rgba(150, 60, 60, 0.35);
+  stroke: rgba(190, 90, 90, 0.75);
+  stroke-dasharray: 0.08 0.06;
+}
+
+.floor-svg-table.is-unfit {
+  fill: rgba(255, 248, 242, 0.12);
+  stroke: rgba(201, 166, 107, 0.45);
+  stroke-dasharray: 0.04 0.06;
+}
+
+.floor-svg-explain:focus-visible .floor-svg-table {
+  stroke: #fff;
+  stroke-width: 0.08;
+}
+
+.floor-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.floor-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.floor-legend-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid transparent;
+}
+
+.floor-legend-swatch.is-free {
+  background: color-mix(in srgb, var(--gold) 35%, transparent);
+  border-color: var(--gold);
+}
+
+.floor-legend-swatch.is-selected {
+  background: var(--gold);
+  border-color: var(--gold-bright);
+}
+
+.floor-legend-swatch.is-booked {
+  background: rgba(120, 120, 120, 0.35);
+  border-color: rgba(160, 160, 160, 0.6);
+}
+
+.floor-legend-swatch.is-blocked {
+  background: rgba(150, 60, 60, 0.35);
+  border: 1px dashed rgba(190, 90, 90, 0.75);
+}
+
+.floor-legend-swatch.is-unfit {
+  background: rgba(255, 248, 242, 0.12);
+  border: 1px dashed rgba(201, 166, 107, 0.45);
+}
+
+.table-reasons {
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.table-reasons summary {
+  cursor: pointer;
+  color: var(--gold-bright);
+}
+
+.table-reasons ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+
+.table-reasons li + li {
+  margin-top: 4px;
+}
+
 .floor-svg-pick:focus-visible .floor-svg-table {
   stroke: #fff;
   stroke-width: 0.08;

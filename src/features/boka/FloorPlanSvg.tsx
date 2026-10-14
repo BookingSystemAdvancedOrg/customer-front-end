@@ -1,25 +1,42 @@
 import { labelTables, layoutViewBox } from '../../shared/layoutApi'
 import type { FloorGroup, LayoutElement, LayoutTableElement } from '../../shared/layoutApi'
+import { tableBadge } from './bookingApi'
+import type { TableUnavailable } from './bookingApi'
+
+/** Utseende per anledning: bokat/spärrat är upptaget, resten passar inte sällskapet. */
+function stateClass(u: TableUnavailable | undefined): string {
+  if (!u) return ' is-taken'
+  if (u.reason === 'booked') return ' is-booked'
+  if (u.reason === 'blocked') return ' is-blocked'
+  return ' is-unfit'
+}
 
 /**
  * Planritningen i verklig skala (SVG-viewBox i meter, samma enhet som
  * API:t): väggar, dörrar, fönster och bord.
  *
  * Med `free` blir den ett bordsval: lediga bord (för den valda tiden) går
- * att klicka/tabba till och markera, upptagna bord är nedtonade. Utan
- * `free` är den en ren förhandsvisning.
+ * att klicka/tabba till och markera. Övriga bord visar varför de inte går
+ * att välja (`unavailable`: bokat, spärrat, fel storlek, bara telefon) -
+ * ett tryck på dem anropar `onExplain` så sidan kan förklara. Utan `free`
+ * är den en ren förhandsvisning.
  */
 export function FloorPlanSvg({
   group,
   free,
   selected,
   onToggle,
+  unavailable,
+  onExplain,
 }: {
   group: FloorGroup
   /** tableId -> platser, för bord som är lediga vid den valda tiden. */
   free?: Map<string, number>
   selected?: ReadonlySet<string>
   onToggle?: (tableId: string) => void
+  /** tableId -> varför bordet inte går att välja vid den valda tiden. */
+  unavailable?: Map<string, TableUnavailable>
+  onExplain?: (tableId: string) => void
 }) {
   const { elements } = group
   const tables = elements.filter((el): el is LayoutTableElement => el.type === 'table')
@@ -54,9 +71,14 @@ export function FloorPlanSvg({
     const label = labels.get(el.elementId) ?? '?'
     const isFree = free ? free.has(el.elementId) : true
     const isSelected = selected?.has(el.elementId) ?? false
+    const why = isFree ? undefined : unavailable?.get(el.elementId)
     const selectable = Boolean(free && onToggle && isFree)
+    const explainable = Boolean(free && !isFree && onExplain)
+    const interactive = selectable || explainable
+    const act = () => (selectable ? onToggle?.(el.elementId) : onExplain?.(el.elementId))
     const transform = el.rotationY ? `rotate(${el.rotationY} ${el.x} ${el.z})` : undefined
-    const state = !free ? '' : isSelected ? ' is-selected' : isFree ? ' is-free' : ' is-taken'
+    const state = !free ? '' : isSelected ? ' is-selected' : isFree ? ' is-free' : stateClass(why)
+    const badge = !free || isFree ? `${el.seats} pl` : why ? tableBadge(why) : 'Ej ledigt'
     const shape =
       el.shape === 'round' ? (
         <circle className={`floor-svg-table${state}`} cx={el.x} cy={el.z} r={Math.max(el.width, el.depth) / 2} />
@@ -71,22 +93,23 @@ export function FloorPlanSvg({
           transform={transform}
         />
       )
-    const title = `Bord ${label}, ${el.seats} platser${free ? (isFree ? (isSelected ? ', valt' : ', ledigt') : ', upptaget') : ''}`
+    const status = !free ? '' : isFree ? (isSelected ? ', valt' : ', ledigt') : `, går inte att välja: ${badge.toLowerCase()}`
+    const title = `Bord ${label}, ${el.seats} platser${status}`
     return (
       <g
         key={el.elementId}
-        className={selectable ? 'floor-svg-pick' : undefined}
-        role={selectable ? 'button' : undefined}
-        tabIndex={selectable ? 0 : undefined}
+        className={selectable ? 'floor-svg-pick' : explainable ? 'floor-svg-explain' : undefined}
+        role={interactive ? 'button' : undefined}
+        tabIndex={interactive ? 0 : undefined}
         aria-pressed={selectable ? isSelected : undefined}
-        aria-label={selectable ? title : undefined}
-        onClick={selectable ? () => onToggle?.(el.elementId) : undefined}
+        aria-label={interactive ? title : undefined}
+        onClick={interactive ? act : undefined}
         onKeyDown={
-          selectable
+          interactive
             ? (e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault()
-                  onToggle?.(el.elementId)
+                  act()
                 }
               }
             : undefined
@@ -98,7 +121,7 @@ export function FloorPlanSvg({
           {label}
         </text>
         <text className="floor-svg-table-seats" x={el.x} y={el.z + 0.22} textAnchor="middle">
-          {el.seats} pl
+          {badge}
         </text>
       </g>
     )

@@ -85,7 +85,7 @@ async function chooseTable(user: ReturnType<typeof userEvent.setup>) {
   await user.selectOptions(screen.getByLabelText('Antal personer'), '3')
   await user.click(await screen.findByRole('button', { name: '18:00' }))
   // Only tables free at 18:00 are selectable; pick table-b (4 seats).
-  await user.click(screen.getByRole('button', { name: /Bord 2 · 4 pl/ }))
+  await user.click(screen.getByRole('button', { name: /Bord 2 · 4 platser/ }))
 }
 
 async function chooseAndFill(user: ReturnType<typeof userEvent.setup>) {
@@ -134,8 +134,8 @@ describe('BokaBordPage', () => {
     render(<WithSite><BokaBordPage /></WithSite>)
     await user.selectOptions(screen.getByLabelText('Antal personer'), '3')
     await user.click(await screen.findByRole('button', { name: '18:00' }))
-    expect(screen.queryByRole('button', { name: /Bord 1 · 2 pl/ })).toBeNull()
-    expect(screen.getByRole('button', { name: /Bord 2 · 4 pl/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Bord 1 · 2 platser/ })).toBeNull()
+    expect(screen.getByRole('button', { name: /Bord 2 · 4 platser/ })).toBeInTheDocument()
     const last = fetchMock.mock.calls.filter(([url]) => String(url).includes('/availability')).at(-1)!
     expect(String(last[0])).toContain('partySize=3')
   })
@@ -150,7 +150,7 @@ describe('BokaBordPage', () => {
     render(<WithSite><BokaBordPage /></WithSite>)
     await user.selectOptions(screen.getByLabelText('Antal personer'), '6')
     await user.click(await screen.findByRole('button', { name: '18:00' }))
-    await user.click(screen.getByRole('button', { name: 'Bord 1 + 2 · 6 pl' }))
+    await user.click(screen.getByRole('button', { name: /^Bord 1 \+ 2 · 6 platser/ }))
     await user.click(screen.getByRole('button', { name: 'Bekräfta bord' }))
     await user.type(await screen.findByLabelText('Namn'), 'Anna')
     await user.type(screen.getByLabelText('E-post'), 'anna@example.se')
@@ -217,7 +217,7 @@ describe('BokaBordPage', () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     render(<WithSite><BokaBordPage /></WithSite>)
     await user.click(await screen.findByRole('button', { name: '18:00' }))
-    await user.click(screen.getByRole('button', { name: /Bord 2 · 4 pl/ }))
+    await user.click(screen.getByRole('button', { name: /Bord 2 · 4 platser/ }))
 
     availabilityBody = availability([{ tableId: 'table-a', seats: 2 }])
     await act(async () => {
@@ -225,8 +225,8 @@ describe('BokaBordPage', () => {
     })
 
     expect(await screen.findByText('Bordet du valt har hunnit bokas. Välj bord igen.')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Bord 1 · 2 pl/ })).toHaveAttribute('aria-pressed', 'false')
-    expect(screen.queryByRole('button', { name: /Bord 2 · 4 pl/ })).toBeNull()
+    expect(screen.getByRole('button', { name: /Bord 1 · 2 platser/ })).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.queryByRole('button', { name: /Bord 2 · 4 platser/ })).toBeNull()
     expect(screen.getByRole('button', { name: '18:00' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.queryByLabelText('Namn')).toBeNull()
   })
@@ -274,7 +274,7 @@ describe('BokaBordPage', () => {
     render(<WithSite><BokaBordPage /></WithSite>)
     await user.selectOptions(screen.getByLabelText('Antal personer'), '3')
     await user.click(await screen.findByRole('button', { name: '18:00' }))
-    await user.click(screen.getByRole('button', { name: /Bord 2 · 4 pl/ }))
+    await user.click(screen.getByRole('button', { name: /Bord 2 · 4 platser/ }))
     await user.click(screen.getByRole('button', { name: 'Bekräfta bord' }))
     await user.type(await screen.findByLabelText('Namn'), 'Anna')
     await user.type(screen.getByLabelText('E-post'), 'anna@example.se')
@@ -364,7 +364,7 @@ describe('BokaBordPage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('hann bokas av någon annan')
 
     // The token was used up: picking again shows a fresh widget, the old token isn't sent.
-    await user.click(await screen.findByRole('button', { name: /Bord 2 · 4 pl/ }))
+    await user.click(await screen.findByRole('button', { name: /Bord 2 · 4 platser/ }))
     expect(turnstileResets.at(-1)).toBe(1)
     await user.click(screen.getByRole('button', { name: 'Bekräfta bord' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('Bekräfta säkerhetskontrollen')
@@ -427,7 +427,7 @@ describe('BokaBordPage', () => {
       expect(deletes()).toHaveLength(1)
       expect(screen.queryByLabelText('Namn')).toBeNull()
       expect(screen.getByRole('button', { name: '18:00' })).toHaveAttribute('aria-pressed', 'true')
-      expect(await screen.findByRole('button', { name: /Bord 2 · 4 pl/ })).toHaveAttribute('aria-pressed', 'false')
+      expect(await screen.findByRole('button', { name: /Bord 2 · 4 platser/ })).toHaveAttribute('aria-pressed', 'false')
     })
 
     it('starts over when the server says the hold already ran out', async () => {
@@ -453,3 +453,58 @@ describe('BokaBordPage', () => {
   })
 })
 
+
+describe('BokaBordPage - why a table cannot be chosen', () => {
+  it('explains a table that is too small for the party when it is tapped', async () => {
+    const user = userEvent.setup()
+    render(<WithSite><BokaBordPage /></WithSite>)
+    await user.selectOptions(screen.getByLabelText('Antal personer'), '3')
+    await user.click(await screen.findByRole('button', { name: '18:00' }))
+
+    // The 2-seat table is shown, marked and tappable - but not selectable.
+    const small = screen.getByRole('button', { name: /^Bord 1, 2 platser, går inte att välja: 1–2 pers$/ })
+    expect(small).not.toHaveAttribute('aria-pressed')
+    await user.click(small)
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Bord 1 tar 1–2 personer - ni är 3 personer. Välj ett större bord.')
+    expect(screen.queryByRole('button', { name: 'Bekräfta bord' })).toBeNull()
+
+    // The legend and the full list of reasons are there too.
+    expect(screen.getByRole('list', { name: 'Förklaring' })).toHaveTextContent('Spärrat av restaurangen')
+    expect(screen.getByText(/Varför kan jag inte välja vissa bord\? \(1\)/)).toBeInTheDocument()
+
+    // Choosing a table that fits clears the explanation.
+    await user.click(screen.getByRole('button', { name: /Bord 2 · 4 platser/ }))
+    expect(screen.queryByRole('status')).toBeNull()
+  })
+
+  it('tells a table blocked by the restaurant from one that is booked', async () => {
+    availabilityBody = {
+      ...availability([{ tableId: 'table-b', seats: 4 }]),
+      slots: [{
+        startTime: '18:00', endTime: '20:00', layoutVersion: 1, tables: [{ tableId: 'table-b', seats: 4 }],
+        unavailable: [{ tableId: 'table-a', reason: 'blocked' }],
+      }],
+    } as unknown as typeof availabilityBody
+    const user = userEvent.setup()
+    render(<WithSite><BokaBordPage /></WithSite>)
+    await user.selectOptions(screen.getByLabelText('Antal personer'), '2')
+    await user.click(await screen.findByRole('button', { name: '18:00' }))
+
+    await user.click(screen.getByRole('button', { name: /^Bord 1, 2 platser, går inte att välja: spärrat$/ }))
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Bord 1 är spärrat av restaurangen kl 18:00 och kan inte bokas online.')
+  })
+
+  it('says when the chosen tables are put together', async () => {
+    combos = [{ tableIds: ['table-a', 'table-b'], minParty: 5, maxParty: 6 }]
+    const user = userEvent.setup()
+    render(<WithSite><BokaBordPage /></WithSite>)
+    await user.selectOptions(screen.getByLabelText('Antal personer'), '5')
+    await user.click(await screen.findByRole('button', { name: '18:00' }))
+    const combo = screen.getByRole('button', { name: /^Bord 1 \+ 2 · 6 platser/ })
+    expect(combo).toHaveTextContent('Bord 1 + 2 · 6 platser · ställs ihop')
+    await user.click(combo)
+    expect(screen.getByText('Borden 1 och 2 ställs ihop för ert sällskap.')).toBeInTheDocument()
+  })
+})
