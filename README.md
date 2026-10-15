@@ -18,8 +18,8 @@ npm run dev            # http://localhost:7071/?restaurang=<slug>
 ```
 
 Ingen restaurangs data finns i koden. Namn, adress, öppettider och
-varumärke redigeras i admin-panelen / sbs-admin och kommer från
-`/site-config`. En egen domän kopplas i sbs-admin (domänen måste vara
+varumärke redigeras i admin-panelen / Booqy Console och kommer från
+`/site-config`. En egen domän kopplas i Booqy Console (domänen måste vara
 `active`); i dev väljs restaurangen med `?restaurang=<slug>`.
 
 ## Säkerhetsmodell
