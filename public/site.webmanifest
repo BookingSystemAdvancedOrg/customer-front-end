@@ -2,7 +2,7 @@
   "name": "Restaurang",
   "short_name": "Restaurang",
   "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }],
-  "theme_color": "#170f0d",
-  "background_color": "#0a0606",
+  "theme_color": "#f5f4f4",
+  "background_color": "#f5f4f4",
   "display": "standalone"
 }

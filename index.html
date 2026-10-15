@@ -2,7 +2,14 @@
 <html lang="sv">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- Standardikonen (Booqys bok) ligger i src/assets så att Vite ger den
+         ett hashat filnamn: deployen cachar allt utom index.html i ett år.
+         En restaurang med egen ikon (branding.faviconUrl) byter den i
+         SiteProvider. -->
+    <link rel="icon" type="image/svg+xml" href="/src/assets/favicon.svg" />
+    <link rel="apple-touch-icon" href="/src/assets/apple-touch-icon.png" />
+    <meta name="theme-color" content="#f5f4f4" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
     <link rel="manifest" href="/site.webmanifest" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!--
@@ -12,8 +19,8 @@
       bilder ligger på deras egna adresser). Externa skript och ramar
       bara från Stripe (betalning) och challenges.cloudflare.com
       (säkerhetskontrollen, Turnstile - utan den kan ingen boka, beställa
-      eller skicka en cateringförfrågan). Typsnitten ligger i bygget -
-      inga anrop till Google.
+      eller skicka en cateringförfrågan). Systemtypsnitt - inga
+      typsnittsanrop alls.
       frame-ancestors kan inte sättas i en meta-tagg - sätt den som riktigt
       svarshuvud i CloudFronts response headers policy.
     -->

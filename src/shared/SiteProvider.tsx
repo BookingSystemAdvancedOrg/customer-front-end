@@ -17,19 +17,51 @@ type State =
   | { status: 'unavailable' }
   | { status: 'error' }
 
+function parseHex(hex: string): [number, number, number] | null {
+  const m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(hex.trim())
+  if (!m) return null
+  const full = m[1].length === 3 ? m[1].replace(/./g, (c) => c + c) : m[1]
+  return [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16)) as [number, number, number]
+}
+
+function luminance([r, g, b]: [number, number, number]): number {
+  const [lr, lg, lb] = [r, g, b].map((v) => {
+    const c = v / 255
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
+  })
+  return 0.2126 * lr + 0.7152 * lg + 0.0722 * lb
+}
+
+function contrast(a: [number, number, number], b: [number, number, number]): number {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x)
+  return (hi + 0.05) / (lo + 0.05)
+}
+
+const toHex = (rgb: [number, number, number]) =>
+  '#' + rgb.map((v) => Math.round(v).toString(16).padStart(2, '0')).join('')
+
 /** Text på accentfärgen: vit på mörka färger, nästan svart på ljusa (t.ex.
  * guld) - så knappar alltid går att läsa (WCAG-kontrast). */
 export function textOn(hex: string): string {
-  const m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(hex.trim())
-  if (!m) return '#ffffff'
-  const full = m[1].length === 3 ? m[1].replace(/./g, (c) => c + c) : m[1]
-  const [r, g, b] = [0, 2, 4].map((i) => {
-    const c = parseInt(full.slice(i, i + 2), 16) / 255
-    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
-  })
-  const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
-  // Kontrast mot vitt (1.05/(L+0.05)) mot kontrast mot #1d1d1f (L ~ 0.012).
-  return 1.05 / (luminance + 0.05) >= (luminance + 0.05) / 0.062 ? '#ffffff' : '#1d1d1f'
+  const rgb = parseHex(hex)
+  if (!rgb) return '#ffffff'
+  return contrast(rgb, [255, 255, 255]) >= contrast(rgb, [29, 26, 26]) ? '#ffffff' : '#1d1a1a'
+}
+
+/**
+ * Ljusar upp en färg mot vitt tills den når `min` i kontrast mot mörkt
+ * läges yta (#1c1a1a). Mörka märkesfärger (t.ex. Booqys #350001) försvinner
+ * annars mot svart bakgrund.
+ */
+export function liftForDark(hex: string, min: number): string {
+  const rgb = parseHex(hex)
+  if (!rgb) return hex
+  const surface: [number, number, number] = [28, 26, 26]
+  for (let t = 0; t <= 1.0001; t += 0.05) {
+    const mixed = rgb.map((v) => v + (255 - v) * t) as [number, number, number]
+    if (contrast(mixed, surface) >= min) return toHex(mixed)
+  }
+  return '#ffffff'
 }
 
 function applyBranding(config: SiteConfig): void {
@@ -37,10 +69,17 @@ function applyBranding(config: SiteConfig): void {
   document.title = name
   const root = document.documentElement.style
   // Restaurangens färg blir designsystemets enda accent (knappar, länkar,
-  // valda bord); hover/fokus-nyanser räknas fram ur den i index.css.
-  if (branding.primaryColor) {
-    root.setProperty('--accent', branding.primaryColor)
-    root.setProperty('--on-accent', textOn(branding.primaryColor))
+  // valda bord); hover/fokus-nyanser räknas fram ur den i index.css. Mörkt
+  // läge får en uppljusad variant så att färgen syns mot svart.
+  // Utan egen färg gäller Booqys standardfärger i index.css.
+  if (branding.primaryColor && parseHex(branding.primaryColor)) {
+    const color = branding.primaryColor
+    const dark = liftForDark(color, 3)
+    root.setProperty('--tenant-accent', color)
+    root.setProperty('--tenant-on-accent', textOn(color))
+    root.setProperty('--tenant-accent-dark', dark)
+    root.setProperty('--tenant-on-accent-dark', textOn(dark))
+    root.setProperty('--tenant-accent-ink-dark', liftForDark(color, 4.5))
   }
   if (branding.faviconUrl) {
     let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]')

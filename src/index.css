@@ -1,21 +1,25 @@
 /* Globala CSS-variabler och nollställningar. Sid-specifik styling bor i
    src/shared/customer.css.
 
-   Designsystem: "Apple UI kit" - systemtypsnitt, en accentfärg, neutrala
+   Designsystem: samma "Apple UI kit" i Booqys färger som admin-front-end
+   - systemtypsnitt, en accent (Booqy-vinrött #350001), varma neutrala
    gråtoner, frostade paneler och 44 px höga kontroller. Ljust och mörkt
-   läge följer besökarens system. Accentfärgen är restaurangens egen
-   (branding.primaryColor, satt av SiteProvider) - blå om den saknas.
-   Äldre namn (--gold, --serif, ...) pekar på de nya värdena. */
+   läge följer besökarens system. --accent fyller (knappar, valt läge);
+   --accent-ink är samma färg för text/länkar, ljusare i mörkt läge så att
+   kontrasten håller. Har restaurangen en egen färg
+   (branding.primaryColor) sätter SiteProvider --tenant-accent* och den
+   ersätter Booqy-färgen. Äldre namn (--gold, --serif, ...) pekar på de
+   nya värdena. */
 :root {
-  --bg: #f5f5f7;
+  --bg: #f5f4f4;
   --surface: #ffffff;
-  --fill: #f5f5f7;
+  --fill: #f0eeee;
   --surface-glass: rgba(255, 255, 255, 0.72);
-  --page-scrim: rgba(245, 245, 247, 0.84);
+  --page-scrim: rgba(245, 244, 244, 0.84);
   --border: rgba(0, 0, 0, 0.08);
-  --ink: #1d1d1f;
-  --muted: #6e6e73;
-  --on-accent: #ffffff;
+  --ink: #1d1a1a;
+  --muted: #6e6969;
+  --on-accent: var(--tenant-on-accent, #ffffff);
   --danger: #ff3b30;
   --danger-ink: #d70015;
   --success: #34c759;
@@ -23,7 +27,8 @@
   --scrim: rgba(0, 0, 0, 0.3);
   --shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06);
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08), 0 24px 64px rgba(0, 0, 0, 0.12);
-  --accent: #0071e3;
+  --accent: var(--tenant-accent, #350001);
+  --accent-ink: var(--tenant-accent, #350001);
   --accent-hover: color-mix(in srgb, var(--accent) 88%, #fff);
   --accent-active: color-mix(in srgb, var(--accent) 88%, #000);
   --focus: color-mix(in srgb, var(--accent) 28%, transparent);
@@ -61,38 +66,44 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
   --bg: #000000;
-  --surface: #1c1c1e;
-  --fill: #2c2c2e;
-  --surface-glass: rgba(28, 28, 30, 0.72);
+  --surface: #1c1a1a;
+  --fill: #2c2929;
+  --surface-glass: rgba(28, 26, 26, 0.72);
   --page-scrim: rgba(0, 0, 0, 0.8);
   --border: rgba(255, 255, 255, 0.12);
-  --ink: #f5f5f7;
-  --muted: #a1a1a6;
+  --ink: #f5f4f4;
+  --muted: #a6a1a1;
   --danger: #ff453a;
   --danger-ink: #ff6961;
   --success: #30d158;
   --scrim: rgba(0, 0, 0, 0.5);
   --shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4), 0 24px 64px rgba(0, 0, 0, 0.5);
+  --accent: var(--tenant-accent-dark, #b8444c);
+  --accent-ink: var(--tenant-accent-ink-dark, #e07a82);
+  --on-accent: var(--tenant-on-accent-dark, #ffffff);
   color-scheme: dark;
   }
 }
 
 :root[data-theme='dark'] {
   --bg: #000000;
-  --surface: #1c1c1e;
-  --fill: #2c2c2e;
-  --surface-glass: rgba(28, 28, 30, 0.72);
+  --surface: #1c1a1a;
+  --fill: #2c2929;
+  --surface-glass: rgba(28, 26, 26, 0.72);
   --page-scrim: rgba(0, 0, 0, 0.8);
   --border: rgba(255, 255, 255, 0.12);
-  --ink: #f5f5f7;
-  --muted: #a1a1a6;
+  --ink: #f5f4f4;
+  --muted: #a6a1a1;
   --danger: #ff453a;
   --danger-ink: #ff6961;
   --success: #30d158;
   --scrim: rgba(0, 0, 0, 0.5);
   --shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4), 0 24px 64px rgba(0, 0, 0, 0.5);
+  --accent: var(--tenant-accent-dark, #b8444c);
+  --accent-ink: var(--tenant-accent-ink-dark, #e07a82);
+  --on-accent: var(--tenant-on-accent-dark, #ffffff);
   color-scheme: dark;
 }
 

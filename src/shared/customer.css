@@ -132,7 +132,7 @@
 }
 
 .site-header-nav a.active {
-  color: var(--gold);
+  color: var(--accent-ink);
 }
 
 .site-header-brand {
@@ -360,7 +360,7 @@
   font-size: clamp(1.05rem, 2.2vw, 1.35rem);
   font-weight: 600;
   letter-spacing: 0.04em;
-  color: var(--gold);
+  color: var(--accent-ink);
 }
 
 .opening-hours-modal-close {
@@ -479,7 +479,7 @@
 
 .cart-head h2 {
   font: 600 18px/1.2 var(--serif);
-  color: var(--gold);
+  color: var(--accent-ink);
 }
 
 .cart-close {
@@ -533,7 +533,7 @@
 
 .cart-item-price {
   font-weight: 600;
-  color: var(--gold);
+  color: var(--accent-ink);
 }
 
 .cart-total {
@@ -577,7 +577,7 @@
 }
 
 .hero-kicker {
-  color: var(--gold);
+  color: var(--accent-ink);
   font-family: var(--sans);
   font-weight: 600;
   font-size: 0.78rem;
@@ -801,7 +801,7 @@
 }
 
 .btn.ghost {
-  color: var(--accent);
+  color: var(--accent-ink);
   background: var(--fill);
 }
 
@@ -815,7 +815,7 @@
   border-radius: var(--r-sm);
   font-size: 15px;
   background: var(--tint-accent);
-  color: var(--accent);
+  color: var(--accent-ink);
 }
 
 .btn.small:hover:not(:disabled) {
@@ -909,7 +909,7 @@
 
 .dish-price {
   font-weight: 600;
-  color: var(--gold);
+  color: var(--accent-ink);
 }
 
 /* --- Mörka band (allergi, avbokningspolicy) -------------------------------------- */
@@ -927,7 +927,7 @@
 
 .dark-band h2 {
   font: 600 22px/1.2 var(--serif);
-  color: var(--gold);
+  color: var(--accent-ink);
   margin-bottom: 10px;
 }
 
@@ -952,7 +952,7 @@
 }
 
 .menu-cta a:hover {
-  color: var(--gold);
+  color: var(--accent-ink);
 }
 
 /* --- Planritning (Boka bord - förhandsvisning, se BokaBordPage.tsx) --------------- */
@@ -1367,7 +1367,7 @@
 }
 
 .site-footer h3 {
-  color: var(--gold);
+  color: var(--accent-ink);
   font-family: var(--sans);
   font-size: 12px;
   letter-spacing: 0;
@@ -1438,7 +1438,7 @@
   font-size: 0.72rem;
   font-weight: 500;
   letter-spacing: 0.06em;
-  color: var(--gold);
+  color: var(--accent-ink);
   text-decoration: none;
 }
 
@@ -1480,7 +1480,7 @@
   font-size: clamp(1.35rem, 3.5vw, 1.65rem);
   font-weight: 600;
   letter-spacing: 0.04em;
-  color: var(--gold);
+  color: var(--accent-ink);
 }
 
 .glass-panel p {
@@ -1516,7 +1516,7 @@
   font-family: var(--sans);
   font-size: 0.8rem;
   font-weight: 500;
-  color: var(--gold);
+  color: var(--accent-ink);
 }
 
 .glass-figure {
@@ -1554,7 +1554,7 @@
 }
 
 .glass-link:hover {
-  color: var(--gold);
+  color: var(--accent-ink);
 }
 
 /* --- Kontaktformulär ---------------------------------------------------------------------- */
@@ -1659,7 +1659,7 @@
 }
 
 .parking-map-attrib a {
-  color: var(--gold);
+  color: var(--accent-ink);
 }
 
 .parking-list {
@@ -1728,7 +1728,7 @@
 }
 
 .parking-card a:hover {
-  color: var(--gold);
+  color: var(--accent-ink);
 }
 
 /* --- Mobil ----------------------------------------------------------------------------------- */
@@ -1992,7 +1992,7 @@
 .btn-secondary {
   border: 0;
   background: var(--fill);
-  color: var(--accent);
+  color: var(--accent-ink);
 }
 
 .btn-secondary:hover:not(:disabled) {
@@ -2316,7 +2316,7 @@
 
 .order-cart h2 {
   font: 600 20px/1.2 var(--serif);
-  color: var(--gold);
+  color: var(--accent-ink);
 }
 
 .order-form {
