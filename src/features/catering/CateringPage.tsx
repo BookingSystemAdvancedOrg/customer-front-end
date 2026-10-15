@@ -177,13 +177,13 @@ export default function CateringPage() {
         <p className="hero-kicker">Catering</p>
         <h1>Räkna på catering</h1>
         <p className="hero-sub">
-          Välj rätter och antal portioner - priset räknas direkt. Skicka förfrågan så får du en offert som du
-          godkänner med BankID.
+          Välj rätter, se priset direkt och skicka en förfrågan. Du får en offert som du godkänner med BankID.
         </p>
       </section>
 
       <form className="order-layout" onSubmit={submit} noValidate>
         <div className="order-menu">
+          <h2 className="catering-step-title">1. Välj rätter och antal portioner</h2>
           <p className="order-hint">
             Minst {settings.minPortions} portioner · beställ minst {settings.advanceDays} dagar i förväg
             {tiers.length > 0 && ` · rabatt från ${Math.min(...tiers.map((t) => t.fromPortions))} portioner`}
@@ -215,8 +215,25 @@ export default function CateringPage() {
             </section>
           ))}
 
-          <section className="catering-details" aria-label="Leverans och kontakt">
-            <h2 className="menu-content-title">Leverans och kontakt</h2>
+          {calc.portions === 0 ? (
+            <p className="notice catering-next" role="status">
+              Fyll i antal portioner ovan - sedan väljer du datum, leverans och dina uppgifter.
+            </p>
+          ) : (
+          <>
+          <section className="catering-details" aria-label="När och var">
+            <h2 className="catering-step-title">2. När och var</h2>
+            {settings.pickup && settings.delivery && (
+              <div className="segmented" role="radiogroup" aria-label="Avhämtning eller leverans">
+                {(['delivery', 'pickup'] as const).map((v) => (
+                  <label key={v} className={form.fulfilment === v ? 'on' : ''}>
+                    <input type="radio" name="fulfilment" checked={form.fulfilment === v}
+                      onChange={() => set('fulfilment', v)} />
+                    {v === 'delivery' ? 'Leverans' : 'Avhämtning'}
+                  </label>
+                ))}
+              </div>
+            )}
             <div className="booking-grid">
               <label className="booking-field">
                 Datum
@@ -231,15 +248,6 @@ export default function CateringPage() {
                 Antal gäster (valfritt)
                 <input inputMode="numeric" value={form.guests} onChange={(e) => set('guests', e.target.value.replace(/\D/g, ''))} />
               </label>
-              {settings.pickup && settings.delivery && (
-                <label className="booking-field">
-                  Avhämtning eller leverans
-                  <select value={form.fulfilment} onChange={(e) => set('fulfilment', e.target.value as Form['fulfilment'])}>
-                    <option value="delivery">Leverans</option>
-                    <option value="pickup">Avhämtning</option>
-                  </select>
-                </label>
-              )}
             </div>
             {form.fulfilment === 'delivery' && (
               <div className="booking-grid">
@@ -269,18 +277,27 @@ export default function CateringPage() {
                 </label>
               </div>
             )}
-            <div className="catering-type" role="radiogroup" aria-label="Beställare">
-              <label className="booking-check">
+          </section>
+
+          <section className="catering-details" aria-label="Dina uppgifter">
+            <h2 className="catering-step-title">3. Dina uppgifter</h2>
+            <div className="segmented" role="radiogroup" aria-label="Beställare">
+              <label className={form.customerType === 'private' ? 'on' : ''}>
                 <input type="radio" name="customerType" checked={form.customerType === 'private'}
                   onChange={() => set('customerType', 'private')} />
-                <span>Privatperson - betala med kort eller Swish när du signerat</span>
+                Privatperson
               </label>
-              <label className="booking-check">
+              <label className={form.customerType === 'company' ? 'on' : ''}>
                 <input type="radio" name="customerType" checked={form.customerType === 'company'}
                   onChange={() => set('customerType', 'company')} />
-                <span>Företag - faktura ({settings.paymentTermsDays} dagar)</span>
+                Företag
               </label>
             </div>
+            <p className="cell-muted">
+              {form.customerType === 'private'
+                ? 'Du betalar med kort eller Swish efter att du godkänt offerten.'
+                : `Ni får en faktura med ${settings.paymentTermsDays} dagars betalningsvillkor.`}
+            </p>
             <div className="booking-grid">
               {form.customerType === 'company' && (
                 <>
@@ -317,12 +334,14 @@ export default function CateringPage() {
               </label>
             </div>
           </section>
+          </>
+          )}
         </div>
 
         <aside className="order-cart" aria-label="Kalkyl">
           <h2>Kalkyl · {calc.portions} portioner</h2>
           {chosen.length === 0 ? (
-            <p className="cart-empty">Ange antal portioner för en eller flera rätter.</p>
+            <p className="cart-empty">Fyll i antal portioner vid en eller flera rätter.</p>
           ) : (
             <ul className="cart-list">
               {chosen.map(([id, q]) => (

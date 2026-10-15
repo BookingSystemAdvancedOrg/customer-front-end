@@ -16,6 +16,7 @@ import {
   createReservation,
   dayMessage,
   formatDate,
+  formatShortDate,
   getAvailability,
   holdTables,
   manageLink,
@@ -85,11 +86,11 @@ function HoldBanner({ secondsLeft, tables, onChange }: {
 function FloorLegend() {
   return (
     <ul className="floor-legend" aria-label="Förklaring">
-      <li><span className="floor-legend-swatch is-free" aria-hidden="true" />Ledigt - passar er</li>
-      <li><span className="floor-legend-swatch is-selected" aria-hidden="true" />Valt</li>
+      <li><span className="floor-legend-swatch is-free" aria-hidden="true" />Ledigt</li>
+      <li><span className="floor-legend-swatch is-selected" aria-hidden="true" />Ditt val</li>
       <li><span className="floor-legend-swatch is-booked" aria-hidden="true" />Bokat</li>
-      <li><span className="floor-legend-swatch is-blocked" aria-hidden="true" />Spärrat av restaurangen</li>
-      <li><span className="floor-legend-swatch is-unfit" aria-hidden="true" />Passar inte ert sällskap</li>
+      <li><span className="floor-legend-swatch is-blocked" aria-hidden="true" />Spärrat</li>
+      <li><span className="floor-legend-swatch is-unfit" aria-hidden="true" />Fel storlek</li>
     </ul>
   )
 }
@@ -610,13 +611,15 @@ export default function BokaBordPage() {
       <section className="page-hero">
         <p className="hero-kicker">{info.name}</p>
         <h1>Boka bord</h1>
-        <p className="hero-sub">Välj dag, tid och bord - bekräftelsen kommer direkt.</p>
+        <p className="hero-sub">Tre snabba steg: när, vilken tid och vilket bord.</p>
         {restartNotice && <p className="notice error" role="alert">{restartNotice}</p>}
       </section>
 
       <form className="booking" onSubmit={submit} noValidate>
-        <fieldset className="booking-step" disabled={Boolean(hold) || holding}>
-          <legend>1. När och hur många?</legend>
+        {/* När bordet hålls visas bara uppgifterna - "Byt bord" tar tillbaka stegen. */}
+        {!hold && (<>
+        <fieldset className="booking-step" disabled={holding}>
+          <legend>1. Hur många och vilken dag?</legend>
           <label className="booking-field">
             <span>Antal personer</span>
             <select value={partySize} onChange={(e) => choosePartySize(Number(e.target.value))}>
@@ -626,8 +629,7 @@ export default function BokaBordPage() {
             </select>
           </label>
           <p className="cell-muted">
-            Antalet personer avgör vilka bord du kan välja - varje bord tar ett visst antal gäster.
-            Fler än {maxParty}? Ring oss på {info.phone || 'restaurangen'}.
+            Fler än {maxParty} personer? Ring {info.phone || 'restaurangen'}.
           </p>
           <div className="booking-dates" role="group" aria-label="Välj datum">
             {dates.map((d) => {
@@ -639,10 +641,11 @@ export default function BokaBordPage() {
                   key={d}
                   type="button"
                   className={`filter-pill${d === date ? ' active' : ''}${mark ? ' is-special' : ''}`}
+                  title={formatDate(d)}
                   aria-pressed={d === date}
                   onClick={() => chooseDate(d)}
                 >
-                  {d === today ? 'Idag' : formatDate(d)}
+                  {d === today ? 'Idag' : formatShortDate(d)}
                   {mark && <span className="pill-note"> · {mark}</span>}
                 </button>
               )
@@ -650,7 +653,7 @@ export default function BokaBordPage() {
           </div>
         </fieldset>
 
-        <fieldset className="booking-step" disabled={Boolean(hold) || holding}>
+        <fieldset className="booking-step" disabled={holding}>
           <legend>2. Välj tid</legend>
           {loadingSlots && <p className="notice" role="status">Hämtar lediga tider…</p>}
           {slotsError && <p className="notice error" role="alert">{slotsError}</p>}
@@ -677,12 +680,10 @@ export default function BokaBordPage() {
         </fieldset>
 
         {slot && (
-          <fieldset className="booking-step" disabled={Boolean(hold) || holding}>
+          <fieldset className="booking-step" disabled={holding}>
             <legend>3. Välj bord</legend>
             <p className="cell-muted">
-              Välj ett av de markerade borden - de är lediga kl {slot.startTime} och passar{' '}
-              {partySize} {partySize === 1 ? 'person' : 'personer'}. Bord som är bokade, spärrade av
-              restaurangen eller har fel storlek för ert sällskap går inte att välja. Tryck på dem för att se varför.
+              Tryck på ett ledigt bord. Grå bord går inte att välja - tryck på dem för att se varför.
             </p>
             {slotNotice?.step === 'tables' && <p className="notice" role="status">{slotNotice.text}</p>}
             {floors && floors.length > 1 && (
@@ -760,7 +761,7 @@ export default function BokaBordPage() {
                   </p>
                 )}
                 <p className="cell-muted">
-                  När du bekräftar hålls bordet åt dig i 15 minuter medan du fyller i dina uppgifter.
+                  Bordet hålls åt dig i 15 minuter medan du fyller i dina uppgifter.
                 </p>
                 {turnstileSiteKey && (
                   <TurnstileWidget
@@ -777,6 +778,7 @@ export default function BokaBordPage() {
             )}
           </fieldset>
         )}
+        </>)}
 
         {hold && secondsLeft !== null && (
           <HoldBanner secondsLeft={secondsLeft} tables={heldTables} onChange={changeTables} />

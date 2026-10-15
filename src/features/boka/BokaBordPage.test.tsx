@@ -380,15 +380,15 @@ describe('BokaBordPage', () => {
   })
 
   describe('the table is held for 15 minutes', () => {
-    it('counts down and locks the earlier steps while the guest fills in the form', async () => {
+    it('counts down and hides the earlier steps while the guest fills in the form', async () => {
       vi.useFakeTimers({ shouldAdvanceTime: true })
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
       render(<WithSite><BokaBordPage /></WithSite>)
       await chooseAndFill(user)
 
       expect(screen.getByRole('timer')).toHaveTextContent('Bord 2 hålls åt dig i 15:00')
-      expect(screen.getByRole('button', { name: '18:00' })).toBeDisabled()
-      expect(screen.getByLabelText('Antal personer')).toBeDisabled()
+      expect(screen.queryByRole('button', { name: '18:00' })).toBeNull()
+      expect(screen.queryByLabelText('Antal personer')).toBeNull()
       await act(async () => {
         await vi.advanceTimersByTimeAsync(61_000)
       })
@@ -470,7 +470,7 @@ describe('BokaBordPage - why a table cannot be chosen', () => {
     expect(screen.queryByRole('button', { name: 'Bekräfta bord' })).toBeNull()
 
     // The legend and the full list of reasons are there too.
-    expect(screen.getByRole('list', { name: 'Förklaring' })).toHaveTextContent('Spärrat av restaurangen')
+    expect(screen.getByRole('list', { name: 'Förklaring' })).toHaveTextContent('Spärrat')
     expect(screen.getByText(/Varför kan jag inte välja vissa bord\? \(1\)/)).toBeInTheDocument()
 
     // Choosing a table that fits clears the explanation.

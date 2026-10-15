@@ -204,9 +204,12 @@ export default function BestallPage() {
                   const blocked = mode === 'pickup' && dish.alcohol
                   return (
                     <article className="dish-card" key={dish.menuItemId}>
-                      <div className="dish-media">
-                        <DishImage src={menuImageUrl(dish.imageKey)} alt={dish.name} />
-                      </div>
+                      {/* Utan bild: ingen tom ruta - kortet blir en kompakt rad. */}
+                      {menuImageUrl(dish.imageKey) && (
+                        <div className="dish-media">
+                          <DishImage src={menuImageUrl(dish.imageKey)} alt={dish.name} />
+                        </div>
+                      )}
                       <div className="dish-body">
                         <h3>{dish.name}</h3>
                         {dish.description && <p className="dish-desc">{dish.description}</p>}
@@ -238,10 +241,10 @@ export default function BestallPage() {
           ))}
         </div>
 
-        <aside className="order-cart" aria-label="Din beställning">
+        <aside className="order-cart" id="order-cart" aria-label="Din beställning">
           <h2>Din beställning</h2>
           {lines.length === 0 ? (
-            <p className="cart-empty">Varukorgen är tom.</p>
+            <p className="cart-empty">Tryck på Lägg till vid en rätt för att börja.</p>
           ) : (
             <ul className="cart-list">
               {lines.map(({ dish, quantity }) => (
@@ -262,8 +265,9 @@ export default function BestallPage() {
             <span>Totalt</span>
             <span>{kronor(total)}</span>
           </div>
-          <p className="cart-note">Högst {MAX_QUANTITY} av varje rätt. Priserna inkluderar moms.</p>
+          <p className="cart-note">Priserna inkluderar moms.</p>
 
+          {lines.length > 0 && (
           <form className="order-form" onSubmit={submit} noValidate>
             <label className="booking-field">
               Namn
@@ -271,7 +275,10 @@ export default function BestallPage() {
                 onChange={(e) => setGuest({ ...guest, name: e.target.value })} />
             </label>
             <label className="booking-field">
-              Mobilnummer {mode === 'pickup' ? '(sms när köket börjar och när maten är klar)' : '(sms när köket börjar)'}
+              Mobilnummer
+              <span className="field-hint">
+                {mode === 'pickup' ? 'Vi sms:ar när maten lagas och när den är klar.' : 'Vi sms:ar när maten lagas.'}
+              </span>
               <input type="tel" autoComplete="tel" placeholder="070-123 45 67" value={guest.phone}
                 onChange={(e) => setGuest({ ...guest, phone: e.target.value })} />
             </label>
@@ -289,9 +296,8 @@ export default function BestallPage() {
               <input type="checkbox" checked={guest.accept}
                 onChange={(e) => setGuest({ ...guest, accept: e.target.checked })} />
               <span>
-                Jag betalar nu med kort. Beställningen kan inte ändras efter betalningen; avbryter
-                restaurangen den återbetalas hela beloppet. Se{' '}
-                <Link to="/integritetspolicy">integritetspolicyn</Link>.
+                Jag förstår att beställningen inte kan ändras efter betalning. Avbryter restaurangen får
+                jag pengarna tillbaka. <Link to="/integritetspolicy">Integritetspolicy</Link>
               </span>
             </label>
             {turnstileSiteKey && (
@@ -313,8 +319,16 @@ export default function BestallPage() {
               {busy ? 'Skickar…' : `Betala ${kronor(total)}`}
             </button>
           </form>
+          )}
         </aside>
       </div>
+
+      {lines.length > 0 && (
+        <a className="order-mobile-bar" href="#order-cart">
+          <span>{lines.reduce((n, l) => n + l.quantity, 0)} st · {kronor(total)}</span>
+          <strong>Till kassan</strong>
+        </a>
+      )}
     </>
   )
 }

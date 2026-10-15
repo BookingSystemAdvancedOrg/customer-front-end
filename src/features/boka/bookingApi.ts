@@ -419,6 +419,16 @@ export function formatDate(date: string): string {
   }).format(new Date(Date.UTC(y, m - 1, d)))
 }
 
+/** "2026-09-20" -> "sön 20 sep" - kort etikett för datumknapparna. */
+export function formatShortDate(date: string): string {
+  const [y, m, d] = date.split('-').map(Number)
+  const parts = new Intl.DateTimeFormat('sv-SE', {
+    weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC',
+  }).formatToParts(new Date(Date.UTC(y, m - 1, d)))
+  const get = (t: string) => (parts.find((p) => p.type === t)?.value ?? '').replace('.', '')
+  return `${get('weekday')} ${get('day')} ${get('month')}`
+}
+
 /** Dagens datum (YYYY-MM-DD) i restaurangens tidszon. */
 export function todayIn(timezone: string | null | undefined, now: Date = new Date()): string {
   try {

@@ -58,9 +58,12 @@ export default function MenyPage() {
             <div className="menu-grid">
               {visible.map((dish) => (
                 <article className="dish-card" key={dish.menuItemId}>
-                  <div className="dish-media">
-                    <DishImage src={menuImageUrl(dish.imageKey)} alt={dish.name} />
-                  </div>
+                  {/* Utan bild: ingen tom ruta - kortet blir en kompakt rad. */}
+                  {menuImageUrl(dish.imageKey) && (
+                    <div className="dish-media">
+                      <DishImage src={menuImageUrl(dish.imageKey)} alt={dish.name} />
+                    </div>
+                  )}
                   <div className="dish-body">
                     <h3>{dish.name}</h3>
                     {dish.description && <p className="dish-desc">{dish.description}</p>}
