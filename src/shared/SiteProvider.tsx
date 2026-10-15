@@ -17,15 +17,31 @@ type State =
   | { status: 'unavailable' }
   | { status: 'error' }
 
+/** Text på accentfärgen: vit på mörka färger, nästan svart på ljusa (t.ex.
+ * guld) - så knappar alltid går att läsa (WCAG-kontrast). */
+export function textOn(hex: string): string {
+  const m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(hex.trim())
+  if (!m) return '#ffffff'
+  const full = m[1].length === 3 ? m[1].replace(/./g, (c) => c + c) : m[1]
+  const [r, g, b] = [0, 2, 4].map((i) => {
+    const c = parseInt(full.slice(i, i + 2), 16) / 255
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
+  })
+  const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
+  // Kontrast mot vitt (1.05/(L+0.05)) mot kontrast mot #1d1d1f (L ~ 0.012).
+  return 1.05 / (luminance + 0.05) >= (luminance + 0.05) / 0.062 ? '#ffffff' : '#1d1d1f'
+}
+
 function applyBranding(config: SiteConfig): void {
   const { branding, name } = config.tenant
   document.title = name
   const root = document.documentElement.style
+  // Restaurangens färg blir designsystemets enda accent (knappar, länkar,
+  // valda bord); hover/fokus-nyanser räknas fram ur den i index.css.
   if (branding.primaryColor) {
-    root.setProperty('--gold', branding.primaryColor)
     root.setProperty('--accent', branding.primaryColor)
+    root.setProperty('--on-accent', textOn(branding.primaryColor))
   }
-  if (branding.accentColor) root.setProperty('--gold-bright', branding.accentColor)
   if (branding.faviconUrl) {
     let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]')
     if (!link) {
