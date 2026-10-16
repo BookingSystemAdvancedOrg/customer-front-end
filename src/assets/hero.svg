@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img">
+  <!-- Dekorativ hero: dukat bord i sajtens färgpalett. -->
+  <rect width="800" height="600" rx="24" fill="#1a2b23"/>
+  <circle cx="400" cy="470" r="360" fill="#294436"/>
+  <!-- Tallrik -->
+  <circle cx="400" cy="330" r="170" fill="#faf8f5"/>
+  <circle cx="400" cy="330" r="168" fill="none" stroke="#eae6df" stroke-width="4"/>
+  <circle cx="400" cy="330" r="120" fill="#ffffff"/>
+  <circle cx="400" cy="330" r="120" fill="none" stroke="#eae6df" stroke-width="3"/>
+  <!-- Maten -->
+  <circle cx="385" cy="320" r="56" fill="#d98353"/>
+  <circle cx="432" cy="352" r="34" fill="#b2472a"/>
+  <circle cx="352" cy="362" r="24" fill="#294436"/>
+  <path d="M340 292c18-26 62-34 88-18" fill="none" stroke="#1a2b23" stroke-width="6" stroke-linecap="round"/>
+  <!-- Gaffel -->
+  <g fill="#faf8f5">
+    <rect x="176" y="300" width="10" height="150" rx="5"/>
+    <rect x="160" y="240" width="8" height="70" rx="4"/>
+    <rect x="177" y="240" width="8" height="70" rx="4"/>
+    <rect x="194" y="240" width="8" height="70" rx="4"/>
+    <rect x="160" y="288" width="42" height="20" rx="8"/>
+  </g>
+  <!-- Kniv -->
+  <g fill="#faf8f5">
+    <rect x="614" y="300" width="10" height="150" rx="5"/>
+    <path d="M610 240c0-6 8-6 18-4 6 12 6 48-4 70h-14z"/>
+  </g>
+  <!-- Ånga -->
+  <g fill="none" stroke="#d98353" stroke-width="5" stroke-linecap="round" opacity="0.85">
+    <path d="M360 150c-8 14 8 22 0 38"/>
+    <path d="M400 134c-8 14 8 22 0 38"/>
+    <path d="M440 150c-8 14 8 22 0 38"/>
+  </g>
+</svg>

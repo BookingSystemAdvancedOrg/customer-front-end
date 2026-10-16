@@ -1,0 +1,331 @@
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Link, useLocation, useParams } from 'react-router-dom'
+import QRCode from 'qrcode'
+import {
+  bankIdMessage,
+  errorMessage,
+  getRequest,
+  kronor,
+  rejectOffer,
+  requestChange,
+  signingStatus,
+  startCheckout,
+  startSigning,
+  tokenFor,
+} from './cateringApi'
+import type { GuestRequest, Line, Totals } from './cateringApi'
+
+/** BankID: frågan om status en gång i sekunden (QR-koden byts varje sekund). */
+export const SIGN_POLL_MS = 1_000
+
+const HEADLINE: Record<GuestRequest['status'], string> = {
+  requested: 'Tack! Din förfrågan är skickad.',
+  offer_sent: 'Din offert är klar',
+  change_requested: 'Restaurangen tittar på dina ändringar',
+  signed: 'Offerten är signerad',
+  confirmed: 'Din catering är bekräftad',
+  delivered: 'Levererad - tack!',
+  closed: 'Levererad - tack!',
+  declined: 'Restaurangen kunde tyvärr inte ta emot beställningen',
+  rejected: 'Du har avböjt offerten',
+  expired: 'Förfrågan har gått ut',
+  cancelled: 'Beställningen är avbokad av restaurangen',
+}
+
+function isMobile(): boolean {
+  return /android|iphone|ipad|ipod/i.test(navigator.userAgent)
+}
+
+function LinesTable({ lines, totals }: { lines: Line[]; totals: Totals }) {
+  return (
+    <>
+      <ul className="cart-list">
+        {lines.map((l, i) => (
+          <li key={i}>
+            <span className="cart-item-name">{l.quantity} × {l.name}</span>
+            <span className="cell-muted">{kronor(l.unitPrice)}</span>
+            <span className="cart-item-price">{kronor(l.unitPrice * l.quantity)}</span>
+          </li>
+        ))}
+      </ul>
+      {totals.discount > 0 && (
+        <div className="cart-total"><span>Rabatt {totals.discountPercent} %</span><span>-{kronor(totals.discount)}</span></div>
+      )}
+      {totals.deliveryFee > 0 && (
+        <div className="cart-total"><span>Leverans</span><span>{kronor(totals.deliveryFee)}</span></div>
+      )}
+      <div className="cart-total"><span>Totalt inkl. moms</span><span>{kronor(totals.total)}</span></div>
+      <p className="cart-note">varav moms 12 %: {kronor(totals.vat)}</p>
+    </>
+  )
+}
+
+/**
+ * Gästens sida för en cateringförfrågan (länken i mejl/sms:
+ * /catering/<plats>/<id>#t=<token>). Visar status och offerten, och låter
+ * gästen signera med BankID (QR-kod på en annan enhet eller BankID-appen
+ * på samma enhet), be om ändringar, avböja och - som privatperson - betala.
+ */
+export default function CateringRequestPage() {
+  const { locationId = '', requestId = '' } = useParams()
+  const { hash, search } = useLocation()
+  const [token] = useState(() => tokenFor(requestId, hash))
+  const [request, setRequest] = useState<GuestRequest | null>(null)
+  const [error, setError] = useState<string | null>(token ? null : 'Länken är ofullständig. Använd länken i ditt mejl eller sms.')
+  const [busy, setBusy] = useState(false)
+  const [signing, setSigning] = useState<{ hint?: string; qr?: string; autoStartToken?: string } | null>(null)
+  const [mode, setMode] = useState<'change' | 'reject' | null>(null)
+  const [message, setMessage] = useState('')
+  const timer = useRef<number | undefined>(undefined)
+  const params = new URLSearchParams(search)
+
+  const load = useCallback(async () => {
+    try {
+      setRequest(await getRequest(locationId, requestId, token))
+    } catch (err) {
+      setError(errorMessage(err))
+    }
+  }, [locationId, requestId, token])
+
+  useEffect(() => {
+    if (!token) return
+    let active = true
+    getRequest(locationId, requestId, token).then(
+      (r) => active && setRequest(r),
+      (err: unknown) => active && setError(errorMessage(err)),
+    )
+    return () => {
+      active = false
+      window.clearTimeout(timer.current)
+    }
+  }, [locationId, requestId, token])
+
+  // Tillbaka från betalningen: Stripe bekräftar via webhook - fråga några gånger.
+  useEffect(() => {
+    if (params.get('betalning') !== 'klar' || !request || request.status !== 'signed') return
+    const t = window.setTimeout(() => void load(), 3000)
+    return () => window.clearTimeout(t)
+  }, [request, load, search]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function showQr(data: string | undefined) {
+    if (!data) return undefined
+    try {
+      return await QRCode.toDataURL(data, { margin: 1, width: 280 })
+    } catch {
+      return undefined
+    }
+  }
+
+  async function poll() {
+    try {
+      const state = await signingStatus(locationId, requestId, token)
+      if (state.status === 'pending') {
+        setSigning((s) => ({ ...s, hint: state.hintCode }))
+        const qr = await showQr(state.qrData)
+        if (qr) setSigning((s) => (s ? { ...s, qr } : s))
+        timer.current = window.setTimeout(() => void poll(), SIGN_POLL_MS)
+        return
+      }
+      if (state.status === 'complete' && state.request) {
+        setSigning(null)
+        setRequest(state.request)
+        return
+      }
+      setSigning(null)
+      setError(state.status === 'failed' ? bankIdMessage(state.hintCode, isMobile()) : null)
+      await load()
+    } catch (err) {
+      setSigning(null)
+      setError(errorMessage(err))
+      await load()
+    }
+  }
+
+  async function sign() {
+    setError(null)
+    setBusy(true)
+    try {
+      const start = await startSigning(locationId, requestId, token)
+      setSigning({ hint: 'outstandingTransaction', qr: await showQr(start.qrData), autoStartToken: start.autoStartToken })
+      if (isMobile() && start.autoStartToken) {
+        window.location.href = `https://app.bankid.com/?autostarttoken=${start.autoStartToken}&redirect=null`
+      }
+      timer.current = window.setTimeout(() => void poll(), SIGN_POLL_MS)
+    } catch (err) {
+      setError(errorMessage(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function pay() {
+    setError(null)
+    setBusy(true)
+    try {
+      const { checkoutUrl } = await startCheckout(locationId, requestId, token)
+      window.location.assign(checkoutUrl)
+    } catch (err) {
+      setError(errorMessage(err))
+      setBusy(false)
+    }
+  }
+
+  async function send() {
+    setError(null)
+    setBusy(true)
+    try {
+      setRequest(mode === 'change'
+        ? await requestChange(locationId, requestId, token, message.trim())
+        : await rejectOffer(locationId, requestId, token, message.trim()))
+      setMode(null)
+      setMessage('')
+    } catch (err) {
+      setError(errorMessage(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <section className="booking-confirmation catering-request">
+      <h1>Catering</h1>
+      {!request && !error && <p className="notice" role="status">Hämtar förfrågan…</p>}
+      {error && <p className="notice error" role="alert">{error}</p>}
+      {request && (
+        <>
+          <p className="booking-status" aria-live="polite">{HEADLINE[request.status]}</p>
+          {request.status === 'requested' && (
+            <p className="order-hint">
+              Restaurangen går igenom förfrågan och skickar en offert till {request.customerName.split(' ')[0]} via
+              mejl och sms. Spara länken i mejlet - där kan du följa förfrågan.
+            </p>
+          )}
+          <dl className="booking-summary">
+            {request.location?.name && <div><dt>Restaurang</dt><dd>{request.location.name}</dd></div>}
+            <div><dt>Datum</dt><dd>{request.deliveryDate} kl {request.deliveryTime}</dd></div>
+            <div>
+              <dt>{request.fulfilment === 'delivery' ? 'Leverans' : 'Avhämtning'}</dt>
+              <dd>
+                {request.fulfilment === 'delivery' && request.deliveryAddress
+                  ? `${request.deliveryAddress.street}, ${request.deliveryAddress.city}`
+                  : request.location?.address ?? ''}
+              </dd>
+            </div>
+            <div><dt>Beställare</dt><dd>{request.companyName ? `${request.companyName}, ` : ''}{request.customerName}</dd></div>
+          </dl>
+
+          {request.offer && !['declined', 'expired'].includes(request.status) ? (
+            <div className="catering-offer">
+              <h2>Offert{request.offer.version > 1 ? ` (version ${request.offer.version})` : ''}</h2>
+              {request.offer.message && <p className="catering-message">”{request.offer.message}”</p>}
+              <LinesTable lines={request.offer.lines} totals={request.offer.totals} />
+              <p className="cart-note">
+                Gäller till och med {request.offer.validUntil}.
+                {request.customerType === 'company'
+                  ? ` Faktureras ${request.paymentTermsDays ?? 30} dagar netto efter signering.`
+                  : ' Betalas med kort eller Swish direkt efter signering.'}
+              </p>
+              {request.offer.terms && (
+                <details className="catering-terms">
+                  <summary>Villkor</summary>
+                  <p>{request.offer.terms}</p>
+                </details>
+              )}
+              {request.offer.documentHash && (
+                <p className="cart-note">Dokument-ID: <code>{request.offer.documentHash.slice(0, 32)}</code></p>
+              )}
+            </div>
+          ) : (
+            request.request && (
+              <div className="catering-offer">
+                <h2>Din förfrågan</h2>
+                <LinesTable lines={request.request.lines} totals={request.request} />
+              </div>
+            )
+          )}
+
+          {request.canSign && !signing && !mode && (
+            <div className="catering-actions">
+              <p>Genom att signera godkänner du offerten och villkoren. Beställningen kan sedan bara avbokas av restaurangen.</p>
+              <button type="button" className="btn-primary" disabled={busy} onClick={() => void sign()}>
+                Signera med BankID
+              </button>
+              <button type="button" className="btn-secondary" disabled={busy} onClick={() => setMode('change')}>
+                Be om ändringar
+              </button>
+              <button type="button" className="btn-secondary" disabled={busy} onClick={() => setMode('reject')}>
+                Avböj offerten
+              </button>
+            </div>
+          )}
+
+          {signing && (
+            <div className="bankid-box" role="status" aria-live="polite">
+              <p className="bankid-hint">{bankIdMessage(signing.hint, isMobile())}</p>
+              {signing.qr && !isMobile() && <img className="bankid-qr" src={signing.qr} alt="QR-kod för BankID" />}
+              {signing.autoStartToken && (
+                <a className="btn-secondary"
+                  href={isMobile()
+                    ? `https://app.bankid.com/?autostarttoken=${signing.autoStartToken}&redirect=null`
+                    : `bankid:///?autostarttoken=${signing.autoStartToken}&redirect=null`}>
+                  Öppna BankID på den här enheten
+                </a>
+              )}
+            </div>
+          )}
+
+          {mode && (
+            <div className="catering-actions" role="group" aria-label={mode === 'change' ? 'Be om ändringar' : 'Avböj offerten'}>
+              <label className="booking-field booking-field--wide">
+                {mode === 'change' ? 'Vad vill du ändra?' : 'Varför avböjer du? (valfritt)'}
+                <textarea rows={3} maxLength={1000} value={message} onChange={(e) => setMessage(e.target.value)} />
+              </label>
+              <button type="button" className="btn-primary" disabled={busy || (mode === 'change' && !message.trim())}
+                onClick={() => void send()}>
+                {mode === 'change' ? 'Skicka till restaurangen' : 'Avböj offerten'}
+              </button>
+              <button type="button" className="btn-secondary" onClick={() => setMode(null)}>Tillbaka</button>
+            </div>
+          )}
+
+          {request.status === 'change_requested' && request.changeMessage && (
+            <p className="order-hint">Du skrev: ”{request.changeMessage}”. Du får en ny offert via mejl och sms.</p>
+          )}
+          {request.signedBy && (
+            <p className="order-hint">Signerad med BankID av {request.signedBy}{request.signedAt ? ` ${request.signedAt.slice(0, 10)}` : ''}.</p>
+          )}
+          {request.canPay && (
+            <div className="catering-actions">
+              {params.get('betalning') === 'avbruten' && (
+                <p className="notice" role="status">Betalningen avbröts - inget har dragits. Signaturen gäller fortfarande.</p>
+              )}
+              <button type="button" className="btn-primary" disabled={busy} onClick={() => void pay()}>
+                Betala {request.offer ? kronor(request.offer.totals.total) : ''}
+              </button>
+            </div>
+          )}
+          {request.status === 'signed' && request.customerType === 'company' && (
+            <p className="order-hint">Fakturan skapas och skickas till din e-post.</p>
+          )}
+          {request.invoiceUrl && (
+            <p className="order-hint">
+              Faktura {request.invoiceNumber}: <a href={request.invoiceUrl} target="_blank" rel="noreferrer">visa och betala</a>
+            </p>
+          )}
+          {request.status === 'declined' && request.declineReason && <p className="order-hint">”{request.declineReason}”</p>}
+          {request.status === 'cancelled' && (
+            <p className="order-hint">
+              {request.cancelReason ? `”${request.cancelReason}” ` : ''}Det du har betalat betalas tillbaka.
+            </p>
+          )}
+          {['declined', 'rejected', 'expired'].includes(request.status) && (
+            <p className="order-hint"><Link to="/catering">Gör en ny förfrågan</Link></p>
+          )}
+          {request.location?.phoneNumber && (
+            <p className="cell-muted">Frågor? Ring {request.location.phoneNumber}{request.location.email ? ` eller mejla ${request.location.email}` : ''}.</p>
+          )}
+        </>
+      )}
+    </section>
+  )
+}

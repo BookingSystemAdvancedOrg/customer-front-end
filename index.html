@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="sv">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- Standardikonen (Booqys bok) ligger i src/assets så att Vite ger den
+         ett hashat filnamn: deployen cachar allt utom index.html i ett år.
+         En restaurang med egen ikon (branding.faviconUrl) byter den i
+         SiteProvider. -->
+    <link rel="icon" type="image/svg+xml" href="/src/assets/favicon.svg" />
+    <link rel="apple-touch-icon" href="/src/assets/apple-touch-icon.png" />
+    <meta name="theme-color" content="#f5f4f4" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      Skyddsnät: kundsajten är publik, så CSP:n låser ner vad sidan får
+      göra. connect-src: API:ts origin (sätts vid bygget) och 'self'
+      för dev-proxyn. img-src: https (restaurangernas egna logotyper och
+      bilder ligger på deras egna adresser). Externa skript och ramar
+      bara från Stripe (betalning) och challenges.cloudflare.com
+      (säkerhetskontrollen, Turnstile - utan den kan ingen boka, beställa
+      eller skicka en cateringförfrågan). Systemtypsnitt - inga
+      typsnittsanrop alls.
+      frame-ancestors kan inte sättas i en meta-tagg - sätt den som riktigt
+      svarshuvud i CloudFronts response headers policy.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' https://js.stripe.com https://*.js.stripe.com https://challenges.cloudflare.com; frame-src https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com https://challenges.cloudflare.com; connect-src 'self' %API_ORIGIN% https://api.stripe.com https://*.stripe.com; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self' mailto:"
+    />
+    <meta name="referrer" content="no-referrer" />
+    <title>Restaurang</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
