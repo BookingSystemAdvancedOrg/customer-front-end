@@ -154,3 +154,88 @@ export function specialDayRows(
   })
 }
 
+
+/* --- Öppet just nu ---------------------------------------------------------- */
+
+export interface OpenStatus {
+  open: boolean
+  /** "Öppet till 22:00" / "Öppnar 11:00" / "Öppnar tis 11:00" / "Stängt idag". */
+  text: string
+}
+
+const JS_DAY: Weekday[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+
+/** Datum, veckodag och klockslag (HH:MM) i restaurangens tidszon. */
+function zonedNow(now: Date, timeZone: string): { date: string; day: Weekday; time: string } {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(now)
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? ''
+  const wd = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(get('weekday'))
+  return { date: `${get('year')}-${get('month')}-${get('day')}`, day: JS_DAY[Math.max(0, wd)], time: `${get('hour')}:${get('minute')}` }
+}
+
+function addDays(iso: string, n: number): string {
+  const d = new Date(`${iso}T12:00:00Z`)
+  d.setUTCDate(d.getUTCDate() + n)
+  return d.toISOString().slice(0, 10)
+}
+
+/**
+ * Är platsen öppen nu, och i så fall till när - annars när den öppnar.
+ * Avvikande dagar (stängt / andra tider) går före veckoschemat. Ett pass som
+ * går över midnatt (t.ex. 18:00–02:00) räknas som öppet efter midnatt.
+ */
+export function openStatus(
+  hours: BusinessHours,
+  specialDays: { date: string; kind: 'closed' | 'hours' | 'no_online'; intervals?: DayHoursRange[] }[] = [],
+  timeZone = 'Europe/Stockholm',
+  now: Date = new Date(),
+): OpenStatus {
+  let zoned
+  try {
+    zoned = zonedNow(now, timeZone)
+  } catch {
+    zoned = zonedNow(now, 'Europe/Stockholm')
+  }
+  const special = new Map(specialDays.map((d) => [d.date, d]))
+  const rangesFor = (date: string, day: Weekday): DayHoursRange[] => {
+    const s = special.get(date)
+    if (s?.kind === 'closed') return []
+    if (s?.kind === 'hours') return s.intervals ?? []
+    return hours[day] ?? []
+  }
+  const dayIndex = JS_DAY.indexOf(zoned.day)
+  const today = rangesFor(zoned.date, zoned.day)
+  const yesterday = rangesFor(addDays(zoned.date, -1), JS_DAY[(dayIndex + 6) % 7])
+
+  // Gårdagens pass som går över midnatt.
+  for (const r of yesterday) {
+    if (r.closesAt < r.opensAt && zoned.time < r.closesAt) return { open: true, text: `Öppet till ${r.closesAt}` }
+  }
+  for (const r of today) {
+    const overnight = r.closesAt < r.opensAt
+    if (zoned.time >= r.opensAt && (overnight || zoned.time < r.closesAt)) {
+      return { open: true, text: `Öppet till ${r.closesAt}` }
+    }
+  }
+  const later = today.filter((r) => r.opensAt > zoned.time).sort((a, b) => a.opensAt.localeCompare(b.opensAt))
+  if (later.length) return { open: false, text: `Öppnar ${later[0].opensAt}` }
+  for (let n = 1; n <= 7; n++) {
+    const day = JS_DAY[(dayIndex + n) % 7]
+    const ranges = rangesFor(addDays(zoned.date, n), day)
+    if (ranges.length) {
+      const first = [...ranges].sort((a, b) => a.opensAt.localeCompare(b.opensAt))[0]
+      const when = n === 1 ? 'i morgon' : WEEKDAY_SHORT[day].toLowerCase()
+      return { open: false, text: `Öppnar ${when} ${first.opensAt}` }
+    }
+  }
+  return { open: false, text: 'Stängt' }
+}

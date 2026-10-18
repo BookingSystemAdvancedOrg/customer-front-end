@@ -2,14 +2,15 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet } from 'react-router-dom'
 import { OpeningHoursModal } from './OpeningHoursModal'
 import { useLocationInfo } from './useLocationInfo'
+import { openStatus } from './locationApi'
 import { useSite } from './SiteContext'
 import './customer.css'
+import './world.css'
 
 /**
- * Kundsajtens skal: header med vänster/höger-nav kring restaurangens
- * logotyp (eller namn), hamburgermeny under 1074px, öppettider som modal,
- * restaurangens egen bakgrundsbild (varumärkesinställningen heroImageUrl,
- * annars en neutral gradient) och en mörk footer med juridiska länkar.
+ * Kundsajtens skal: ett band i restaurangens färg med namn/logga, menyn,
+ * öppet-just-nu (öppnar öppettiderna) och platsväljare; hamburgermeny på
+ * mobil; footer med öppettider, kontakt och juridiska länkar.
  *
  * Allt innehåll kommer från GET /site-config för den här domänen - ingen
  * restaurangs uppgifter är inbyggda i sajten. Menypunkter visas bara för
@@ -84,57 +85,45 @@ export function CustomerLayout() {
     prevMenuOpen.current = menuOpen
   }, [menuOpen])
 
+  const status = openStatus(
+    current.businessHours ?? {},
+    current.specialDays ?? [],
+    current.timezone ?? 'Europe/Stockholm',
+  )
+  const NAV = [...LEFT_NAV, ...RIGHT_NAV]
+
   return (
-    <div className="landing" data-page="default">
-      {tenant.branding.heroImageUrl ? (
-        <img className="landing-bg" src={tenant.branding.heroImageUrl} alt="" aria-hidden="true" />
-      ) : (
-        <div className="landing-bg landing-bg--plain" aria-hidden="true" />
-      )}
-      <div className="landing-scrim" aria-hidden="true" />
-
-      <div className="site landing-content">
-        <header className="site-header" ref={headerRef}>
-          <div className="site-header-gutter" aria-hidden="true" />
-
-          <nav className="site-header-nav site-header-nav--left" aria-label="Huvudmeny vänster">
-            <ul>
-              {LEFT_NAV.map((item) => (
-                <li key={item.to}>
-                  <NavLink to={item.to}>{item.label}</NavLink>
-                </li>
-              ))}
-            </ul>
-          </nav>
-
+    <div className="site">
+      <header className="site-header" ref={headerRef}>
+        <div className="site-header-inner">
           <Link className="site-header-brand" to="/" aria-label={`${tenant.name} - startsida`}>
             {tenant.branding.logoUrl ? (
-              <img src={tenant.branding.logoUrl} alt="" width={72} height={72} />
-            ) : (
-              <span className="site-header-wordmark">{tenant.name}</span>
-            )}
+              <img src={tenant.branding.logoUrl} alt="" width={44} height={44} />
+            ) : null}
+            <span className="site-header-wordmark">{tenant.name}</span>
           </Link>
 
-          <nav className="site-header-nav site-header-nav--right" aria-label="Huvudmeny höger">
+          <nav className="site-header-nav" aria-label="Huvudmeny">
             <ul>
-              {RIGHT_NAV.map((item) => (
+              {NAV.map((item) => (
                 <li key={item.to}>
                   <NavLink to={item.to}>{item.label}</NavLink>
                 </li>
               ))}
-              <li>
-                <button
-                  type="button"
-                  className="site-header-dropdown-trigger"
-                  aria-expanded={hoursOpen}
-                  aria-haspopup="dialog"
-                  onClick={() => setHoursOpen(true)}
-                >
-                  Öppettider
-                </button>
-              </li>
             </ul>
           </nav>
+
+          <button
+            type="button"
+            className={`open-chip${status.open ? ' is-open' : ''}`}
+            aria-haspopup="dialog"
+            aria-expanded={hoursOpen}
+            onClick={() => setHoursOpen(true)}
+          >
+            <span className="open-chip-dot" aria-hidden="true" />
+            <span>{status.text}</span>
+            <span className="sr-only"> - visa öppettider</span>
+          </button>
 
           <button
             ref={menuBtnRef}
@@ -149,45 +138,7 @@ export function CustomerLayout() {
             <span className="site-header-burger-line" aria-hidden="true" />
             <span className="site-header-burger-line" aria-hidden="true" />
           </button>
-        </header>
-
-        <div
-          className={`mobile-drawer-backdrop${menuOpen ? ' mobile-drawer-backdrop--visible' : ''}`}
-          aria-hidden="true"
-          onClick={closeMenu}
-        />
-
-        <aside
-          id="mobile-drawer"
-          className={`mobile-drawer${menuOpen ? ' mobile-drawer--open' : ''}`}
-          aria-hidden={!menuOpen}
-        >
-          <nav aria-label="Mobilmeny">
-            <ul className="mobile-drawer-list">
-              {[...LEFT_NAV, ...RIGHT_NAV].map((item) => (
-                <li key={item.to}>
-                  <Link to={item.to} onClick={closeMenu}>
-                    {item.label}
-                  </Link>
-                </li>
-              ))}
-              <li>
-                <button
-                  type="button"
-                  className="mobile-drawer-hours-trigger"
-                  onClick={() => {
-                    closeMenu()
-                    setHoursOpen(true)
-                  }}
-                >
-                  Öppettider
-                </button>
-              </li>
-            </ul>
-          </nav>
-        </aside>
-
-        <OpeningHoursModal open={hoursOpen} onClose={() => setHoursOpen(false)} />
+        </div>
 
         {config.locations.length > 1 && (
           <div className="location-picker">
@@ -205,46 +156,86 @@ export function CustomerLayout() {
             </select>
           </div>
         )}
+      </header>
 
-        <main className="site-main">
-          <Outlet key={current.locationId} />
-        </main>
+      <div
+        className={`mobile-drawer-backdrop${menuOpen ? ' mobile-drawer-backdrop--visible' : ''}`}
+        aria-hidden="true"
+        onClick={closeMenu}
+      />
 
-        <footer className="site-footer">
-          <div className="footer-cols">
-            <div className="footer-brand">
-              <h2>{location.name}</h2>
-              {tenant.branding.tagline && <p>{tenant.branding.tagline}</p>}
-            </div>
-            <div>
-              <h3>Öppettider</h3>
-              <ul className="footer-hours">
-                {location.openingHours.map((row) => (
-                  <li key={row.days}>
-                    {row.days}: {row.hours}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <h3>Adress &amp; kontakt</h3>
-              {location.address && <p>{location.address}</p>}
-              {location.phone && <p><a href={`tel:${location.phone.replace(/[^\d+]/g, '')}`}>{location.phone}</a></p>}
-              {location.email && <p><a href={`mailto:${location.email}`}>{location.email}</a></p>}
-            </div>
+      <aside
+        id="mobile-drawer"
+        className={`mobile-drawer${menuOpen ? ' mobile-drawer--open' : ''}`}
+        aria-hidden={!menuOpen}
+      >
+        <nav aria-label="Mobilmeny">
+          <ul className="mobile-drawer-list">
+            {NAV.map((item) => (
+              <li key={item.to}>
+                <Link to={item.to} onClick={closeMenu}>
+                  {item.label}
+                </Link>
+              </li>
+            ))}
+            <li>
+              <button
+                type="button"
+                className="mobile-drawer-hours-trigger"
+                onClick={() => {
+                  closeMenu()
+                  setHoursOpen(true)
+                }}
+              >
+                Öppettider
+              </button>
+            </li>
+          </ul>
+        </nav>
+      </aside>
+
+      <OpeningHoursModal open={hoursOpen} onClose={() => setHoursOpen(false)} />
+
+      <main className="site-main">
+        <Outlet key={current.locationId} />
+      </main>
+
+      <footer className="site-footer">
+        <div className="footer-cols">
+          <div className="footer-brand">
+            <h2>{location.name}</h2>
+            {tenant.branding.tagline && <p>{tenant.branding.tagline}</p>}
           </div>
-          <div className="site-footer-main">
-            <p className="site-footer-rights">
-              © {new Date().getFullYear()} {legal.legalName}
-              {legal.orgNumber ? ` · org.nr ${legal.orgNumber}` : ''}
-            </p>
-            <nav className="site-footer-legal" aria-label="Juridiskt">
-              <Link to="/integritetspolicy">Integritetspolicy</Link>
-              {tenant.features.reservations && <Link to="/bokningsvillkor">Bokningsvillkor</Link>}
-            </nav>
+          <div>
+            <h3>Öppettider</h3>
+            <ul className="footer-hours">
+              {location.openingHours.map((row) => (
+                <li key={row.days}>
+                  <span>{row.days}</span>
+                  <span>{row.hours}</span>
+                </li>
+              ))}
+            </ul>
           </div>
-        </footer>
-      </div>
+          <div>
+            <h3>Adress &amp; kontakt</h3>
+            {location.address && <p>{location.address}</p>}
+            {location.phone && <p><a href={`tel:${location.phone.replace(/[^\d+]/g, '')}`}>{location.phone}</a></p>}
+            {location.email && <p><a href={`mailto:${location.email}`}>{location.email}</a></p>}
+          </div>
+        </div>
+        <div className="site-footer-main">
+          <p className="site-footer-rights">
+            © {new Date().getFullYear()} {legal.legalName}
+            {legal.orgNumber ? ` · org.nr ${legal.orgNumber}` : ''}
+          </p>
+          <nav className="site-footer-legal" aria-label="Juridiskt">
+            <Link to="/integritetspolicy">Integritetspolicy</Link>
+            {tenant.features.reservations && <Link to="/bokningsvillkor">Bokningsvillkor</Link>}
+          </nav>
+          <p className="site-footer-credit">Drivs av Booqy</p>
+        </div>
+      </footer>
     </div>
   )
 }

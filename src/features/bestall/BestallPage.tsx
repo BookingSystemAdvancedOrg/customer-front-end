@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { isApiConfigured } from '../../shared/api'
@@ -6,7 +6,7 @@ import { useSite } from '../../shared/SiteContext'
 import { useLocationInfo } from '../../shared/useLocationInfo'
 import { normalizePhone, validEmail } from '../boka/bookingApi'
 import { TurnstileWidget } from '../boka/TurnstileWidget'
-import { DishImage } from '../meny/DishImage'
+import { Plate } from '../../shared/Plate'
 import { CATEGORY_LABEL, getPublicMenu, groupByCategory, menuImageUrl } from '../meny/menuApi'
 import type { PublicMenuItem } from '../meny/menuApi'
 import {
@@ -119,6 +119,37 @@ export default function BestallPage() {
     })
   }
 
+  const trayRef = useRef<HTMLSpanElement>(null)
+  const barRef = useRef<HTMLAnchorElement>(null)
+
+  /** Lägg till och låt tallriken glida till beställningen (brickan). */
+  function add(id: string, from: HTMLElement) {
+    change(id, 1)
+    const plate = from.closest('.dish')?.querySelector<HTMLElement>('.plate')
+    const bar = barRef.current && barRef.current.offsetParent ? barRef.current : null
+    const target = bar ?? trayRef.current
+    if (!plate || !target || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+    const a = plate.getBoundingClientRect()
+    const b = target.getBoundingClientRect()
+    if (!a.width || !b.width) return
+    const ghost = plate.cloneNode(true) as HTMLElement
+    ghost.classList.add('plate-flying')
+    Object.assign(ghost.style, { left: `${a.left}px`, top: `${a.top}px`, width: `${a.width}px`, height: `${a.height}px` })
+    document.body.appendChild(ghost)
+    const dx = b.left + Math.min(b.width, 40) / 2 - (a.left + a.width / 2)
+    const dy = b.top + b.height / 2 - (a.top + a.height / 2)
+    const anim = ghost.animate?.(
+      [
+        { transform: 'translate(0, 0) scale(1)', opacity: 1 },
+        { transform: `translate(${dx * 0.55}px, ${dy * 0.35 - 40}px) scale(0.7)`, opacity: 1, offset: 0.5 },
+        { transform: `translate(${dx}px, ${dy}px) scale(0.28)`, opacity: 0.4 },
+      ],
+      { duration: 620, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
+    )
+    if (anim) anim.onfinish = () => ghost.remove()
+    else ghost.remove()
+  }
+
   async function submit(e: FormEvent) {
     e.preventDefault()
     setError(null)
@@ -156,13 +187,12 @@ export default function BestallPage() {
 
   return (
     <>
-      <section className="page-hero">
-        <p className="hero-kicker">{mode === 'table' ? 'Beställ till bordet' : 'Avhämtning'}</p>
-        <h1>Beställ</h1>
-        <p className="hero-sub">
+      <section className="page-head">
+        <h1>{mode === 'table' ? 'Beställ till bordet' : 'Beställ för avhämtning'}</h1>
+        <p className="page-lede">
           {mode === 'table'
-            ? `Beställ och betala här - vi serverar vid ${tableLabel ? (/^bord/i.test(tableLabel) ? tableLabel : `bord ${tableLabel}`) : 'ditt bord'}.`
-            : `Beställ och betala här, hämta hos ${config.tenant.name}. Du får ett sms när köket börjar laga den och när maten är klar.`}
+            ? `Välj, betala i mobilen - vi serverar vid ${tableLabel ? (/^bord/i.test(tableLabel) ? tableLabel : `bord ${tableLabel}`) : 'ditt bord'}.`
+            : `Välj, betala här och hämta hos ${config.tenant.name}. Du får ett sms när maten är klar.`}
         </p>
       </section>
 
@@ -195,56 +225,72 @@ export default function BestallPage() {
       <div className="order-layout">
         <div className="order-menu">
           {menu === null && <p className="notice" role="status">Hämtar menyn…</p>}
+          {groups.length > 1 && (
+            <nav className="chip-rail" aria-label="Kategorier">
+              {groups.map((g) => (
+                <a key={g.category} className="chip" href={`#bestall-${g.category}`}>
+                  {CATEGORY_LABEL[g.category]}
+                  <span className="chip-count">{g.items.length}</span>
+                </a>
+              ))}
+            </nav>
+          )}
           {groups.map((group) => (
-            <section key={group.category} aria-label={CATEGORY_LABEL[group.category]}>
-              <h2 className="menu-content-title">{CATEGORY_LABEL[group.category]}</h2>
-              <div className="menu-grid">
+            <section key={group.category} id={`bestall-${group.category}`} className="menu-section" aria-label={CATEGORY_LABEL[group.category]}>
+              <h2 className="menu-section-title">{CATEGORY_LABEL[group.category]}</h2>
+              <ul className="dish-list">
                 {group.items.map((dish) => {
                   const quantity = cart[dish.menuItemId] ?? 0
                   const blocked = mode === 'pickup' && dish.alcohol
                   return (
-                    <article className="dish-card" key={dish.menuItemId}>
-                      {/* Utan bild: ingen tom ruta - kortet blir en kompakt rad. */}
-                      {menuImageUrl(dish.imageKey) && (
-                        <div className="dish-media">
-                          <DishImage src={menuImageUrl(dish.imageKey)} alt={dish.name} />
-                        </div>
-                      )}
-                      <div className="dish-body">
-                        <h3>{dish.name}</h3>
+                    <li className={`dish dish--order${quantity ? ' is-in-cart' : ''}`} key={dish.menuItemId} data-dish={dish.menuItemId}>
+                      <Plate src={menuImageUrl(dish.imageKey)} name={dish.name} />
+                      <div className="dish-text">
+                        <h3 className="dish-name">{dish.name}</h3>
                         {dish.description && <p className="dish-desc">{dish.description}</p>}
-                        <div className="dish-foot">
-                          <span className="dish-price">{kronor(ore(dish.price))}</span>
-                          {blocked ? (
-                            <span className="order-only-table">Bara vid bordet</span>
-                          ) : quantity === 0 ? (
-                            <button type="button" className="btn small" disabled={!open}
-                              aria-label={`Lägg till ${dish.name}`} onClick={() => change(dish.menuItemId, 1)}>
-                              Lägg till
-                            </button>
-                          ) : (
-                            <span className="cart-qty" role="group" aria-label={`Antal ${dish.name}`}>
-                              <button type="button" aria-label={`En ${dish.name} mindre`}
-                                onClick={() => change(dish.menuItemId, -1)}>−</button>
-                              <span aria-live="polite">{quantity}</span>
-                              <button type="button" aria-label={`En ${dish.name} till`}
-                                disabled={quantity >= MAX_QUANTITY} onClick={() => change(dish.menuItemId, 1)}>+</button>
-                            </span>
-                          )}
-                        </div>
+                        <span className="dish-price">{kronor(ore(dish.price))}</span>
                       </div>
-                    </article>
+                      <div className="dish-action">
+                        {blocked ? (
+                          <span className="order-only-table">Bara vid bordet</span>
+                        ) : quantity === 0 ? (
+                          <button type="button" className="add-btn" disabled={!open}
+                            aria-label={`Lägg till ${dish.name}`} onClick={(e) => add(dish.menuItemId, e.currentTarget)}>
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+                          </button>
+                        ) : (
+                          <span className="stepper" role="group" aria-label={`Antal ${dish.name}`}>
+                            <button type="button" aria-label={`En ${dish.name} mindre`}
+                              onClick={() => change(dish.menuItemId, -1)}>
+                              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14" /></svg>
+                            </button>
+                            <span aria-live="polite">{quantity}</span>
+                            <button type="button" aria-label={`En ${dish.name} till`}
+                              disabled={quantity >= MAX_QUANTITY} onClick={(e) => add(dish.menuItemId, e.currentTarget)}>
+                              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+                            </button>
+                          </span>
+                        )}
+                      </div>
+                    </li>
                   )
                 })}
-              </div>
+              </ul>
             </section>
           ))}
         </div>
 
         <aside className="order-cart" id="order-cart" aria-label="Din beställning">
-          <h2>Din beställning</h2>
+          <div className="tray-head">
+            <h2>Din beställning</h2>
+            <span className="tray-plates" aria-hidden="true" ref={trayRef}>
+              {lines.slice(0, 5).map(({ dish }) => (
+                <Plate key={dish.menuItemId} src={menuImageUrl(dish.imageKey)} name={dish.name} size="sm" />
+              ))}
+            </span>
+          </div>
           {lines.length === 0 ? (
-            <p className="cart-empty">Tryck på Lägg till vid en rätt för att börja.</p>
+            <p className="cart-empty">Tryck på + vid en rätt för att lägga den här.</p>
           ) : (
             <ul className="cart-list">
               {lines.map(({ dish, quantity }) => (
@@ -324,9 +370,10 @@ export default function BestallPage() {
       </div>
 
       {lines.length > 0 && (
-        <a className="order-mobile-bar" href="#order-cart">
-          <span>{lines.reduce((n, l) => n + l.quantity, 0)} st · {kronor(total)}</span>
-          <strong>Till kassan</strong>
+        <a className="order-mobile-bar" href="#order-cart" ref={barRef}>
+          <span className="order-mobile-bar-count">{lines.reduce((n, l) => n + l.quantity, 0)}</span>
+          <strong>Visa beställning</strong>
+          <span className="order-mobile-bar-total">{kronor(total)}</span>
         </a>
       )}
     </>

@@ -608,10 +608,9 @@ export default function BokaBordPage() {
 
   return (
     <>
-      <section className="page-hero">
-        <p className="hero-kicker">{info.name}</p>
+      <section className="page-head">
         <h1>Boka bord</h1>
-        <p className="hero-sub">Tre snabba steg: när, vilken tid och vilket bord.</p>
+        <p className="page-lede">Välj hur många ni är, dag och tid - sedan ert bord. {info.name !== config.tenant.name ? info.name : ''}</p>
         {restartNotice && <p className="notice error" role="alert">{restartNotice}</p>}
       </section>
 
@@ -619,15 +618,25 @@ export default function BokaBordPage() {
         {/* När bordet hålls visas bara uppgifterna - "Byt bord" tar tillbaka stegen. */}
         {!hold && (<>
         <fieldset className="booking-step" disabled={holding}>
-          <legend>1. Hur många och vilken dag?</legend>
-          <label className="booking-field">
-            <span>Antal personer</span>
-            <select value={partySize} onChange={(e) => choosePartySize(Number(e.target.value))}>
-              {Array.from({ length: maxParty }, (_, i) => i + 1).map((n) => (
-                <option key={n} value={n}>{n} {n === 1 ? 'person' : 'personer'}</option>
-              ))}
-            </select>
-          </label>
+          <legend><span className="step-no">1</span>Hur många och när?</legend>
+          <div className="party">
+            <label className="party-label" htmlFor="party-size">Antal personer</label>
+            <div className="party-stepper">
+              <button type="button" className="party-btn" aria-label="En person färre"
+                disabled={partySize <= 1} onClick={() => choosePartySize(partySize - 1)}>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14" /></svg>
+              </button>
+              <select id="party-size" value={partySize} onChange={(e) => choosePartySize(Number(e.target.value))}>
+                {Array.from({ length: maxParty }, (_, i) => i + 1).map((n) => (
+                  <option key={n} value={n}>{n} {n === 1 ? 'person' : 'personer'}</option>
+                ))}
+              </select>
+              <button type="button" className="party-btn" aria-label="En person till"
+                disabled={partySize >= maxParty} onClick={() => choosePartySize(partySize + 1)}>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+              </button>
+            </div>
+          </div>
           <p className="cell-muted">
             Fler än {maxParty} personer? Ring {info.phone || 'restaurangen'}.
           </p>
@@ -640,13 +649,14 @@ export default function BokaBordPage() {
                 <button
                   key={d}
                   type="button"
-                  className={`filter-pill${d === date ? ' active' : ''}${mark ? ' is-special' : ''}`}
+                  className={`date-tile${d === date ? ' active' : ''}${mark ? ' is-special' : ''}`}
                   title={formatDate(d)}
                   aria-pressed={d === date}
                   onClick={() => chooseDate(d)}
                 >
-                  {d === today ? 'Idag' : formatShortDate(d)}
-                  {mark && <span className="pill-note"> · {mark}</span>}
+                  <span className="date-tile-wd">{d === today ? 'Idag' : formatShortDate(d).split(' ')[0]}</span>
+                  <span className="date-tile-day">{Number(d.slice(8, 10))}</span>
+                  {mark ? <span className="pill-note">{mark}</span> : <span className="date-tile-mon">{formatShortDate(d).split(' ').slice(2).join(' ') || ''}</span>}
                 </button>
               )
             })}
@@ -654,7 +664,7 @@ export default function BokaBordPage() {
         </fieldset>
 
         <fieldset className="booking-step" disabled={holding}>
-          <legend>2. Välj tid</legend>
+          <legend><span className="step-no">2</span>Välj tid</legend>
           {loadingSlots && <p className="notice" role="status">Hämtar lediga tider…</p>}
           {slotsError && <p className="notice error" role="alert">{slotsError}</p>}
           {!loadingSlots && dayText && <p className="notice" role="status">{dayText}</p>}
@@ -681,7 +691,7 @@ export default function BokaBordPage() {
 
         {slot && (
           <fieldset className="booking-step" disabled={holding}>
-            <legend>3. Välj bord</legend>
+            <legend><span className="step-no">3</span>Välj ert bord</legend>
             <p className="cell-muted">
               Tryck på ett ledigt bord. Grå bord går inte att välja - tryck på dem för att se varför.
             </p>
@@ -711,6 +721,7 @@ export default function BokaBordPage() {
                   <>
                     <FloorPlanSvg
                       group={activeFloor}
+                      ghosts={(floors ?? []).filter((g) => g !== activeFloor)}
                       free={free}
                       selected={selected}
                       onToggle={pickTable}
@@ -786,7 +797,7 @@ export default function BokaBordPage() {
 
         {hold && (
           <fieldset className="booking-step">
-            <legend>4. Dina uppgifter</legend>
+            <legend><span className="step-no">4</span>Dina uppgifter</legend>
             <div className="booking-grid">
               <label className="booking-field">
                 <span>Namn</span>

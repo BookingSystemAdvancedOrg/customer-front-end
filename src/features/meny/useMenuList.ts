@@ -53,5 +53,5 @@ export function useMenuList() {
     .slice()
     .sort((a, b) => a.name.localeCompare(b.name, 'sv'))
 
-  return { configured, loading, error, filter, setFilter, visible }
+  return { configured, loading, error, filter, setFilter, visible, items }
 }
