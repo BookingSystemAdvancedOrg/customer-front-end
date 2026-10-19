@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, NavLink, Outlet } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { OpeningHoursModal } from './OpeningHoursModal'
 import { useLocationInfo } from './useLocationInfo'
 import { openStatus } from './locationApi'
 import { useSite } from './SiteContext'
+import { trackPage } from './visits'
 import './customer.css'
 import './world.css'
 
@@ -44,6 +45,14 @@ export function CustomerLayout() {
   ]
 
   const closeMenu = () => setMenuOpen(false)
+
+  // Besöksstatistik utan cookies (shared/visits.ts), bara med
+  // marknadsföring i planen.
+  const { pathname } = useLocation()
+  const marketing = tenant.features.marketing
+  useEffect(() => {
+    if (marketing) trackPage(current.locationId, pathname)
+  }, [marketing, current.locationId, pathname])
 
   // Headern är sticky men dess höjd är flytande (clamp() i CSS) - mäter den
   // på riktigt i stället för att gissa ett pixelvärde, så att t.ex.

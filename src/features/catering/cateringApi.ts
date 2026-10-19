@@ -1,4 +1,5 @@
 import { apiGet, apiPost, ApiError } from '../../shared/api'
+import { withAttribution } from '../../shared/visits'
 import { CATERING_TOKEN_PREFIX } from '../../shared/storageRegistry'
 
 /**
@@ -145,7 +146,7 @@ export function createRequest(
   locationId: string,
   input: RequestInput,
 ): Promise<{ requestId: string; locationId: string; token: string }> {
-  return apiPost(`${loc(locationId)}/requests`, input)
+  return apiPost(`${loc(locationId)}/requests`, withAttribution(input))
 }
 
 export function getRequest(locationId: string, requestId: string, token: string): Promise<GuestRequest> {

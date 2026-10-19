@@ -44,9 +44,19 @@ export default function PrivacyPage() {
           e-post och/eller ditt telefonnummer (avtal).
         </li>
         <li>
-          <strong>Erbjudanden:</strong> bara om du har kryssat i det. Du kan när som helst ta tillbaka ditt
-          samtycke (rättslig grund: samtycke).
+          <strong>Erbjudanden:</strong> bara om du har kryssat i det. Vi sparar då ditt namn, din e-post och
+          när du senast besökte oss, för att skicka nyheter och erbjudanden via e-post. Varje utskick har en
+          länk för att avsluta prenumerationen, och du kan när som helst ta tillbaka ditt samtycke (rättslig
+          grund: samtycke). Vi ser om du klickar på en länk i ett utskick, men inte om du öppnar det.
         </li>
+        {tenant.features?.marketing && (
+          <li>
+            <strong>Besöksstatistik:</strong> vi räknar hur många som besöker webbplatsen per dag och varifrån
+            de kom (t.ex. Google, Instagram eller ett nyhetsbrev, men bara sajtens namn, aldrig adressen du var på). Inget sparas i din webbläsare och varken din
+            IP-adress eller något id kopplat till dig sparas, så statistiken kan inte spåras till dig
+            (rättslig grund: berättigat intresse).
+          </li>
+        )}
         <li>
           <strong>Allergier och liknande</strong> som du själv skriver i meddelandet används bara för att
           förbereda ditt besök.

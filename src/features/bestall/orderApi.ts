@@ -1,4 +1,5 @@
 import { apiGet, apiPost, ApiError } from '../../shared/api'
+import { withAttribution } from '../../shared/visits'
 import { CART_KEY_PREFIX, ORDER_TOKEN_PREFIX, TABLE_KEY } from '../../shared/storageRegistry'
 
 /**
@@ -82,7 +83,7 @@ export function getOrdering(locationId: string, tableCode?: string | null): Prom
 }
 
 export function createOrder(request: OrderRequest): Promise<OrderCreated> {
-  return apiPost<OrderCreated>('/order', request)
+  return apiPost<OrderCreated>('/order', withAttribution(request))
 }
 
 export function getOrder(locationId: string, orderId: string, token: string): Promise<GuestOrder> {

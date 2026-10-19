@@ -109,4 +109,12 @@ export const STORAGE_REGISTRY: readonly StorageEntry[] = [
     category: 'nödvändig',
     where: 'Bordsbokning',
   },
+  {
+    name: 'Besöksstatistik',
+    kind: 'ingen',
+    setBy: 'Webbplatsen',
+    purpose: 'Räknar sidvisningar per dag och var besökare kom ifrån (t.ex. Google eller ett nyhetsbrev), så att restaurangen ser vad som ger bokningar. Sparar ingenting i din webbläsare, inget besökar-id och ingen IP-adress.',
+    lifetime: '-',
+    category: 'nödvändig',
+  },
 ]
