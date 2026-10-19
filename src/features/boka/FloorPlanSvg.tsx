@@ -1,7 +1,7 @@
 import { labelTables, layoutViewBox } from '../../shared/layoutApi'
 import type { FloorGroup, LayoutElement, LayoutTableElement } from '../../shared/layoutApi'
-import { tableBadge } from './bookingApi'
 import type { TableUnavailable } from './bookingApi'
+import { tableChoice } from './tableState'
 
 /** Stolar runt ett bord, sett ovanifrån: längs långsidorna på ett
  * rektangulärt bord (och kortsidorna när det behövs), jämnt runt ett runt. */
@@ -42,14 +42,6 @@ function chairs(el: LayoutTableElement): { x: number; z: number; rot: number }[]
     out.push(long ? { x: el.x + u, z: el.z, rot: sign > 0 ? 90 : 270 } : { x: el.x, z: el.z + u, rot: sign > 0 ? 180 : 0 })
   }
   return out
-}
-
-/** Utseende per anledning: bokat/spärrat är upptaget, resten passar inte sällskapet. */
-function stateClass(u: TableUnavailable | undefined): string {
-  if (!u) return ' is-taken'
-  if (u.reason === 'booked') return ' is-booked'
-  if (u.reason === 'blocked') return ' is-blocked'
-  return ' is-unfit'
 }
 
 /**
@@ -124,16 +116,12 @@ export function FloorPlanSvg({
 
   function table(el: LayoutTableElement) {
     const label = labels.get(el.elementId) ?? '?'
-    const isFree = free ? free.has(el.elementId) : true
-    const isSelected = selected?.has(el.elementId) ?? false
-    const why = isFree ? undefined : unavailable?.get(el.elementId)
-    const selectable = Boolean(free && onToggle && isFree)
-    const explainable = Boolean(free && !isFree && onExplain)
-    const interactive = selectable || explainable
+    const { selectable, explainable, interactive, isSelected, state, badge, title } = tableChoice({
+      tableId: el.elementId, label, seats: el.seats, free, selected, unavailable,
+      canToggle: Boolean(onToggle), canExplain: Boolean(onExplain),
+    })
     const act = () => (selectable ? onToggle?.(el.elementId) : onExplain?.(el.elementId))
     const transform = el.rotationY ? `rotate(${el.rotationY} ${el.x} ${el.z})` : undefined
-    const state = !free ? '' : isSelected ? ' is-selected' : isFree ? ' is-free' : stateClass(why)
-    const badge = !free || isFree ? `${el.seats} pl` : why ? tableBadge(why) : 'Ej ledigt'
     const shape =
       el.shape === 'round' ? (
         <circle className={`floor-svg-table${state}`} cx={el.x} cy={el.z} r={Math.max(el.width, el.depth) / 2} />
@@ -148,8 +136,6 @@ export function FloorPlanSvg({
           transform={transform}
         />
       )
-    const status = !free ? '' : isFree ? (isSelected ? ', valt' : ', ledigt') : `, går inte att välja: ${badge.toLowerCase()}`
-    const title = `Bord ${label}, ${el.seats} platser${status}`
     const seatsAround = chairs(el)
     return (
       <g

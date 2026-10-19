@@ -1533,6 +1533,57 @@
   stroke-width: 0.08;
 }
 
+/* Bordsval i 3D: samma färger som 2D-planen ovan, på skivan och sidorna. */
+.f3d-pick {
+  cursor: pointer;
+  outline: none;
+}
+
+.f3d-explain {
+  cursor: help;
+  outline: none;
+}
+
+.f3d-table.is-free .f3d-table-top {
+  background: color-mix(in srgb, var(--gold) 35%, #ffffff);
+  border-color: var(--gold);
+}
+
+.f3d-table.is-selected .f3d-table-top {
+  background: var(--gold);
+  border: 2px solid var(--gold-bright);
+}
+
+.f3d-table.is-booked .f3d-table-top {
+  background: color-mix(in srgb, var(--muted) 30%, #ffffff);
+  border-color: color-mix(in srgb, var(--muted) 60%, transparent);
+}
+
+.f3d-table.is-blocked .f3d-table-top {
+  background: color-mix(in srgb, var(--danger) 22%, #ffffff);
+  border: 1px dashed var(--danger);
+}
+
+.f3d-table.is-unfit .f3d-table-top {
+  background: color-mix(in srgb, var(--ink) 8%, #ffffff);
+  border: 1px dashed color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.f3d-table.is-taken {
+  opacity: 0.35;
+}
+
+.f3d-table.is-free .f3d-table-face:not(.ring),
+.f3d-table.is-selected .f3d-table-face:not(.ring) {
+  background: color-mix(in srgb, var(--gold) 55%, #d8d8dc);
+}
+
+.f3d-pick:focus-visible .f3d-table-top,
+.f3d-explain:focus-visible .f3d-table-top {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
 /* --- Textsidor (integritetspolicy, villkor, om oss) ---------------------- */
 
 .page-prose {

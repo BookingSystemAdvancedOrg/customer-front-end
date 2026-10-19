@@ -158,7 +158,8 @@ export default function BokaBordPage() {
   const [tableInfo, setTableInfo] = useState<string | null>(null)
   const [floors, setFloors] = useState<FloorGroup[] | null>(null)
   const [floorId, setFloorId] = useState<string | null>(null)
-  const [view, setView] = useState<'2d' | '3d'>('2d')
+  // 3D först: det är så gästen känner igen lokalen. 2D finns kvar en knapp bort.
+  const [view, setView] = useState<'2d' | '3d'>('3d')
   const [guest, setGuest] = useState<Guest>(EMPTY_GUEST)
   const [formError, setFormError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -718,21 +719,26 @@ export default function BokaBordPage() {
                   <button type="button" className={view === '3d' ? 'active' : ''} aria-pressed={view === '3d'} onClick={() => setView('3d')}>3D</button>
                 </div>
                 {view === '2d' ? (
-                  <>
-                    <FloorPlanSvg
-                      group={activeFloor}
-                      ghosts={(floors ?? []).filter((g) => g !== activeFloor)}
-                      free={free}
-                      selected={selected}
-                      onToggle={pickTable}
-                      unavailable={unavailable}
-                      onExplain={explainTable}
-                    />
-                    <FloorLegend />
-                  </>
+                  <FloorPlanSvg
+                    group={activeFloor}
+                    ghosts={(floors ?? []).filter((g) => g !== activeFloor)}
+                    free={free}
+                    selected={selected}
+                    onToggle={pickTable}
+                    unavailable={unavailable}
+                    onExplain={explainTable}
+                  />
                 ) : (
-                  <FloorPlan3D group={activeFloor} />
+                  <FloorPlan3D
+                    group={activeFloor}
+                    free={free}
+                    selected={selected}
+                    onToggle={pickTable}
+                    unavailable={unavailable}
+                    onExplain={explainTable}
+                  />
                 )}
+                <FloorLegend />
               </>
             )}
             {tableInfo && <p className="notice table-info" role="status">{tableInfo}</p>}
