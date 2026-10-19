@@ -27,6 +27,8 @@ import {
   tableCodeFrom,
 } from './orderApi'
 import type { Cart, OrderMode, OrderingState } from './orderApi'
+import { checkCode, codeErrorMessage, discounted, normalizeCode } from '../erbjudande/offerApi'
+import type { CodeTerms } from '../erbjudande/offerApi'
 
 interface Guest {
   name: string
@@ -34,9 +36,10 @@ interface Guest {
   email: string
   notes: string
   accept: boolean
+  offers: boolean
 }
 
-const EMPTY_GUEST: Guest = { name: '', phone: '', email: '', notes: '', accept: false }
+const EMPTY_GUEST: Guest = { name: '', phone: '', email: '', notes: '', accept: false, offers: false }
 
 function guestError(g: Guest): string | null {
   if (!g.name.trim()) return 'Fyll i ditt namn.'
@@ -78,6 +81,13 @@ export default function BestallPage() {
   const turnstileSiteKey = config.turnstile?.siteKey ?? null
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
   const [turnstileReset, setTurnstileReset] = useState(0)
+  const marketing = Boolean(config.tenant.features.marketing)
+  // Rabattkoden: från länken i mejlet (?kod=) eller inskriven.
+  const [codeInput, setCodeInput] = useState(() => new URLSearchParams(search).get('kod') ?? '')
+  const [code, setCode] = useState<CodeTerms | null>(null)
+  const [codeError, setCodeError] = useState<string | null>(null)
+  const [codeBusy, setCodeBusy] = useState(false)
+  const [codeOpen, setCodeOpen] = useState(() => Boolean(new URLSearchParams(search).get('kod')))
 
   useEffect(() => {
     if (!isApiConfigured()) return
@@ -101,9 +111,15 @@ export default function BestallPage() {
     .map(([id, quantity]) => ({ dish: byId.get(id), quantity }))
     .filter((l): l is { dish: PublicMenuItem; quantity: number } =>
       Boolean(l.dish) && !(mode === 'pickup' && l.dish!.alcohol))
-  const total = lines.reduce((sum, l) => sum + ore(l.dish.price) * l.quantity, 0)
+  const subtotal = lines.reduce((sum, l) => sum + ore(l.dish.price) * l.quantity, 0)
+  const belowMin = Boolean(code && subtotal < code.minOrderOre)
+  const applied = code && !belowMin ? code : null
+  const total = applied
+    ? lines.reduce((sum, l) => sum + discounted(ore(l.dish.price), applied.percent) * l.quantity, 0)
+    : subtotal
   const groups = groupByCategory(menu ?? [])
-  const tooLarge = total > MAX_ORDER_ORE
+  // Servern prövar beloppet före rabatten.
+  const tooLarge = subtotal > MAX_ORDER_ORE
   const open = Boolean(ordering?.open && ordering[mode])
   const tableLabel = ordering?.forTable?.label
 
@@ -150,6 +166,33 @@ export default function BestallPage() {
     else ghost.remove()
   }
 
+  async function applyCode(value = codeInput) {
+    setCodeError(null)
+    const normalized = normalizeCode(value)
+    if (!normalized) {
+      setCode(null)
+      return setCodeError('Koden ska se ut som ABCD-EFGH.')
+    }
+    setCodeBusy(true)
+    try {
+      setCode(await checkCode(locationId, normalized))
+      setCodeInput(normalized)
+    } catch (err) {
+      setCode(null)
+      setCodeError(codeErrorMessage(err))
+    } finally {
+      setCodeBusy(false)
+    }
+  }
+
+  // En kod från mejlets länk kontrolleras direkt.
+  const fromLink = useRef(codeInput)
+  useEffect(() => {
+    if (marketing && fromLink.current) void applyCode(fromLink.current)
+    fromLink.current = ''
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [marketing])
+
   async function submit(e: FormEvent) {
     e.preventDefault()
     setError(null)
@@ -171,12 +214,15 @@ export default function BestallPage() {
         language: 'sv',
         acceptTerms: true,
         ...(turnstileToken ? { turnstileToken } : {}),
+        ...(applied ? { discountCode: applied.code } : {}),
+        ...(marketing && guest.offers ? { marketingOptIn: true } : {}),
       })
       rememberToken(created.orderId, created.statusToken)
       clearCart(locationId)
       window.location.assign(created.checkoutUrl)
     } catch (err) {
       setError(orderErrorMessage(err))
+      if (err instanceof Error && /^discount_/.test(err.message)) setCode(null)
       if (turnstileSiteKey) {
         setTurnstileToken(null)
         setTurnstileReset((n) => n + 1)
@@ -307,10 +353,48 @@ export default function BestallPage() {
               ))}
             </ul>
           )}
+          {applied && (
+            <div className="cart-discount">
+              <span>Rabatt {applied.percent} % ({applied.code})</span>
+              <span>-{kronor(subtotal - total)}</span>
+            </div>
+          )}
           <div className="cart-total">
             <span>Totalt</span>
-            <span>{kronor(total)}</span>
+            <span>
+              {applied && <s className="cart-total-before">{kronor(subtotal)}</s>} {kronor(total)}
+            </span>
           </div>
+          {marketing && lines.length > 0 && (
+            <div className="cart-code">
+              {!codeOpen && !code ? (
+                <button type="button" className="link-button" onClick={() => setCodeOpen(true)}>
+                  Har du en rabattkod?
+                </button>
+              ) : code ? (
+                <p className="cart-code-ok" role="status">
+                  {belowMin
+                    ? `Koden gäller från ${kronor(code.minOrderOre)}. Lägg till för ${kronor(code.minOrderOre - subtotal)} till.`
+                    : `Koden ${code.code} ger ${code.percent} % rabatt.`}{' '}
+                  <button type="button" className="link-button" onClick={() => { setCode(null); setCodeInput('') }}>
+                    Ta bort
+                  </button>
+                </p>
+              ) : (
+                <div className="cart-code-row">
+                  <label className="sr-only" htmlFor="order-code">Rabattkod</label>
+                  <input id="order-code" autoComplete="off" autoCapitalize="characters" placeholder="ABCD-EFGH"
+                    value={codeInput} maxLength={12} onChange={(e) => setCodeInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void applyCode() } }} />
+                  <button type="button" className="btn-secondary" disabled={codeBusy || !codeInput.trim()}
+                    onClick={() => void applyCode()}>
+                    {codeBusy ? 'Kollar…' : 'Använd'}
+                  </button>
+                </div>
+              )}
+              {codeError && <p className="field-hint error" role="alert">{codeError}</p>}
+            </div>
+          )}
           <p className="cart-note">Priserna inkluderar moms.</p>
 
           {lines.length > 0 && (
@@ -346,6 +430,13 @@ export default function BestallPage() {
                 jag pengarna tillbaka. <Link to="/integritetspolicy">Integritetspolicy</Link>
               </span>
             </label>
+            {marketing && (
+              <label className="booking-check">
+                <input type="checkbox" checked={guest.offers}
+                  onChange={(e) => setGuest({ ...guest, offers: e.target.checked })} />
+                <span>Skicka mig erbjudanden och nyheter från {config.tenant.name} via e-post (valfritt).</span>
+              </label>
+            )}
             {turnstileSiteKey && (
               <TurnstileWidget siteKey={turnstileSiteKey} resetKey={turnstileReset} action="order"
                 onToken={setTurnstileToken} />

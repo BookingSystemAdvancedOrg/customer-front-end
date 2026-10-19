@@ -36,6 +36,7 @@ export const CART_KEY_PREFIX = 'order-cart:'
 export const TABLE_KEY = 'order-table-code'
 export const ORDER_TOKEN_PREFIX = 'order-token:'
 export const CATERING_TOKEN_PREFIX = 'catering-token:'
+export const OFFER_CARD_KEY = 'offer-card'
 
 export const STORAGE_REGISTRY: readonly StorageEntry[] = [
   {
@@ -108,6 +109,15 @@ export const STORAGE_REGISTRY: readonly StorageEntry[] = [
     lifetime: '-',
     category: 'nödvändig',
     where: 'Bordsbokning',
+  },
+  {
+    name: OFFER_CARD_KEY,
+    kind: 'sessionStorage',
+    setBy: 'Webbplatsen',
+    purpose: 'Att du har stängt eller tagit välkomsterbjudandet, så att det inte visas igen under besöket. Sparas bara när du själv gör något av det.',
+    lifetime: 'Tills fliken stängs',
+    category: 'nödvändig',
+    where: 'Välkomsterbjudande',
   },
   {
     name: 'Besöksstatistik',

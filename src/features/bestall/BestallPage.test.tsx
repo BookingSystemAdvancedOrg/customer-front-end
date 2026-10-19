@@ -167,3 +167,49 @@ describe('BestallPage', () => {
     expect(await within(cart).findByText('3 × Margherita')).toBeInTheDocument()
   })
 })
+
+describe('BestallPage discount code', () => {
+  function marketingConfig() {
+    const c = config()
+    c.tenant.features = { ...c.tenant.features, marketing: true }
+    return c
+  }
+
+  it('applies the code from the email link and sends it with the order', async () => {
+    const user = userEvent.setup()
+    const base = fetchMock.getMockImplementation() as (url: string, init?: RequestInit) => Promise<Response>
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (String(url).endsWith('/m/code')) {
+        return json({ code: 'ABCD-EFGH', percent: 10, minOrderOre: 0, expiresAt: '2026-11-18T10:00:00Z' })
+      }
+      return base(url, init)
+    })
+    render(<WithSite config={marketingConfig()} path="/bestall?kod=abcdefgh"><BestallPage /></WithSite>)
+    await user.click(await screen.findByRole('button', { name: 'Lägg till Margherita' }))
+    const cart = screen.getByRole('complementary', { name: 'Din beställning' })
+    expect(await within(cart).findByText('Rabatt 10 % (ABCD-EFGH)')).toBeInTheDocument()
+    expect(within(cart).getByText('-12,50 kr')).toBeInTheDocument()
+    await user.type(screen.getByLabelText('Namn'), 'Anna')
+    await user.type(screen.getByLabelText(/Mobilnummer/), '070-123 45 67')
+    await user.type(screen.getByLabelText('E-post (kvitto)'), 'anna@example.se')
+    await user.click(screen.getByRole('checkbox', { name: /inte kan ändras/ }))
+    await user.click(screen.getByRole('checkbox', { name: /Skicka mig erbjudanden/ }))
+    await user.click(screen.getByRole('button', { name: 'Betala 112,50 kr' }))
+    expect(postedOrder()).toMatchObject({ discountCode: 'ABCD-EFGH', marketingOptIn: true })
+  })
+
+  it('explains a code that cannot be used', async () => {
+    const user = userEvent.setup()
+    const base = fetchMock.getMockImplementation() as (url: string, init?: RequestInit) => Promise<Response>
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (String(url).endsWith('/m/code')) return json({ error: 'discount_used' }, 409)
+      return base(url, init)
+    })
+    render(<WithSite config={marketingConfig()} path="/bestall"><BestallPage /></WithSite>)
+    await user.click(await screen.findByRole('button', { name: 'Lägg till Margherita' }))
+    await user.click(screen.getByRole('button', { name: 'Har du en rabattkod?' }))
+    await user.type(screen.getByLabelText('Rabattkod'), 'abcd-efgh')
+    await user.click(screen.getByRole('button', { name: 'Använd' }))
+    expect(await screen.findByText('Koden är redan använd.')).toBeInTheDocument()
+  })
+})

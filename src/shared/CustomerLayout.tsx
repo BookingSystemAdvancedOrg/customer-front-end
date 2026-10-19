@@ -5,6 +5,7 @@ import { useLocationInfo } from './useLocationInfo'
 import { openStatus } from './locationApi'
 import { useSite } from './SiteContext'
 import { trackPage } from './visits'
+import { OfferCard } from '../features/erbjudande/OfferCard'
 import './customer.css'
 import './world.css'
 
@@ -208,6 +209,8 @@ export function CustomerLayout() {
       <main className="site-main">
         <Outlet key={current.locationId} />
       </main>
+
+      {marketing && <OfferCard key={current.locationId} />}
 
       <footer className="site-footer">
         <div className="footer-cols">

@@ -50,10 +50,13 @@ export function TurnstileWidget({
   resetKey,
   onToken,
   action = 'booking',
+  appearance = 'always',
 }: {
   siteKey: string
   /** Formuläret widgeten sitter på - servern godtar bara rätt sort. */
-  action?: 'booking' | 'order' | 'catering'
+  action?: 'booking' | 'order' | 'catering' | 'signup'
+  /** 'interaction-only': syns bara om Cloudflare behöver fråga besökaren. */
+  appearance?: 'always' | 'interaction-only'
   /** Ändras efter varje bokningsförsök - den gamla token är förbrukad. */
   resetKey: number
   onToken: (token: string | null) => void
@@ -78,6 +81,7 @@ export function TurnstileWidget({
           action,
           language: 'sv',
           'refresh-expired': 'auto',
+          appearance,
           callback: (token: string) => onTokenRef.current(token),
           'expired-callback': () => onTokenRef.current(null),
           'error-callback': () => onTokenRef.current(null),
@@ -94,7 +98,7 @@ export function TurnstileWidget({
       // Widgetens token följer inte med till nästa gång den visas.
       onTokenRef.current(null)
     }
-  }, [siteKey, action])
+  }, [siteKey, action, appearance])
 
   useEffect(() => {
     if (lastReset.current === resetKey) return

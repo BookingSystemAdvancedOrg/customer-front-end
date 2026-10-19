@@ -47,6 +47,10 @@ export interface OrderRequest {
   language: 'sv'
   acceptTerms: true
   turnstileToken?: string
+  /** Välkomsterbjudandets kod (ABCD-EFGH). */
+  discountCode?: string
+  /** Gästen kryssade i "skicka mig erbjudanden". */
+  marketingOptIn?: boolean
 }
 
 export interface OrderCreated {
@@ -67,6 +71,8 @@ export interface GuestOrder {
   tableLabel?: string
   lines: { menuItemId: string; name: string; unitPrice: number; quantity: number; total: number; vatRate: number }[]
   totalAmount: number
+  /** Rabattkod (raderna är redan rabatterade). */
+  discount?: { code: string; percent: number; amount: number }
   vat?: { rate: number; gross: number; net: number; vat: number }[]
   customerName?: string
   confirmedAt?: string
@@ -220,6 +226,11 @@ const ORDER_ERRORS: Record<string, string> = {
   'order total must be more than 0 kr': 'Varukorgen är tom. Lägg till en rätt först.',
   'items must be a non-empty list': 'Varukorgen är tom. Lägg till en rätt först.',
   'acceptTerms must be true': 'Godkänn villkoren för att betala.',
+  discount_invalid: 'Rabattkoden känns inte igen. Kontrollera den i mejlet.',
+  discount_expired: 'Rabattkoden har gått ut.',
+  discount_used: 'Rabattkoden är redan använd.',
+  discount_min_order: 'Beställningen är under minsta beloppet för rabattkoden.',
+  discount_other_email: 'Rabattkoden gäller bara med e-postadressen den skickades till.',
 }
 
 export function orderErrorMessage(err: unknown): string {

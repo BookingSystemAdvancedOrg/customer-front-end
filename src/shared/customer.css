@@ -249,6 +249,80 @@
   padding-top: 10px;
 }
 
+/* Rabattkoden i varukorgen. */
+.cart-discount {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+  font-size: 15px;
+  color: var(--success);
+}
+
+.cart-total-before {
+  margin-right: 4px;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.cart-code {
+  margin-top: 10px;
+}
+
+.cart-code-row {
+  display: flex;
+  gap: 8px;
+}
+
+.cart-code-row input {
+  flex: 1;
+  min-width: 0;
+  min-height: 42px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--fill);
+  font: inherit;
+  font-size: 15px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.cart-code-row input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--focus);
+}
+
+.cart-code-ok {
+  margin: 0;
+  font-size: 14px;
+  color: var(--success);
+}
+
+.link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent-ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.link-button:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.field-hint.error {
+  margin: 6px 0 0;
+  color: var(--danger-ink);
+}
+
 .cart-note {
   color: var(--muted);
   font-size: 13px;

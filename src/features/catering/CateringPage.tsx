@@ -38,12 +38,13 @@ interface Form {
   guests: string
   notes: string
   accept: boolean
+  offers: boolean
 }
 
 const EMPTY: Form = {
   customerType: 'private', name: '', email: '', phone: '', companyName: '', orgNumber: '', invoiceReference: '',
   deliveryDate: '', deliveryTime: '12:00', fulfilment: 'delivery', deliveryZone: 'within', street: '', postalCode: '',
-  city: '', guests: '', notes: '', accept: false,
+  city: '', guests: '', notes: '', accept: false, offers: false,
 }
 
 function check(form: Form, portions: number, settings: CateringSettings): string | null {
@@ -151,6 +152,7 @@ export default function CateringPage() {
         acceptTerms: true,
         language: 'sv',
         ...(turnstileToken ? { turnstileToken } : {}),
+        ...(config.tenant.features.marketing && form.offers ? { marketingOptIn: true } : {}),
       })
       rememberToken(created.requestId, created.token)
       navigate(`/catering/${created.locationId}/${created.requestId}?skickad=1`)
@@ -376,6 +378,12 @@ export default function CateringPage() {
               <Link to="/integritetspolicy">integritetspolicyn</Link>.
             </span>
           </label>
+          {config.tenant.features.marketing && (
+            <label className="booking-check">
+              <input type="checkbox" checked={form.offers} onChange={(e) => set('offers', e.target.checked)} />
+              <span>Skicka mig erbjudanden och nyheter från {config.tenant.name} via e-post (valfritt).</span>
+            </label>
+          )}
           {turnstileSiteKey && (
             <TurnstileWidget siteKey={turnstileSiteKey} resetKey={turnstileReset} action="catering"
               onToken={setTurnstileToken} />

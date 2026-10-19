@@ -106,6 +106,23 @@ export function trackPage(locationId: string, path: string): void {
   }
 }
 
+/** Välkomsterbjudandets kort visades (räknas på erbjudandet, inte som besök). */
+export function trackOfferView(locationId: string): void {
+  if (!isApiConfigured() || !locationId) return
+  try {
+    void fetch(`${API_BASE_URL}/t`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ locationId, type: 'offer' }),
+      credentials: 'omit',
+      referrerPolicy: 'no-referrer',
+      keepalive: true,
+    }).catch(() => undefined)
+  } catch {
+    // ingen statistik den här gången
+  }
+}
+
 /** Endast för tester. */
 export function resetVisitsForTests(): void {
   attribution = null

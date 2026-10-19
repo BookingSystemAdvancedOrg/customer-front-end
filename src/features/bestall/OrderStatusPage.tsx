@@ -143,6 +143,12 @@ export default function OrderStatusPage() {
               </li>
             ))}
           </ul>
+          {order.discount && (
+            <div className="cart-discount">
+              <span>Rabatt {order.discount.percent} % ({order.discount.code})</span>
+              <span>-{kronor(order.discount.amount)}</span>
+            </div>
+          )}
           <div className="cart-total">
             <span>Totalt</span>
             <span>{kronor(order.totalAmount)}</span>

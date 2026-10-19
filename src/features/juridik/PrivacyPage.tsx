@@ -44,7 +44,8 @@ export default function PrivacyPage() {
           e-post och/eller ditt telefonnummer (avtal).
         </li>
         <li>
-          <strong>Erbjudanden:</strong> bara om du har kryssat i det. Vi sparar då ditt namn, din e-post och
+          <strong>Erbjudanden:</strong> bara om du har kryssat i det när du bokat, beställt eller skickat en
+          cateringförfrågan, eller anmält dig till vårt välkomsterbjudande. Vi sparar då ditt namn, din e-post och
           när du senast besökte oss, för att skicka nyheter och erbjudanden via e-post. Varje utskick har en
           länk för att avsluta prenumerationen, och du kan när som helst ta tillbaka ditt samtycke (rättslig
           grund: samtycke). Vi ser om du klickar på en länk i ett utskick, men inte om du öppnar det.

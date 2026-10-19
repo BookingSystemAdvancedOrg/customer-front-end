@@ -119,6 +119,8 @@ export interface RequestInput {
   acceptTerms: true
   language: 'sv'
   turnstileToken?: string
+  /** Gästen kryssade i "skicka mig erbjudanden". */
+  marketingOptIn?: boolean
 }
 
 export interface SignState {
