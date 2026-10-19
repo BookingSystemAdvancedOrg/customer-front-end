@@ -79,7 +79,7 @@ describe('BestallPage', () => {
     await user.click(screen.getByRole('button', { name: 'Betala 285,50 kr' }))
     expect(postedOrder()).toEqual({
       locationId: 'loc-1', mode: 'pickup', items: [{ menuItemId: 'pizza', quantity: 2 }, { menuItemId: 'cola', quantity: 1 }],
-      name: 'Anna', phone: '070-123 45 67', email: 'anna@example.se', language: 'sv', acceptTerms: true,
+      name: 'Anna', phone: '+46701234567', email: 'anna@example.se', language: 'sv', acceptTerms: true,
     })
     expect(assign).toHaveBeenCalledWith('https://checkout.stripe.com/x')
     expect(sessionStorage.getItem(`order-token:${'o'.repeat(32)}`)).toBe('tok')

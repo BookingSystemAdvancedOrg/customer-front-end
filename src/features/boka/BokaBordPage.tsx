@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useSite } from '../../shared/SiteContext'
+import { PhoneInput } from '../../shared/PhoneInput'
 import { useLocationInfo } from '../../shared/useLocationInfo'
 import { getPublicActiveLayout, groupElementsByFloor, labelTables } from '../../shared/layoutApi'
 import type { FloorGroup, LayoutTableElement } from '../../shared/layoutApi'
@@ -815,7 +816,7 @@ export default function BokaBordPage() {
               </label>
               <label className="booking-field">
                 <span>Telefon</span>
-                <input type="tel" autoComplete="tel" placeholder="070-123 45 67" value={guest.phone} onChange={(e) => setGuest({ ...guest, phone: e.target.value })} />
+                <PhoneInput value={guest.phone} onChange={(phone) => setGuest({ ...guest, phone })} />
               </label>
               <label className="booking-field booking-field--wide">
                 <span>Meddelande till restaurangen (valfritt)</span>

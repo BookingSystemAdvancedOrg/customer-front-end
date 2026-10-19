@@ -4,6 +4,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { isApiConfigured } from '../../shared/api'
 import { useSite } from '../../shared/SiteContext'
 import { useLocationInfo } from '../../shared/useLocationInfo'
+import { PhoneInput } from '../../shared/PhoneInput'
 import { normalizePhone, validEmail } from '../boka/bookingApi'
 import { TurnstileWidget } from '../boka/TurnstileWidget'
 import { Plate } from '../../shared/Plate'
@@ -409,8 +410,7 @@ export default function BestallPage() {
               <span className="field-hint">
                 {mode === 'pickup' ? 'Vi sms:ar när maten lagas och när den är klar.' : 'Vi sms:ar när maten lagas.'}
               </span>
-              <input type="tel" autoComplete="tel" placeholder="070-123 45 67" value={guest.phone}
-                onChange={(e) => setGuest({ ...guest, phone: e.target.value })} />
+              <PhoneInput value={guest.phone} onChange={(phone) => setGuest({ ...guest, phone })} />
             </label>
             <label className="booking-field">
               E-post (kvitto)

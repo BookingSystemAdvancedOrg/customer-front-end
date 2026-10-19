@@ -114,7 +114,7 @@ describe('BokaBordPage', () => {
     const [post] = posts('/reservations')
     expect(JSON.parse(post[1].body)).toMatchObject({
       startTime: '18:00', tableIds: ['table-b'], partySize: 3, name: 'Anna', holdId: 'h'.repeat(32),
-      email: 'anna@example.se', phone: '0701234567', acceptTerms: true, marketingOptIn: false,
+      email: 'anna@example.se', phone: '+46701234567', acceptTerms: true, marketingOptIn: false,
     })
     expect((post[1].headers as Record<string, string>)['X-Manage-Token']).toBe('tok123')
     expect(screen.getByRole('link', { name: /\/bokning\/loc-1\/r1#tok123$/ })).toBeInTheDocument()

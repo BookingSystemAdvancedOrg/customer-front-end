@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { isApiConfigured } from '../../shared/api'
 import { useSite } from '../../shared/SiteContext'
+import { PhoneInput } from '../../shared/PhoneInput'
 import { normalizePhone, validEmail } from '../boka/bookingApi'
 import { TurnstileWidget } from '../boka/TurnstileWidget'
 import { CATEGORY_LABEL, getPublicMenu, groupByCategory } from '../meny/menuApi'
@@ -327,8 +328,7 @@ export default function CateringPage() {
               </label>
               <label className="booking-field">
                 Mobilnummer
-                <input type="tel" autoComplete="tel" placeholder="070-123 45 67" value={form.phone}
-                  onChange={(e) => set('phone', e.target.value)} />
+                <PhoneInput value={form.phone} onChange={(v) => set('phone', v)} />
               </label>
               <label className="booking-field booking-field--wide">
                 Önskemål, allergier, servering (valfritt)
