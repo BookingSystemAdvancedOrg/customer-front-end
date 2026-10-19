@@ -1533,7 +1533,8 @@
   stroke-width: 0.08;
 }
 
-/* Bordsval i 3D: samma färger som 2D-planen ovan, på skivan och sidorna. */
+/* Bordsval i 3D: samma färger som 2D-planen ovan (grått ledigt, rött bokat,
+   grönt ditt val), på skivan och sidorna. */
 .f3d-pick {
   cursor: pointer;
   outline: none;
@@ -1545,37 +1546,53 @@
 }
 
 .f3d-table.is-free .f3d-table-top {
-  background: color-mix(in srgb, var(--gold) 35%, #ffffff);
-  border-color: var(--gold);
+  background: color-mix(in srgb, var(--muted) 45%, #ffffff);
+  border-color: var(--muted);
 }
 
 .f3d-table.is-selected .f3d-table-top {
-  background: var(--gold);
-  border: 2px solid var(--gold-bright);
+  background: var(--success);
+  border: 2px solid color-mix(in srgb, var(--success) 70%, var(--ink));
 }
 
 .f3d-table.is-booked .f3d-table-top {
-  background: color-mix(in srgb, var(--muted) 30%, #ffffff);
-  border-color: color-mix(in srgb, var(--muted) 60%, transparent);
+  background: color-mix(in srgb, var(--danger) 30%, #ffffff);
+  border-color: var(--danger);
 }
 
 .f3d-table.is-blocked .f3d-table-top {
-  background: color-mix(in srgb, var(--danger) 22%, #ffffff);
+  background: color-mix(in srgb, var(--danger) 14%, #ffffff);
   border: 1px dashed var(--danger);
 }
 
 .f3d-table.is-unfit .f3d-table-top {
-  background: color-mix(in srgb, var(--ink) 8%, #ffffff);
-  border: 1px dashed color-mix(in srgb, var(--accent) 45%, transparent);
+  background: #ffffff;
+  border: 1px dashed color-mix(in srgb, var(--muted) 55%, transparent);
 }
 
-.f3d-table.is-taken {
-  opacity: 0.35;
+/* Ej ledigt utan känd anledning räknas som bokat (rött). */
+.f3d-table.is-taken .f3d-table-top {
+  background: color-mix(in srgb, var(--danger) 30%, #ffffff);
+  border-color: var(--danger);
 }
 
-.f3d-table.is-free .f3d-table-face:not(.ring),
+.f3d-table.is-free .f3d-table-face:not(.ring) {
+  background: color-mix(in srgb, var(--muted) 45%, #d8d8dc);
+}
+
 .f3d-table.is-selected .f3d-table-face:not(.ring) {
-  background: color-mix(in srgb, var(--gold) 55%, #d8d8dc);
+  background: color-mix(in srgb, var(--success) 75%, var(--ink));
+}
+
+.f3d-table.is-booked .f3d-table-face:not(.ring),
+.f3d-table.is-taken .f3d-table-face:not(.ring) {
+  background: color-mix(in srgb, var(--danger) 45%, #d8d8dc);
+}
+
+/* Vit text på det gröna, valda bordet - mörk text på grönt läses dåligt. */
+.f3d-table.is-selected .f3d-table-label,
+.f3d-table.is-selected .f3d-table-seats {
+  color: #ffffff;
 }
 
 .f3d-pick:focus-visible .f3d-table-top,

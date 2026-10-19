@@ -1508,39 +1508,49 @@ svg {
   stroke-width: 0.03;
 }
 
+/* Bordens färger (ägarens val, samma i 3D och förklaringen):
+   grått = ledigt, rött = bokat, grönt = ditt val. Spärrat är rött och
+   streckat; fel storlek bara en streckad kontur. Medvetet inte
+   restaurangens --accent: färgerna ska betyda samma sak på alla sajter. */
 .floor-svg-table.is-free {
-  fill: var(--surface);
-  stroke: var(--accent);
+  fill: color-mix(in srgb, var(--muted) 22%, var(--surface));
+  stroke: var(--muted);
   stroke-width: 0.07;
 }
 
 .floor-svg-chairs.is-free .floor-svg-chair {
-  stroke: color-mix(in srgb, var(--accent) 60%, transparent);
+  stroke: color-mix(in srgb, var(--muted) 60%, transparent);
 }
 
 .floor-svg-table.is-selected {
-  fill: var(--accent);
-  stroke: var(--accent-active);
+  fill: var(--success);
+  stroke: color-mix(in srgb, var(--success) 70%, var(--ink));
   stroke-width: 0.06;
 }
 
 .floor-svg-chairs.is-selected .floor-svg-chair {
-  fill: color-mix(in srgb, var(--accent) 30%, var(--surface));
-  stroke: var(--accent);
+  fill: color-mix(in srgb, var(--success) 30%, var(--surface));
+  stroke: var(--success);
 }
 
 .floor-svg-table.is-booked,
 .floor-svg-table.is-blocked,
 .floor-svg-table.is-taken {
-  fill: color-mix(in srgb, var(--ink) 14%, var(--table));
-  stroke: transparent;
+  fill: color-mix(in srgb, var(--danger) 28%, var(--table));
+  stroke: var(--danger);
+  stroke-width: 0.04;
   filter: none;
+}
+
+.floor-svg-table.is-blocked {
+  fill: color-mix(in srgb, var(--danger) 14%, var(--table));
+  stroke-dasharray: 0.12 0.08;
 }
 
 .floor-svg-chairs.is-booked .floor-svg-chair,
 .floor-svg-chairs.is-blocked .floor-svg-chair,
 .floor-svg-chairs.is-taken .floor-svg-chair {
-  fill: color-mix(in srgb, var(--ink) 10%, var(--table));
+  fill: color-mix(in srgb, var(--danger) 14%, var(--table));
   stroke: transparent;
 }
 
@@ -1568,7 +1578,7 @@ svg {
 
 .floor-svg-pick .floor-svg-table.is-selected ~ .floor-svg-table-label,
 .floor-svg-pick .floor-svg-table.is-selected ~ .floor-svg-table-seats {
-  fill: var(--on-accent);
+  fill: #ffffff;
 }
 
 .floor-svg-pick,
@@ -1577,7 +1587,7 @@ svg {
 }
 
 .floor-svg-pick:hover .floor-svg-table.is-free {
-  fill: var(--accent-soft);
+  fill: color-mix(in srgb, var(--muted) 34%, var(--surface));
 }
 
 .floor-svg-pick:focus-visible {
@@ -1615,18 +1625,25 @@ svg {
 }
 
 .floor-legend-swatch.is-free {
-  box-shadow: inset 0 0 0 2px var(--accent);
+  background: color-mix(in srgb, var(--muted) 22%, var(--surface));
+  box-shadow: inset 0 0 0 2px var(--muted);
 }
 
 .floor-legend-swatch.is-selected {
-  background: var(--accent);
+  background: var(--success);
   box-shadow: none;
 }
 
-.floor-legend-swatch.is-booked,
+.floor-legend-swatch.is-booked {
+  background: color-mix(in srgb, var(--danger) 28%, var(--table));
+  box-shadow: inset 0 0 0 1.5px var(--danger);
+}
+
 .floor-legend-swatch.is-blocked {
-  background: color-mix(in srgb, var(--ink) 14%, var(--table));
+  background: color-mix(in srgb, var(--danger) 14%, var(--table));
   box-shadow: none;
+  outline: 1.5px dashed var(--danger);
+  outline-offset: -2px;
 }
 
 .floor-legend-swatch.is-unfit {
