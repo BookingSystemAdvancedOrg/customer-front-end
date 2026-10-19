@@ -1783,6 +1783,14 @@ svg {
 .site-footer-credit {
   margin-left: auto;
   color: rgba(255, 255, 255, 0.5);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.site-footer-booqy {
+  display: block;
+  color: rgba(255, 255, 255, 0.85);
 }
 
 @media (max-width: 760px) {

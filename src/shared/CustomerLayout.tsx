@@ -8,6 +8,7 @@ import { trackPage } from './visits'
 import { OfferCard } from '../features/erbjudande/OfferCard'
 import './customer.css'
 import './world.css'
+import { BooqyWordmark } from './BooqyWordmark'
 
 /**
  * Kundsajtens skal: ett band i restaurangens färg med namn/logga, menyn,
@@ -245,7 +246,7 @@ export function CustomerLayout() {
             <Link to="/integritetspolicy">Integritetspolicy</Link>
             {tenant.features.reservations && <Link to="/bokningsvillkor">Bokningsvillkor</Link>}
           </nav>
-          <p className="site-footer-credit">Drivs av Booqy</p>
+          <p className="site-footer-credit">Drivs av <BooqyWordmark className="site-footer-booqy" /></p>
         </div>
       </footer>
     </div>
