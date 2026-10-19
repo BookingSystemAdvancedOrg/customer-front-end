@@ -5,47 +5,47 @@ import type { FloorGroup, LayoutElement, LayoutTableElement } from '../../shared
 
 /**
  * 3D-vy av planritningen (Figma-förlaga: admin-front-ends layout-editor,
- * samma "utfälld låda"-teknik i CSS — väggar och bord byggs av roterade
+ * samma "utfälld låda"-teknik i CSS - väggar och bord byggs av roterade
  * sidoytor + ett tak i en scen med perspective + rotateX(tilt)
  * rotateZ(spin)). Skrivskyddad kopia: ingen redigering, bara dra i scenen
- * för att rotera vyn (samma 0.4×deltaX-känsla som admins handverktyg) —
+ * för att rotera vyn (samma 0.4×deltaX-känsla som admins handverktyg) -
  * ingen zoom, varken via mus-hjul eller knappar, bara rotation.
  *
  * Skalan är stiliserad, inte fysiskt korrekt: väggarnas/bordens HÖJD är en
  * fast pixelkonstant (som i admin) eftersom API:t inte behöver returnera en
- * höjd som ser bra ut i en 3D-scen — bara golvplanets x/z är skalenligt.
+ * höjd som ser bra ut i en 3D-scen - bara golvplanets x/z är skalenligt.
  *
- * OBS: Kassan och skillnaden entré/kök syns aldrig här — inte en bugg i den
+ * OBS: Kassan och skillnaden entré/kök syns aldrig här - inte en bugg i den
  * här komponenten, utan att `GET /locations/{id}/layout/active` (och
  * admin-front-ends `LayoutElement`-modell i botten) aldrig lagrar dem alls.
  * Kassan finns bara lokalt i adminens webbläsare (localStorage), och en
  * dörr sparas bara som generisk "door" utan kök/entré-flagga. Se
  * backend-tasken om att lägga till en fixture-typ och ett kind-fält på
- * dörren — tills dess finns det inget för den här sidan att rita.
+ * dörren - tills dess finns det inget för den här sidan att rita.
  */
 
 const SCALE = 42
 const WALL_HEIGHT_PX = 90
-/** Sockelhöjd för väggen som vetter mot kameran — samma idé som admins WALL_LOW. */
+/** Sockelhöjd för väggen som vetter mot kameran - samma idé som admins WALL_LOW. */
 const WALL_LOW_PX = 16
 const TABLE_HEIGHT_PX = 26
 const TILT_DEG = 55
 /** Marginal runt innehållet (i pixlar, samma skala som SCALE) vid auto-fit. */
 const FIT_PADDING = 60
 
-/** Vågrät om rotationen ligger närmare 0° än 90° (modulo 180°) — samma regel som admin. */
+/** Vågrät om rotationen ligger närmare 0° än 90° (modulo 180°) - samma regel som admin. */
 function isHorizontal(rotationY: number): boolean {
   const a = ((rotationY % 180) + 180) % 180
   return a < 45 || a >= 135
 }
 
 /**
- * Sänker väggen som är vänd mot kameran, så bordet bakom den inte skyms —
+ * Sänker väggen som är vänd mot kameran, så bordet bakom den inte skyms -
  * samma princip som admins `isLowered`. Adminens egen variant testar mot en
  * ritad markyta (vilken sida av väggen är "inne i rummet"); den finns aldrig
  * i den publika layouten (grounds/fixtures lagras bara lokalt i admins
  * webbläsare, se docblocken ovan), så den här varianten använder rummets
- * geometriska mittpunkt (från layoutViewBox) i stället — väggens sida som
+ * geometriska mittpunkt (från layoutViewBox) i stället - väggens sida som
  * vetter BORT från mitten är dess utsida, och om den utsidan pekar mot
  * kameran (samma riktning som `viewDir`, som roterar med `spin`) ska den
  * sänkas.
@@ -62,7 +62,7 @@ function isFacingCamera(
   const towardCenterX = originX - el.x
   const towardCenterZ = originZ - el.z
   if (nx * towardCenterX + nz * towardCenterZ > 0) {
-    // Kandidatriktningen pekade mot mitten — vänd den så den pekar utåt.
+    // Kandidatriktningen pekade mot mitten - vänd den så den pekar utåt.
     nx = -nx
     nz = -nz
   }

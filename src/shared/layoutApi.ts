@@ -178,7 +178,7 @@ export function groupElementsByFloor(layout: PublicActiveLayout): FloorGroup[] {
  * => ...T${i + 1})`) - INTE sorterat på `elementId`. Numret finns inte som
  * ett eget fält i API:t, men openapi.yaml garanterar att `elements` kommer i
  * "stored snapshot order", så att räkna i den ordningen (utan att sortera om
- * den) ger samma nummer på samma fysiska bord här som i admin — annars visar
+ * den) ger samma nummer på samma fysiska bord här som i admin - annars visar
  * kund och personal olika nummer för samma bord. Har bordet en egen etikett
  * (`label`) används den - admin gör likadant (admin shared/tables.ts).
  */

@@ -1,4 +1,5 @@
 import { apiGet, apiPost, ApiError } from '../../shared/api'
+import { CATERING_TOKEN_PREFIX } from '../../shared/storageRegistry'
 
 /**
  * Catering för gäster (backend: catering-settings, catering-discount-tiers,
@@ -173,7 +174,7 @@ export function rejectOffer(locationId: string, requestId: string, token: string
 
 // --- token i fliken -------------------------------------------------------------------
 
-const tokenKey = (requestId: string) => `catering-token:${requestId}`
+const tokenKey = (requestId: string) => `${CATERING_TOKEN_PREFIX}${requestId}`
 
 export function rememberToken(requestId: string, token: string): void {
   try {

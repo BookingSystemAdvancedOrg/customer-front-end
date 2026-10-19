@@ -471,7 +471,7 @@
 /* --- 3D-vy (Figma-förlaga: admin-front-ends layout-editor, samma
    "utfälld låda"-teknik i CSS: väggar/bord byggs av roterade sidoytor +
    ett tak, i en scen med perspective + rotateX(tilt) rotateZ(spin)).
-   Bara läsning här — ingen redigering, bara dra för att rotera vyn. ------- */
+   Bara läsning här - ingen redigering, bara dra för att rotera vyn. ------- */
 
 .floor-view-toggle {
   display: inline-flex;
@@ -1935,4 +1935,88 @@
 
 .segmented label:has(input:focus-visible) {
   box-shadow: 0 0 0 4px var(--focus);
+}
+
+/* Integritetspolicyns tabell över cookies och lagring (PrivacyPage.tsx). */
+.storage-table-wrap {
+  overflow-x: auto;
+  margin: 12px 0 16px;
+}
+
+.storage-table {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: collapse;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.storage-table th {
+  text-align: left;
+  font-weight: 700;
+  padding: 0 12px 8px 0;
+  border-bottom: 2px solid var(--line, #d9d4c8);
+}
+
+.storage-table td {
+  padding: 10px 12px 10px 0;
+  border-bottom: 1px solid var(--line, #d9d4c8);
+  vertical-align: top;
+}
+
+.storage-table code {
+  font-size: 12.5px;
+  overflow-wrap: anywhere;
+}
+
+.storage-kind {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--muted, #57504d);
+}
+
+.storage-where {
+  color: var(--muted, #57504d);
+}
+
+/* Telefon: varje rad blir ett eget kort i stället för en bred tabell. */
+@media (max-width: 600px) {
+  .storage-table {
+    min-width: 0;
+  }
+
+  .storage-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .storage-table tr {
+    display: block;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--line, #d9d4c8);
+  }
+
+  .storage-table td {
+    display: block;
+    padding: 2px 0;
+    border: 0;
+  }
+
+  .storage-table td:nth-child(3),
+  .storage-table td:nth-child(4) {
+    font-size: 13px;
+    color: var(--muted, #57504d);
+  }
+
+  .storage-table td:nth-child(3)::before {
+    content: 'Sätts av: ';
+  }
+
+  .storage-table td:nth-child(4)::before {
+    content: 'Sparas: ';
+  }
 }

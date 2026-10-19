@@ -1,4 +1,5 @@
 import { apiGet, apiPost, ApiError } from '../../shared/api'
+import { CART_KEY_PREFIX, ORDER_TOKEN_PREFIX, TABLE_KEY } from '../../shared/storageRegistry'
 
 /**
  * Matbeställning (backend payment-intent / get-order, docs/ORDERS.md).
@@ -92,7 +93,7 @@ export function getOrder(locationId: string, orderId: string, token: string): Pr
 
 // --- status token: kvar i fliken mellan beställning och Stripes retur ---------
 
-const tokenKey = (orderId: string) => `order-token:${orderId}`
+const tokenKey = (orderId: string) => `${ORDER_TOKEN_PREFIX}${orderId}`
 
 export function rememberToken(orderId: string, token: string): void {
   try {
@@ -114,7 +115,7 @@ export function recallToken(orderId: string): string | null {
 
 export type Cart = Record<string, number>
 
-const cartKey = (locationId: string) => `order-cart:${locationId}`
+const cartKey = (locationId: string) => `${CART_KEY_PREFIX}${locationId}`
 
 export function loadCart(locationId: string): Cart {
   try {
@@ -153,7 +154,6 @@ export function stepQuantity(current: number, delta: number): number {
 
 // --- QR-kod: bordet gästen sitter vid (behålls i fliken) ---------------------
 
-const TABLE_KEY = 'order-table-code'
 
 export function tableCodeFrom(search: string): string | null {
   const fromUrl = new URLSearchParams(search).get('bord')

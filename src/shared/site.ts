@@ -1,5 +1,6 @@
 import { apiGet } from './api'
 import type { BusinessHours } from './locationApi'
+import { LOCATION_KEY_PREFIX, SLUG_KEY } from './storageRegistry'
 
 /**
  * Vilken restaurang är det här?
@@ -84,7 +85,7 @@ export interface SiteConfig {
 }
 
 const SLUG_PARAM = 'restaurang'
-const SLUG_STORAGE_KEY = 'site-tenant-slug'
+const SLUG_STORAGE_KEY = SLUG_KEY
 const SLUG_PATTERN = /^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/
 
 /** localhost / *.cloudfront.net / IP: domänen säger inget om restaurangen. */
@@ -136,7 +137,7 @@ export function getSiteConfig(query: string): Promise<SiteConfig> {
 }
 
 // Vald plats minns per restaurang (bara bekvämlighet - servern äger listan).
-const locationKey = (tenantId: string) => `site-location:${tenantId}`
+const locationKey = (tenantId: string) => `${LOCATION_KEY_PREFIX}${tenantId}`
 
 export function pickLocation(config: SiteConfig, preferred: string | null): SiteLocation | null {
   return (
