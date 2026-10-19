@@ -1,4 +1,13 @@
 import { useSite } from '../../shared/SiteContext'
+import { STORAGE_REGISTRY } from '../../shared/storageRegistry'
+import type { StorageKind } from '../../shared/storageRegistry'
+
+const KIND_LABEL: Record<StorageKind, string> = {
+  cookie: 'Cookie',
+  localStorage: 'Lokal lagring',
+  sessionStorage: 'Sessionslagring',
+  ingen: 'Ingen lagring',
+}
 
 /**
  * Integritetspolicy för restaurangens gäster. Restaurangen är
@@ -35,9 +44,20 @@ export default function PrivacyPage() {
           e-post och/eller ditt telefonnummer (avtal).
         </li>
         <li>
-          <strong>Erbjudanden:</strong> bara om du har kryssat i det. Du kan när som helst ta tillbaka ditt
-          samtycke (rättslig grund: samtycke).
+          <strong>Erbjudanden:</strong> bara om du har kryssat i det när du bokat, beställt eller skickat en
+          cateringförfrågan, eller anmält dig till vårt välkomsterbjudande. Vi sparar då ditt namn, din e-post och
+          när du senast besökte oss, för att skicka nyheter och erbjudanden via e-post. Varje utskick har en
+          länk för att avsluta prenumerationen, och du kan när som helst ta tillbaka ditt samtycke (rättslig
+          grund: samtycke). Vi ser om du klickar på en länk i ett utskick, men inte om du öppnar det.
         </li>
+        {tenant.features?.marketing && (
+          <li>
+            <strong>Besöksstatistik:</strong> vi räknar hur många som besöker webbplatsen per dag och varifrån
+            de kom (t.ex. Google, Instagram eller ett nyhetsbrev, men bara sajtens namn, aldrig adressen du var på). Inget sparas i din webbläsare och varken din
+            IP-adress eller något id kopplat till dig sparas, så statistiken kan inte spåras till dig
+            (rättslig grund: berättigat intresse).
+          </li>
+        )}
         <li>
           <strong>Allergier och liknande</strong> som du själv skriver i meddelandet används bara för att
           förbereda ditt besök.
@@ -58,10 +78,43 @@ export default function PrivacyPage() {
         aldrig dina uppgifter.
       </p>
 
-      <h2>Cookies och lagring</h2>
+      <h2 id="cookies">Cookies och lagring</h2>
       <p>
-        Webbplatsen använder inga spårnings- eller reklamcookies. Den sparar bara vilken av våra
-        restauranger du har valt i din webbläsare, för att sidan ska fungera.
+        Webbplatsen använder inga cookies för statistik, spårning eller reklam. Det som sparas i din
+        webbläsare behövs för det du själv gör här (välja plats, beställa, boka, betala), och därför
+        frågar vi inte om samtycke. Så här ser det ut:
+      </p>
+      <div className="storage-table-wrap">
+        <table className="storage-table">
+          <thead>
+            <tr>
+              <th scope="col">Namn</th>
+              <th scope="col">Vad det gör</th>
+              <th scope="col">Sätts av</th>
+              <th scope="col">Sparas</th>
+            </tr>
+          </thead>
+          <tbody>
+            {STORAGE_REGISTRY.map((entry) => (
+              <tr key={entry.name}>
+                <td>
+                  <code>{entry.name}</code>
+                  <span className="storage-kind">{KIND_LABEL[entry.kind]}</span>
+                </td>
+                <td>
+                  {entry.purpose}
+                  {entry.where ? <span className="storage-where"> ({entry.where})</span> : null}
+                </td>
+                <td>{entry.setBy}</td>
+                <td>{entry.lifetime}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p>
+        Du kan rensa allt detta i webbläsarens inställningar. Då glöms bara vald plats och en
+        eventuell varukorg; inget annat på sajten påverkas.
       </p>
 
       <h2>Dina rättigheter</h2>

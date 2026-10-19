@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { isApiConfigured } from '../../shared/api'
@@ -6,7 +6,7 @@ import { useSite } from '../../shared/SiteContext'
 import { useLocationInfo } from '../../shared/useLocationInfo'
 import { normalizePhone, validEmail } from '../boka/bookingApi'
 import { TurnstileWidget } from '../boka/TurnstileWidget'
-import { DishImage } from '../meny/DishImage'
+import { Plate } from '../../shared/Plate'
 import { CATEGORY_LABEL, getPublicMenu, groupByCategory, menuImageUrl } from '../meny/menuApi'
 import type { PublicMenuItem } from '../meny/menuApi'
 import {
@@ -27,6 +27,8 @@ import {
   tableCodeFrom,
 } from './orderApi'
 import type { Cart, OrderMode, OrderingState } from './orderApi'
+import { checkCode, codeErrorMessage, discounted, normalizeCode } from '../erbjudande/offerApi'
+import type { CodeTerms } from '../erbjudande/offerApi'
 
 interface Guest {
   name: string
@@ -34,9 +36,10 @@ interface Guest {
   email: string
   notes: string
   accept: boolean
+  offers: boolean
 }
 
-const EMPTY_GUEST: Guest = { name: '', phone: '', email: '', notes: '', accept: false }
+const EMPTY_GUEST: Guest = { name: '', phone: '', email: '', notes: '', accept: false, offers: false }
 
 function guestError(g: Guest): string | null {
   if (!g.name.trim()) return 'Fyll i ditt namn.'
@@ -78,6 +81,13 @@ export default function BestallPage() {
   const turnstileSiteKey = config.turnstile?.siteKey ?? null
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
   const [turnstileReset, setTurnstileReset] = useState(0)
+  const marketing = Boolean(config.tenant.features.marketing)
+  // Rabattkoden: från länken i mejlet (?kod=) eller inskriven.
+  const [codeInput, setCodeInput] = useState(() => new URLSearchParams(search).get('kod') ?? '')
+  const [code, setCode] = useState<CodeTerms | null>(null)
+  const [codeError, setCodeError] = useState<string | null>(null)
+  const [codeBusy, setCodeBusy] = useState(false)
+  const [codeOpen, setCodeOpen] = useState(() => Boolean(new URLSearchParams(search).get('kod')))
 
   useEffect(() => {
     if (!isApiConfigured()) return
@@ -101,9 +111,15 @@ export default function BestallPage() {
     .map(([id, quantity]) => ({ dish: byId.get(id), quantity }))
     .filter((l): l is { dish: PublicMenuItem; quantity: number } =>
       Boolean(l.dish) && !(mode === 'pickup' && l.dish!.alcohol))
-  const total = lines.reduce((sum, l) => sum + ore(l.dish.price) * l.quantity, 0)
+  const subtotal = lines.reduce((sum, l) => sum + ore(l.dish.price) * l.quantity, 0)
+  const belowMin = Boolean(code && subtotal < code.minOrderOre)
+  const applied = code && !belowMin ? code : null
+  const total = applied
+    ? lines.reduce((sum, l) => sum + discounted(ore(l.dish.price), applied.percent) * l.quantity, 0)
+    : subtotal
   const groups = groupByCategory(menu ?? [])
-  const tooLarge = total > MAX_ORDER_ORE
+  // Servern prövar beloppet före rabatten.
+  const tooLarge = subtotal > MAX_ORDER_ORE
   const open = Boolean(ordering?.open && ordering[mode])
   const tableLabel = ordering?.forTable?.label
 
@@ -118,6 +134,64 @@ export default function BestallPage() {
       return next
     })
   }
+
+  const trayRef = useRef<HTMLSpanElement>(null)
+  const barRef = useRef<HTMLAnchorElement>(null)
+
+  /** Lägg till och låt tallriken glida till beställningen (brickan). */
+  function add(id: string, from: HTMLElement) {
+    change(id, 1)
+    const plate = from.closest('.dish')?.querySelector<HTMLElement>('.plate')
+    const bar = barRef.current && barRef.current.offsetParent ? barRef.current : null
+    const target = bar ?? trayRef.current
+    if (!plate || !target || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+    const a = plate.getBoundingClientRect()
+    const b = target.getBoundingClientRect()
+    if (!a.width || !b.width) return
+    const ghost = plate.cloneNode(true) as HTMLElement
+    ghost.classList.add('plate-flying')
+    Object.assign(ghost.style, { left: `${a.left}px`, top: `${a.top}px`, width: `${a.width}px`, height: `${a.height}px` })
+    document.body.appendChild(ghost)
+    const dx = b.left + Math.min(b.width, 40) / 2 - (a.left + a.width / 2)
+    const dy = b.top + b.height / 2 - (a.top + a.height / 2)
+    const anim = ghost.animate?.(
+      [
+        { transform: 'translate(0, 0) scale(1)', opacity: 1 },
+        { transform: `translate(${dx * 0.55}px, ${dy * 0.35 - 40}px) scale(0.7)`, opacity: 1, offset: 0.5 },
+        { transform: `translate(${dx}px, ${dy}px) scale(0.28)`, opacity: 0.4 },
+      ],
+      { duration: 620, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
+    )
+    if (anim) anim.onfinish = () => ghost.remove()
+    else ghost.remove()
+  }
+
+  async function applyCode(value = codeInput) {
+    setCodeError(null)
+    const normalized = normalizeCode(value)
+    if (!normalized) {
+      setCode(null)
+      return setCodeError('Koden ska se ut som ABCD-EFGH.')
+    }
+    setCodeBusy(true)
+    try {
+      setCode(await checkCode(locationId, normalized))
+      setCodeInput(normalized)
+    } catch (err) {
+      setCode(null)
+      setCodeError(codeErrorMessage(err))
+    } finally {
+      setCodeBusy(false)
+    }
+  }
+
+  // En kod från mejlets länk kontrolleras direkt.
+  const fromLink = useRef(codeInput)
+  useEffect(() => {
+    if (marketing && fromLink.current) void applyCode(fromLink.current)
+    fromLink.current = ''
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [marketing])
 
   async function submit(e: FormEvent) {
     e.preventDefault()
@@ -140,12 +214,15 @@ export default function BestallPage() {
         language: 'sv',
         acceptTerms: true,
         ...(turnstileToken ? { turnstileToken } : {}),
+        ...(applied ? { discountCode: applied.code } : {}),
+        ...(marketing && guest.offers ? { marketingOptIn: true } : {}),
       })
       rememberToken(created.orderId, created.statusToken)
       clearCart(locationId)
       window.location.assign(created.checkoutUrl)
     } catch (err) {
       setError(orderErrorMessage(err))
+      if (err instanceof Error && /^discount_/.test(err.message)) setCode(null)
       if (turnstileSiteKey) {
         setTurnstileToken(null)
         setTurnstileReset((n) => n + 1)
@@ -156,13 +233,12 @@ export default function BestallPage() {
 
   return (
     <>
-      <section className="page-hero">
-        <p className="hero-kicker">{mode === 'table' ? 'Beställ till bordet' : 'Avhämtning'}</p>
-        <h1>Beställ</h1>
-        <p className="hero-sub">
+      <section className="page-head">
+        <h1>{mode === 'table' ? 'Beställ till bordet' : 'Beställ för avhämtning'}</h1>
+        <p className="page-lede">
           {mode === 'table'
-            ? `Beställ och betala här - vi serverar vid ${tableLabel ? (/^bord/i.test(tableLabel) ? tableLabel : `bord ${tableLabel}`) : 'ditt bord'}.`
-            : `Beställ och betala här, hämta hos ${config.tenant.name}. Du får ett sms när köket börjar laga den och när maten är klar.`}
+            ? `Välj, betala i mobilen - vi serverar vid ${tableLabel ? (/^bord/i.test(tableLabel) ? tableLabel : `bord ${tableLabel}`) : 'ditt bord'}.`
+            : `Välj, betala här och hämta hos ${config.tenant.name}. Du får ett sms när maten är klar.`}
         </p>
       </section>
 
@@ -195,56 +271,72 @@ export default function BestallPage() {
       <div className="order-layout">
         <div className="order-menu">
           {menu === null && <p className="notice" role="status">Hämtar menyn…</p>}
+          {groups.length > 1 && (
+            <nav className="chip-rail" aria-label="Kategorier">
+              {groups.map((g) => (
+                <a key={g.category} className="chip" href={`#bestall-${g.category}`}>
+                  {CATEGORY_LABEL[g.category]}
+                  <span className="chip-count">{g.items.length}</span>
+                </a>
+              ))}
+            </nav>
+          )}
           {groups.map((group) => (
-            <section key={group.category} aria-label={CATEGORY_LABEL[group.category]}>
-              <h2 className="menu-content-title">{CATEGORY_LABEL[group.category]}</h2>
-              <div className="menu-grid">
+            <section key={group.category} id={`bestall-${group.category}`} className="menu-section" aria-label={CATEGORY_LABEL[group.category]}>
+              <h2 className="menu-section-title">{CATEGORY_LABEL[group.category]}</h2>
+              <ul className="dish-list">
                 {group.items.map((dish) => {
                   const quantity = cart[dish.menuItemId] ?? 0
                   const blocked = mode === 'pickup' && dish.alcohol
                   return (
-                    <article className="dish-card" key={dish.menuItemId}>
-                      {/* Utan bild: ingen tom ruta - kortet blir en kompakt rad. */}
-                      {menuImageUrl(dish.imageKey) && (
-                        <div className="dish-media">
-                          <DishImage src={menuImageUrl(dish.imageKey)} alt={dish.name} />
-                        </div>
-                      )}
-                      <div className="dish-body">
-                        <h3>{dish.name}</h3>
+                    <li className={`dish dish--order${quantity ? ' is-in-cart' : ''}`} key={dish.menuItemId} data-dish={dish.menuItemId}>
+                      <Plate src={menuImageUrl(dish.imageKey)} name={dish.name} />
+                      <div className="dish-text">
+                        <h3 className="dish-name">{dish.name}</h3>
                         {dish.description && <p className="dish-desc">{dish.description}</p>}
-                        <div className="dish-foot">
-                          <span className="dish-price">{kronor(ore(dish.price))}</span>
-                          {blocked ? (
-                            <span className="order-only-table">Bara vid bordet</span>
-                          ) : quantity === 0 ? (
-                            <button type="button" className="btn small" disabled={!open}
-                              aria-label={`Lägg till ${dish.name}`} onClick={() => change(dish.menuItemId, 1)}>
-                              Lägg till
-                            </button>
-                          ) : (
-                            <span className="cart-qty" role="group" aria-label={`Antal ${dish.name}`}>
-                              <button type="button" aria-label={`En ${dish.name} mindre`}
-                                onClick={() => change(dish.menuItemId, -1)}>−</button>
-                              <span aria-live="polite">{quantity}</span>
-                              <button type="button" aria-label={`En ${dish.name} till`}
-                                disabled={quantity >= MAX_QUANTITY} onClick={() => change(dish.menuItemId, 1)}>+</button>
-                            </span>
-                          )}
-                        </div>
+                        <span className="dish-price">{kronor(ore(dish.price))}</span>
                       </div>
-                    </article>
+                      <div className="dish-action">
+                        {blocked ? (
+                          <span className="order-only-table">Bara vid bordet</span>
+                        ) : quantity === 0 ? (
+                          <button type="button" className="add-btn" disabled={!open}
+                            aria-label={`Lägg till ${dish.name}`} onClick={(e) => add(dish.menuItemId, e.currentTarget)}>
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+                          </button>
+                        ) : (
+                          <span className="stepper" role="group" aria-label={`Antal ${dish.name}`}>
+                            <button type="button" aria-label={`En ${dish.name} mindre`}
+                              onClick={() => change(dish.menuItemId, -1)}>
+                              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14" /></svg>
+                            </button>
+                            <span aria-live="polite">{quantity}</span>
+                            <button type="button" aria-label={`En ${dish.name} till`}
+                              disabled={quantity >= MAX_QUANTITY} onClick={(e) => add(dish.menuItemId, e.currentTarget)}>
+                              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+                            </button>
+                          </span>
+                        )}
+                      </div>
+                    </li>
                   )
                 })}
-              </div>
+              </ul>
             </section>
           ))}
         </div>
 
         <aside className="order-cart" id="order-cart" aria-label="Din beställning">
-          <h2>Din beställning</h2>
+          <div className="tray-head">
+            <h2>Din beställning</h2>
+            <span className="tray-plates" aria-hidden="true" ref={trayRef}>
+              {lines.slice(0, 5).map(({ dish }) => (
+                <Plate key={dish.menuItemId} src={menuImageUrl(dish.imageKey)} name={dish.name} size="sm" />
+              ))}
+            </span>
+          </div>
           {lines.length === 0 ? (
-            <p className="cart-empty">Tryck på Lägg till vid en rätt för att börja.</p>
+            <p className="cart-empty">Tryck på + vid en rätt för att lägga den här.</p>
           ) : (
             <ul className="cart-list">
               {lines.map(({ dish, quantity }) => (
@@ -261,10 +353,48 @@ export default function BestallPage() {
               ))}
             </ul>
           )}
+          {applied && (
+            <div className="cart-discount">
+              <span>Rabatt {applied.percent} % ({applied.code})</span>
+              <span>-{kronor(subtotal - total)}</span>
+            </div>
+          )}
           <div className="cart-total">
             <span>Totalt</span>
-            <span>{kronor(total)}</span>
+            <span>
+              {applied && <s className="cart-total-before">{kronor(subtotal)}</s>} {kronor(total)}
+            </span>
           </div>
+          {marketing && lines.length > 0 && (
+            <div className="cart-code">
+              {!codeOpen && !code ? (
+                <button type="button" className="link-button" onClick={() => setCodeOpen(true)}>
+                  Har du en rabattkod?
+                </button>
+              ) : code ? (
+                <p className="cart-code-ok" role="status">
+                  {belowMin
+                    ? `Koden gäller från ${kronor(code.minOrderOre)}. Lägg till för ${kronor(code.minOrderOre - subtotal)} till.`
+                    : `Koden ${code.code} ger ${code.percent} % rabatt.`}{' '}
+                  <button type="button" className="link-button" onClick={() => { setCode(null); setCodeInput('') }}>
+                    Ta bort
+                  </button>
+                </p>
+              ) : (
+                <div className="cart-code-row">
+                  <label className="sr-only" htmlFor="order-code">Rabattkod</label>
+                  <input id="order-code" autoComplete="off" autoCapitalize="characters" placeholder="ABCD-EFGH"
+                    value={codeInput} maxLength={12} onChange={(e) => setCodeInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void applyCode() } }} />
+                  <button type="button" className="btn-secondary" disabled={codeBusy || !codeInput.trim()}
+                    onClick={() => void applyCode()}>
+                    {codeBusy ? 'Kollar…' : 'Använd'}
+                  </button>
+                </div>
+              )}
+              {codeError && <p className="field-hint error" role="alert">{codeError}</p>}
+            </div>
+          )}
           <p className="cart-note">Priserna inkluderar moms.</p>
 
           {lines.length > 0 && (
@@ -300,6 +430,13 @@ export default function BestallPage() {
                 jag pengarna tillbaka. <Link to="/integritetspolicy">Integritetspolicy</Link>
               </span>
             </label>
+            {marketing && (
+              <label className="booking-check">
+                <input type="checkbox" checked={guest.offers}
+                  onChange={(e) => setGuest({ ...guest, offers: e.target.checked })} />
+                <span>Skicka mig erbjudanden och nyheter från {config.tenant.name} via e-post (valfritt).</span>
+              </label>
+            )}
             {turnstileSiteKey && (
               <TurnstileWidget siteKey={turnstileSiteKey} resetKey={turnstileReset} action="order"
                 onToken={setTurnstileToken} />
@@ -324,9 +461,10 @@ export default function BestallPage() {
       </div>
 
       {lines.length > 0 && (
-        <a className="order-mobile-bar" href="#order-cart">
-          <span>{lines.reduce((n, l) => n + l.quantity, 0)} st · {kronor(total)}</span>
-          <strong>Till kassan</strong>
+        <a className="order-mobile-bar" href="#order-cart" ref={barRef}>
+          <span className="order-mobile-bar-count">{lines.reduce((n, l) => n + l.quantity, 0)}</span>
+          <strong>Visa beställning</strong>
+          <span className="order-mobile-bar-total">{kronor(total)}</span>
         </a>
       )}
     </>

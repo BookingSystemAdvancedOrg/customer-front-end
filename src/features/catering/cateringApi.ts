@@ -1,4 +1,6 @@
 import { apiGet, apiPost, ApiError } from '../../shared/api'
+import { withAttribution } from '../../shared/visits'
+import { CATERING_TOKEN_PREFIX } from '../../shared/storageRegistry'
 
 /**
  * Catering för gäster (backend: catering-settings, catering-discount-tiers,
@@ -117,6 +119,8 @@ export interface RequestInput {
   acceptTerms: true
   language: 'sv'
   turnstileToken?: string
+  /** Gästen kryssade i "skicka mig erbjudanden". */
+  marketingOptIn?: boolean
 }
 
 export interface SignState {
@@ -144,7 +148,7 @@ export function createRequest(
   locationId: string,
   input: RequestInput,
 ): Promise<{ requestId: string; locationId: string; token: string }> {
-  return apiPost(`${loc(locationId)}/requests`, input)
+  return apiPost(`${loc(locationId)}/requests`, withAttribution(input))
 }
 
 export function getRequest(locationId: string, requestId: string, token: string): Promise<GuestRequest> {
@@ -173,7 +177,7 @@ export function rejectOffer(locationId: string, requestId: string, token: string
 
 // --- token i fliken -------------------------------------------------------------------
 
-const tokenKey = (requestId: string) => `catering-token:${requestId}`
+const tokenKey = (requestId: string) => `${CATERING_TOKEN_PREFIX}${requestId}`
 
 export function rememberToken(requestId: string, token: string): void {
   try {

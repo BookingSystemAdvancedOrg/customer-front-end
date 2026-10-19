@@ -190,7 +190,7 @@ describe('labelTables', () => {
     }
   }
 
-  it('numrerar i listans ordning, inte sorterat på elementId — samma regel som admin-front-end', async () => {
+  it('numrerar i listans ordning, inte sorterat på elementId - samma regel som admin-front-end', async () => {
     // Regression: elementId är ett slumpat UUID. Att sortera på det (som en
     // tidigare version gjorde) ger ett annat nummer än admins
     // `elements.filter(type==='table').map((el, i) => T${i+1})`, som räknar

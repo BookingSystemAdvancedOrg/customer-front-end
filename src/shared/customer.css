@@ -8,303 +8,6 @@
   min-height: 100svh;
 }
 
-/* --- Sidbakgrund (foto + scrim), Figma-förlaga: anars SiteLayout.jsx -------- */
-
-.landing {
-  position: relative;
-  min-height: 100svh;
-  /* overflow-x låg tidigare här, men en overflow-x utan matchande
-     overflow-y tvingar webbläsaren att beräkna overflow-y: auto på samma
-     element - det gör .landing till en scroll-container och bryter
-     `position: sticky` för ALLT under den (headern inkluderad - den såg
-     sticky ut i CSS:en men flöt faktiskt med sidan). Klippningen ligger nu
-     på html/body i stället (se index.css), som är sidans egna
-     rot-scroller och inte har samma bieffekt på sticky-avkomlingar. */
-  background: var(--bg);
-}
-
-.landing-bg {
-  position: fixed;
-  inset: 0;
-  width: 100%;
-  height: 100vh;
-  object-fit: cover;
-  object-position: center center;
-  z-index: 0;
-}
-
-.landing-scrim {
-  position: fixed;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  background: var(--page-scrim);
-  -webkit-backdrop-filter: saturate(180%) blur(28px);
-  backdrop-filter: saturate(180%) blur(28px);
-}
-
-.landing[data-page='meny'] .landing-scrim {
-  background: var(--page-scrim);
-}
-
-.landing[data-page='historia'] .landing-scrim {
-  background: var(--page-scrim);
-}
-
-.landing[data-page='parkering'] .landing-scrim {
-  background: var(--page-scrim);
-}
-
-.landing[data-page='kontakt'] .landing-scrim {
-  background: var(--page-scrim);
-}
-
-.landing-content {
-  position: relative;
-  z-index: 2;
-}
-
-/* --- Header ------------------------------------------------------------ */
-
-.site-header {
-  position: sticky;
-  top: 0;
-  z-index: 30;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  align-items: center;
-  gap: clamp(0.75rem, 2vw, 2rem);
-  padding: clamp(0.85rem, 2.2vw, 1.35rem) clamp(16px, 4vw, 48px);
-  border-bottom: 1px solid var(--border);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
-  backdrop-filter: saturate(180%) blur(20px);
-  background: var(--surface-glass);
-}
-
-.site-header-gutter {
-  display: none;
-  width: 2.75rem;
-  height: 2.75rem;
-  pointer-events: none;
-}
-
-.site-header-nav ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: clamp(0.35rem, 1.2vw, 1.1rem);
-}
-
-.site-header-nav--left ul {
-  justify-content: flex-end;
-}
-
-.site-header-nav--right ul {
-  justify-content: flex-start;
-}
-
-.site-header-nav a,
-.site-header-dropdown-trigger {
-  display: inline-flex;
-  align-items: center;
-  font-family: var(--sans);
-  font-size: clamp(0.78rem, 1.05vw, 0.95rem);
-  font-weight: 400;
-  letter-spacing: 0;
-  text-transform: none;
-  color: color-mix(in srgb, var(--ink) 88%, transparent);
-  text-decoration: none;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  padding: 0.35rem 0.5rem;
-  border-radius: 2px;
-  transition: color 0.2s ease, background 0.2s ease;
-}
-
-.site-header-nav a:hover,
-.site-header-dropdown-trigger:hover {
-  color: var(--gold-bright);
-  background: var(--fill);
-}
-
-.site-header-nav a.active {
-  color: var(--accent-ink);
-}
-
-.site-header-brand {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 0;
-  filter: none;
-  transition: transform 0.35s ease, filter 0.35s ease;
-}
-
-.site-header-brand:hover {
-  transform: scale(1.04);
-  filter: drop-shadow(0 6px 28px rgba(0, 0, 0, 0.25));
-}
-
-.site-header-brand img {
-  width: clamp(52px, 7vw, 72px);
-  height: auto;
-  display: block;
-  border-radius: 50%;
-}
-
-.site-header-burger {
-  display: none;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  gap: 6px;
-  width: 2.75rem;
-  height: 2.75rem;
-  padding: 0;
-  margin: 0;
-  border: none;
-  border-radius: 4px;
-  background: color-mix(in srgb, var(--ink) 8%, transparent);
-  cursor: pointer;
-  transition: background 0.2s ease;
-}
-
-.site-header-burger:hover {
-  background: var(--fill);
-}
-
-.site-header-burger-line {
-  display: block;
-  width: 1.25rem;
-  height: 2px;
-  background: color-mix(in srgb, var(--ink) 92%, transparent);
-  border-radius: 1px;
-  transition: transform 0.25s ease, opacity 0.2s ease;
-}
-
-.site-header-burger--open .site-header-burger-line:nth-child(1) {
-  transform: translateY(8px) rotate(45deg);
-}
-
-.site-header-burger--open .site-header-burger-line:nth-child(2) {
-  opacity: 0;
-}
-
-.site-header-burger--open .site-header-burger-line:nth-child(3) {
-  transform: translateY(-8px) rotate(-45deg);
-}
-
-@media (max-width: 1073px) {
-  .site-header {
-    grid-template-columns: 2.75rem 1fr 2.75rem;
-    gap: 0.5rem;
-  }
-
-  .site-header-burger {
-    display: flex;
-    justify-self: end;
-  }
-
-  .site-header-gutter {
-    display: block;
-    justify-self: start;
-  }
-
-  .site-header-nav--left,
-  .site-header-nav--right {
-    display: none;
-  }
-
-  .site-header-brand {
-    justify-self: center;
-  }
-}
-
-/* --- Mobil-drawer -------------------------------------------------------- */
-
-.mobile-drawer-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 18;
-  background: var(--scrim);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 0.28s ease, visibility 0.28s ease;
-}
-
-.mobile-drawer-backdrop--visible {
-  opacity: 1;
-  visibility: visible;
-}
-
-.mobile-drawer {
-  position: fixed;
-  top: 0;
-  bottom: 0;
-  right: 0;
-  z-index: 20;
-  width: min(18rem, 86vw);
-  max-width: 100%;
-  padding: calc(5.5rem + env(safe-area-inset-top, 0px)) max(1.25rem, env(safe-area-inset-right, 0px)) 1.5rem
-    1.25rem;
-  background: var(--surface);
-  border-left: 1px solid var(--border);
-  box-shadow: var(--shadow-lg);
-  transform: translateX(100%);
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  overflow-y: auto;
-}
-
-.mobile-drawer--open {
-  transform: translateX(0);
-}
-
-.mobile-drawer-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-}
-
-.mobile-drawer-list a,
-.mobile-drawer-list .mobile-drawer-hours-trigger {
-  display: block;
-  width: 100%;
-  box-sizing: border-box;
-  font: inherit;
-  font-family: var(--sans);
-  font-size: 0.95rem;
-  font-weight: 400;
-  letter-spacing: 0;
-  text-transform: none;
-  color: color-mix(in srgb, var(--ink) 92%, transparent);
-  text-decoration: none;
-  text-align: left;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  padding: 0.75rem 0.5rem;
-  border-radius: 4px;
-  transition: background 0.2s ease, color 0.2s ease;
-}
-
-.mobile-drawer-list a:hover,
-.mobile-drawer-list a:focus-visible,
-.mobile-drawer-list .mobile-drawer-hours-trigger:hover,
-.mobile-drawer-list .mobile-drawer-hours-trigger:focus-visible {
-  color: var(--gold-bright);
-  background: var(--fill);
-  outline: none;
-}
-
 /* --- Öppettider (modal) --------------------------------------------------- */
 
 .opening-hours-modal-root {
@@ -546,6 +249,80 @@
   padding-top: 10px;
 }
 
+/* Rabattkoden i varukorgen. */
+.cart-discount {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+  font-size: 15px;
+  color: var(--success);
+}
+
+.cart-total-before {
+  margin-right: 4px;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.cart-code {
+  margin-top: 10px;
+}
+
+.cart-code-row {
+  display: flex;
+  gap: 8px;
+}
+
+.cart-code-row input {
+  flex: 1;
+  min-width: 0;
+  min-height: 42px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--fill);
+  font: inherit;
+  font-size: 15px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.cart-code-row input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--focus);
+}
+
+.cart-code-ok {
+  margin: 0;
+  font-size: 14px;
+  color: var(--success);
+}
+
+.link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent-ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.link-button:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.field-hint.error {
+  margin: 6px 0 0;
+  color: var(--danger-ink);
+}
+
 .cart-note {
   color: var(--muted);
   font-size: 13px;
@@ -635,135 +412,6 @@
   font-weight: 600;
 }
 
-/* --- Kategorinavigering + menyinnehåll (Meny, Beställ mat) --------------------
-   CategoryNav renderar BÅDA varianterna - sidopanel och dropdown - alltid;
-   media queryn nedan väljer vilken som visas. Brytpunkten (1073px) matchar
-   headerns egen hamburgermeny-brytpunkt så de växlar tillsammans. */
-
-.menu-layout {
-  display: flex;
-  align-items: flex-start;
-  gap: clamp(20px, 4vw, 40px);
-}
-
-.category-sidebar {
-  position: sticky;
-  top: calc(var(--header-h) + 24px);
-  flex: 0 0 220px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.category-sidebar-kicker {
-  color: var(--muted);
-  font-family: var(--font);
-  font-weight: 600;
-  font-size: 13px;
-  margin: 0 0 4px 12px;
-}
-
-.category-sidebar ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.category-sidebar-item {
-  display: block;
-  width: 100%;
-  min-height: 40px;
-  text-align: left;
-  padding: 9px 12px;
-  border-radius: var(--r-md);
-  border: 0;
-  background: transparent;
-  color: var(--ink);
-  font: 500 15px/1.4 var(--font);
-  cursor: pointer;
-  transition: background 0.2s var(--ease), color 0.2s var(--ease);
-}
-
-.category-sidebar-item:hover {
-  background: var(--fill);
-}
-
-.category-sidebar-item.active {
-  background: var(--accent);
-  color: var(--on-accent);
-  font-weight: 600;
-}
-
-.menu-content {
-  flex: 1 1 0;
-  min-width: 1px;
-}
-
-.menu-content-title {
-  font: 600 clamp(24px, 3.4vw, 32px) / 1.2 var(--serif);
-  color: var(--ink);
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 14px;
-  margin-bottom: 20px;
-}
-
-/* Dropdown-varianten är dold på skrivbord - visas bara under 1073px. */
-.category-dropdown {
-  display: none;
-}
-
-@media (max-width: 1073px) {
-  .menu-layout {
-    display: block;
-  }
-
-  .category-sidebar {
-    display: none;
-  }
-
-  .category-dropdown {
-    display: block;
-    position: sticky;
-    top: var(--header-h);
-    z-index: 10;
-    /* Samma "frostat glas"-behandling som .site-header, så den sticky
-       raden smälter in mot sidfotot i stället för att se ut som en platt
-       ruta när den klistrar sig fast under scroll. */
-    background: var(--surface-glass);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
-  backdrop-filter: saturate(180%) blur(20px);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    padding: 16px 0;
-    margin: 0 0 8px;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .category-dropdown-label {
-    display: block;
-    color: var(--ink);
-    font-weight: 600;
-    font-size: 0.7rem;
-    letter-spacing: 0;
-    text-transform: none;
-    margin-bottom: 8px;
-  }
-
-  .category-dropdown select {
-    width: 100%;
-    padding: 12px 16px;
-    border-radius: 8px;
-    border: 1px solid var(--border);
-    background: var(--surface);
-    color: var(--ink);
-    font: 600 16px/1.3 var(--serif);
-    cursor: pointer;
-  }
-}
-
 /* --- Knappar ------------------------------------------------------------------ */
 
 .btn {
@@ -826,134 +474,6 @@
 .btn.wide {
   width: 100%;
   text-align: center;
-}
-
-/* --- Menysidan ------------------------------------------------------------------ */
-
-.menu-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 16px;
-}
-
-.dish-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-lg);
-  overflow: hidden;
-  box-shadow: var(--shadow);
-  display: flex;
-  flex-direction: column;
-}
-
-.dish-media {
-  position: relative;
-  height: 150px;
-  background: var(--surface-soft);
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-}
-
-.dish-media img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.dish-badge {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  z-index: 1;
-  background: var(--accent);
-  color: var(--on-accent);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0;
-  text-transform: none;
-  padding: 4px 10px;
-  border-radius: var(--r-pill);
-}
-
-.dish-placeholder {
-  font-size: 40px;
-}
-
-.dish-body {
-  padding: 14px 16px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  flex: 1;
-}
-
-.dish-body h3 {
-  font: 600 17px/1.25 var(--serif);
-  color: var(--ink);
-}
-
-.dish-desc {
-  color: var(--muted);
-  font-size: 14px;
-  flex: 1;
-}
-
-.dish-foot {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 6px;
-}
-
-.dish-price {
-  font-weight: 600;
-  color: var(--accent-ink);
-}
-
-/* --- Mörka band (allergi, avbokningspolicy) -------------------------------------- */
-
-.dark-band {
-  background: var(--surface-glass);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
-  backdrop-filter: saturate(180%) blur(20px);
-  border: 1px solid var(--border);
-  color: var(--ink);
-  border-radius: var(--r-lg);
-  padding: clamp(24px, 4vw, 40px);
-  margin-top: clamp(32px, 6vw, 56px);
-}
-
-.dark-band h2 {
-  font: 600 22px/1.2 var(--serif);
-  color: var(--accent-ink);
-  margin-bottom: 10px;
-}
-
-.dark-band p {
-  color: var(--muted);
-  max-width: 72ch;
-  font-size: 15px;
-}
-
-.menu-cta {
-  text-align: center;
-  margin-top: clamp(20px, 4vw, 32px);
-  color: var(--muted);
-  font-size: 15px;
-}
-
-.menu-cta a {
-  color: var(--gold-bright);
-  font-weight: 600;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.menu-cta a:hover {
-  color: var(--accent-ink);
 }
 
 /* --- Planritning (Boka bord - förhandsvisning, se BokaBordPage.tsx) --------------- */
@@ -1025,7 +545,7 @@
 /* --- 3D-vy (Figma-förlaga: admin-front-ends layout-editor, samma
    "utfälld låda"-teknik i CSS: väggar/bord byggs av roterade sidoytor +
    ett tak, i en scen med perspective + rotateX(tilt) rotateZ(spin)).
-   Bara läsning här — ingen redigering, bara dra för att rotera vyn. ------- */
+   Bara läsning här - ingen redigering, bara dra för att rotera vyn. ------- */
 
 .floor-view-toggle {
   display: inline-flex;
@@ -1335,119 +855,6 @@
   border-left-color: var(--danger);
 }
 
-/* --- Footer -------------------------------------------------------------------------------- */
-
-.site-footer {
-  background: var(--surface-glass);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
-  backdrop-filter: saturate(180%) blur(20px);
-  border-top: 1px solid var(--border);
-  color: var(--muted);
-  margin-top: clamp(32px, 6vw, 64px);
-}
-
-.footer-cols {
-  display: grid;
-  grid-template-columns: 1.4fr 1fr 1fr;
-  gap: 24px;
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: clamp(28px, 5vw, 48px) clamp(16px, 5vw, 48px) 24px;
-}
-
-.footer-brand h2 {
-  font: 600 22px/1.2 var(--serif);
-  color: var(--ink);
-  letter-spacing: 0.08em;
-  margin-bottom: 10px;
-}
-
-.footer-brand p {
-  font-size: 14px;
-  max-width: 36ch;
-}
-
-.site-footer h3 {
-  color: var(--accent-ink);
-  font-family: var(--sans);
-  font-size: 12px;
-  letter-spacing: 0;
-  text-transform: none;
-  margin-bottom: 10px;
-}
-
-.site-footer p,
-.footer-hours li {
-  font-size: 14px;
-  line-height: 1.7;
-}
-
-.footer-hours {
-  list-style: none;
-  padding: 0;
-}
-
-.site-footer-main {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 0.75rem 1.5rem;
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 0.85rem clamp(16px, 5vw, 48px) 1.25rem;
-  border-top: 1px solid var(--border);
-  box-sizing: border-box;
-}
-
-.site-footer-rights {
-  margin: 0;
-  max-width: 20rem;
-  font-family: var(--sans);
-  font-size: 0.68rem;
-  font-weight: 400;
-  line-height: 1.35;
-  color: color-mix(in srgb, var(--ink) 50%, transparent);
-  text-align: left;
-}
-
-.site-footer-credit-block {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.35rem;
-  max-width: 18rem;
-  margin-left: auto;
-}
-
-.site-footer-credit {
-  margin: 0;
-  font-family: var(--sans);
-  font-size: 0.68rem;
-  font-weight: 400;
-  line-height: 1.35;
-  color: color-mix(in srgb, var(--ink) 50%, transparent);
-  text-align: right;
-}
-
-.site-footer-dev-site {
-  margin: 0;
-}
-
-.site-footer-dev-link {
-  font-family: var(--sans);
-  font-size: 0.72rem;
-  font-weight: 500;
-  letter-spacing: 0.06em;
-  color: var(--accent-ink);
-  text-decoration: none;
-}
-
-.site-footer-dev-link:hover {
-  color: var(--gold-bright);
-  text-decoration: underline;
-}
-
 /* --- Sidhero (Historia/Parkering/Kontakt) - fotot kommer nu från den
    sidfasta landing-bg:n bakom hela sidan, inte en egen bild per hero. ------ */
 
@@ -1732,34 +1139,6 @@
   color: var(--accent-ink);
 }
 
-/* --- Mobil ----------------------------------------------------------------------------------- */
-
-@media (max-width: 720px) {
-  .footer-cols {
-    grid-template-columns: 1fr;
-  }
-
-  .site-footer-main {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-  }
-
-  .site-footer-rights,
-  .site-footer-credit-block {
-    text-align: center;
-    margin-left: 0;
-  }
-
-  .site-footer-credit-block {
-    align-items: center;
-  }
-
-  .site-footer-credit {
-    text-align: center;
-  }
-}
-
 /* --- Restaurangmall: start, varumärke, platsval ------------------------- */
 
 .site-boot {
@@ -1776,55 +1155,6 @@
 
 .site-boot h1 {
   font: 600 clamp(28px, 5vw, 40px) / 1.1 var(--serif);
-}
-
-.landing-bg--plain {
-  background:
-    radial-gradient(ellipse 90% 70% at 50% 0%, color-mix(in srgb, var(--gold) 22%, transparent), transparent 60%),
-    linear-gradient(180deg, var(--surface) 0%, var(--bg) 100%);
-}
-
-.site-header-brand:has(.site-header-wordmark) {
-  text-decoration: none;
-}
-
-.site-header-wordmark {
-  display: inline-block;
-  max-width: 220px;
-  font: 600 clamp(22px, 2.6vw, 30px) / 1.05 var(--serif);
-  color: var(--gold-bright);
-  text-align: center;
-  overflow-wrap: anywhere;
-}
-
-.location-picker {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 10px 16px 0;
-  font-family: var(--sans);
-}
-
-.location-picker select {
-  padding: 8px 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--r-pill);
-  background: var(--surface);
-  color: var(--ink);
-  font: inherit;
-}
-
-.site-footer-legal {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  font-size: 14px;
-}
-
-.site-footer-legal a,
-.site-footer a {
-  color: var(--gold-bright);
 }
 
 /* --- Bokning ------------------------------------------------------------ */
@@ -2201,6 +1531,74 @@
 .floor-svg-pick:focus-visible .floor-svg-table {
   stroke: var(--accent);
   stroke-width: 0.08;
+}
+
+/* Bordsval i 3D: samma färger som 2D-planen ovan (grått ledigt, rött bokat,
+   grönt ditt val), på skivan och sidorna. */
+.f3d-pick {
+  cursor: pointer;
+  outline: none;
+}
+
+.f3d-explain {
+  cursor: help;
+  outline: none;
+}
+
+.f3d-table.is-free .f3d-table-top {
+  background: color-mix(in srgb, var(--muted) 45%, #ffffff);
+  border-color: var(--muted);
+}
+
+.f3d-table.is-selected .f3d-table-top {
+  background: var(--success);
+  border: 2px solid color-mix(in srgb, var(--success) 70%, var(--ink));
+}
+
+.f3d-table.is-booked .f3d-table-top {
+  background: color-mix(in srgb, var(--danger) 30%, #ffffff);
+  border-color: var(--danger);
+}
+
+.f3d-table.is-blocked .f3d-table-top {
+  background: color-mix(in srgb, var(--danger) 14%, #ffffff);
+  border: 1px dashed var(--danger);
+}
+
+.f3d-table.is-unfit .f3d-table-top {
+  background: #ffffff;
+  border: 1px dashed color-mix(in srgb, var(--muted) 55%, transparent);
+}
+
+/* Ej ledigt utan känd anledning räknas som bokat (rött). */
+.f3d-table.is-taken .f3d-table-top {
+  background: color-mix(in srgb, var(--danger) 30%, #ffffff);
+  border-color: var(--danger);
+}
+
+.f3d-table.is-free .f3d-table-face:not(.ring) {
+  background: color-mix(in srgb, var(--muted) 45%, #d8d8dc);
+}
+
+.f3d-table.is-selected .f3d-table-face:not(.ring) {
+  background: color-mix(in srgb, var(--success) 75%, var(--ink));
+}
+
+.f3d-table.is-booked .f3d-table-face:not(.ring),
+.f3d-table.is-taken .f3d-table-face:not(.ring) {
+  background: color-mix(in srgb, var(--danger) 45%, #d8d8dc);
+}
+
+/* Vit text på det gröna, valda bordet - mörk text på grönt läses dåligt. */
+.f3d-table.is-selected .f3d-table-label,
+.f3d-table.is-selected .f3d-table-seats {
+  color: #ffffff;
+}
+
+.f3d-pick:focus-visible .f3d-table-top,
+.f3d-explain:focus-visible .f3d-table-top {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
 }
 
 /* --- Textsidor (integritetspolicy, villkor, om oss) ---------------------- */
@@ -2679,4 +2077,88 @@
 
 .segmented label:has(input:focus-visible) {
   box-shadow: 0 0 0 4px var(--focus);
+}
+
+/* Integritetspolicyns tabell över cookies och lagring (PrivacyPage.tsx). */
+.storage-table-wrap {
+  overflow-x: auto;
+  margin: 12px 0 16px;
+}
+
+.storage-table {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: collapse;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.storage-table th {
+  text-align: left;
+  font-weight: 700;
+  padding: 0 12px 8px 0;
+  border-bottom: 2px solid var(--line, #d9d4c8);
+}
+
+.storage-table td {
+  padding: 10px 12px 10px 0;
+  border-bottom: 1px solid var(--line, #d9d4c8);
+  vertical-align: top;
+}
+
+.storage-table code {
+  font-size: 12.5px;
+  overflow-wrap: anywhere;
+}
+
+.storage-kind {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--muted, #57504d);
+}
+
+.storage-where {
+  color: var(--muted, #57504d);
+}
+
+/* Telefon: varje rad blir ett eget kort i stället för en bred tabell. */
+@media (max-width: 600px) {
+  .storage-table {
+    min-width: 0;
+  }
+
+  .storage-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .storage-table tr {
+    display: block;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--line, #d9d4c8);
+  }
+
+  .storage-table td {
+    display: block;
+    padding: 2px 0;
+    border: 0;
+  }
+
+  .storage-table td:nth-child(3),
+  .storage-table td:nth-child(4) {
+    font-size: 13px;
+    color: var(--muted, #57504d);
+  }
+
+  .storage-table td:nth-child(3)::before {
+    content: 'Sätts av: ';
+  }
+
+  .storage-table td:nth-child(4)::before {
+    content: 'Sparas: ';
+  }
 }

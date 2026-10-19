@@ -1,4 +1,5 @@
 import { apiDelete, apiGet, apiPost, ApiError } from '../../shared/api'
+import { withAttribution } from '../../shared/visits'
 
 /**
  * Klient mot bokningsrutterna (backend docs/RESERVATIONS.md):
@@ -337,7 +338,7 @@ export function createReservation(
 ): Promise<GuestReservation> {
   return apiPost<GuestReservation>(
     `${path(locationId)}/reservations`,
-    request,
+    withAttribution(request),
     holdToken ? { 'X-Manage-Token': holdToken } : undefined,
   )
 }

@@ -1,46 +1,49 @@
-/* Globala CSS-variabler och nollställningar. Sid-specifik styling bor i
-   src/shared/customer.css.
+/* Globala tokens och nollställningar. Sidornas styling bor i
+   src/shared/customer.css och src/shared/world.css.
 
-   Designsystem: samma "Apple UI kit" i Booqys färger som admin-front-end
-   - systemtypsnitt, en accent (Booqy-vinrött #350001), varma neutrala
-   gråtoner, frostade paneler och 44 px höga kontroller. Ljust och mörkt
-   läge följer besökarens system. --accent fyller (knappar, valt läge);
-   --accent-ink är samma färg för text/länkar, ljusare i mörkt läge så att
-   kontrasten håller. Har restaurangen en egen färg
-   (branding.primaryColor) sätter SiteProvider --tenant-accent* och den
-   ersätter Booqy-färgen. Äldre namn (--gold, --serif, ...) pekar på de
-   nya värdena. */
+   Världen: restaurangen sedd ovanifrån. Underlaget är en sten-/bordsskiva,
+   rätterna ligger på vita tallrikar och restaurangens egen färg
+   (branding.primaryColor -> --tenant-accent*, satt av SiteProvider) äger
+   skalet: headerbandet, heron, huvudknapparna, valt bord och brickan.
+   Utan egen färg används en örtgrön standard. Ljust och mörkt läge följer
+   besökarens system. */
 :root {
-  --bg: #f5f4f4;
+  --table: #eceeec;
+  --table-2: #e3e6e3;
+  --bg: var(--table);
   --surface: #ffffff;
-  --fill: #f0eeee;
-  --surface-glass: rgba(255, 255, 255, 0.72);
-  --page-scrim: rgba(245, 244, 244, 0.84);
-  --border: rgba(0, 0, 0, 0.08);
-  --ink: #1d1a1a;
-  --muted: #6e6969;
+  --fill: #f2f4f2;
+  --surface-glass: rgba(255, 255, 255, 0.86);
+  --page-scrim: rgba(236, 238, 236, 0.9);
+  --border: rgba(24, 28, 26, 0.1);
+  --line: rgba(24, 28, 26, 0.12);
+  --ink: #181c1a;
+  --muted: #59605c;
   --on-accent: var(--tenant-on-accent, #ffffff);
-  --danger: #ff3b30;
-  --danger-ink: #d70015;
-  --success: #34c759;
-  --warning: #ff9f0a;
-  --scrim: rgba(0, 0, 0, 0.3);
-  --shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08), 0 24px 64px rgba(0, 0, 0, 0.12);
-  --accent: var(--tenant-accent, #350001);
-  --accent-ink: var(--tenant-accent, #350001);
-  --accent-hover: color-mix(in srgb, var(--accent) 88%, #fff);
-  --accent-active: color-mix(in srgb, var(--accent) 88%, #000);
-  --focus: color-mix(in srgb, var(--accent) 28%, transparent);
+  --danger: #c4231b;
+  --danger-ink: #b3150e;
+  --success: #1f8a4c;
+  --warning: #b86e00;
+  --scrim: rgba(12, 16, 14, 0.42);
+  --shadow: 0 1px 2px rgba(20, 26, 22, 0.06), 0 6px 18px -6px rgba(20, 26, 22, 0.18);
+  --shadow-lg: 0 10px 30px -10px rgba(20, 26, 22, 0.3), 0 30px 70px -30px rgba(20, 26, 22, 0.35);
+  --plate-shadow: 0 2px 3px rgba(20, 26, 22, 0.12), 0 10px 18px -8px rgba(20, 26, 22, 0.32);
+  --accent: var(--tenant-accent, #285c4d);
+  --accent-ink: var(--tenant-accent, #285c4d);
+  --accent-hover: color-mix(in srgb, var(--accent) 86%, #000);
+  --accent-active: color-mix(in srgb, var(--accent) 76%, #000);
+  --accent-soft: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  --focus: color-mix(in srgb, var(--accent) 35%, transparent);
   --tint-accent: color-mix(in srgb, var(--accent) 12%, transparent);
-  --font: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', Inter,
-    system-ui, sans-serif;
-  --r-sm: 8px;
-  --r-md: 12px;
-  --r-lg: 20px;
+  --font: 'Figtree Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 22px;
   --r-pill: 9999px;
-  --ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
   --spring: cubic-bezier(0.32, 0.72, 0, 1);
+  --wrap: 1180px;
+  --gutter: clamp(16px, 4vw, 32px);
 
   /* Äldre namn */
   --gold: var(--accent);
@@ -50,11 +53,10 @@
   --surface-soft: var(--fill);
   --serif: var(--font);
   --sans: var(--font);
-  /* Verkligt värde sätts av CustomerLayout (mätt, headern har flytande
-     höjd) - det här är bara en fallback innan JS hunnit köra. */
-  --header-h: 72px;
+  /* Verkligt värde sätts av CustomerLayout (mätt). */
+  --header-h: 64px;
 
-  font: 17px/1.47 var(--font);
+  font: 17px/1.5 var(--font);
   color: var(--ink);
   background: var(--bg);
   color-scheme: light;
@@ -65,44 +67,41 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-  --bg: #000000;
-  --surface: #1c1a1a;
-  --fill: #2c2929;
-  --surface-glass: rgba(28, 26, 26, 0.72);
-  --page-scrim: rgba(0, 0, 0, 0.8);
-  --border: rgba(255, 255, 255, 0.12);
-  --ink: #f5f4f4;
-  --muted: #a6a1a1;
-  --danger: #ff453a;
-  --danger-ink: #ff6961;
-  --success: #30d158;
-  --scrim: rgba(0, 0, 0, 0.5);
-  --shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4), 0 24px 64px rgba(0, 0, 0, 0.5);
-  --accent: var(--tenant-accent-dark, #b8444c);
-  --accent-ink: var(--tenant-accent-ink-dark, #e07a82);
-  --on-accent: var(--tenant-on-accent-dark, #ffffff);
-  color-scheme: dark;
+    --table: #151917;
+    --table-2: #1b201d;
+    --surface: #222825;
+    --fill: #2a312d;
+    --surface-glass: rgba(34, 40, 37, 0.88);
+    --page-scrim: rgba(21, 25, 23, 0.9);
+    --border: rgba(255, 255, 255, 0.1);
+    --line: rgba(255, 255, 255, 0.12);
+    --ink: #eef1ef;
+    --muted: #a8b0ab;
+    --danger: #ff6b5f;
+    --danger-ink: #ff8d84;
+    --success: #4cc883;
+    --scrim: rgba(0, 0, 0, 0.6);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 22px -8px rgba(0, 0, 0, 0.6);
+    --shadow-lg: 0 10px 30px -10px rgba(0, 0, 0, 0.7), 0 30px 70px -30px rgba(0, 0, 0, 0.7);
+    --plate-shadow: 0 2px 3px rgba(0, 0, 0, 0.45), 0 10px 18px -8px rgba(0, 0, 0, 0.7);
+    --accent: var(--tenant-accent-dark, #4d9a83);
+    --accent-ink: var(--tenant-accent-ink-dark, #79c2ab);
+    --on-accent: var(--tenant-on-accent-dark, #ffffff);
+    color-scheme: dark;
   }
 }
 
 :root[data-theme='dark'] {
-  --bg: #000000;
-  --surface: #1c1a1a;
-  --fill: #2c2929;
-  --surface-glass: rgba(28, 26, 26, 0.72);
-  --page-scrim: rgba(0, 0, 0, 0.8);
-  --border: rgba(255, 255, 255, 0.12);
-  --ink: #f5f4f4;
-  --muted: #a6a1a1;
-  --danger: #ff453a;
-  --danger-ink: #ff6961;
-  --success: #30d158;
-  --scrim: rgba(0, 0, 0, 0.5);
-  --shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4), 0 24px 64px rgba(0, 0, 0, 0.5);
-  --accent: var(--tenant-accent-dark, #b8444c);
-  --accent-ink: var(--tenant-accent-ink-dark, #e07a82);
+  --table: #151917;
+  --table-2: #1b201d;
+  --surface: #222825;
+  --fill: #2a312d;
+  --border: rgba(255, 255, 255, 0.1);
+  --line: rgba(255, 255, 255, 0.12);
+  --ink: #eef1ef;
+  --muted: #a8b0ab;
+  --accent: var(--tenant-accent-dark, #4d9a83);
+  --accent-ink: var(--tenant-accent-ink-dark, #79c2ab);
   --on-accent: var(--tenant-on-accent-dark, #ffffff);
   color-scheme: dark;
 }
