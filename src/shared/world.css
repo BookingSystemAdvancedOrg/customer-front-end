@@ -3055,12 +3055,12 @@ h1, h2, h3, h4 {
 /* --- Kontakt: formuläret på ett kvitto ---------------------------------- */
 
 .photo-hero {
-  text-align: left;
+  text-align: center;
   padding-top: clamp(28px, 5vw, 52px);
 }
 
-.page > .contact-form {
-  margin-inline: 0;
+.photo-hero .hero-sub {
+  margin-inline: auto;
 }
 
 .booking-status:empty {
@@ -3074,7 +3074,7 @@ h1, h2, h3, h4 {
 .contact-form {
   position: relative;
   max-width: 34rem;
-  margin: 0 0 clamp(28px, 4vw, 48px);
+  margin: 0 auto clamp(28px, 4vw, 48px);
   padding: clamp(20px, 3vw, 28px) clamp(20px, 3vw, 28px) calc(24px + var(--tooth-h));
   background: var(--surface);
   box-shadow: var(--shadow);
