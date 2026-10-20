@@ -1,6 +1,6 @@
-/* Kundsajtens skal och sidor. Designsystem: "Apple UI kit" (tokens i
-   src/index.css) - ljus/mörk efter besökarens system, restaurangens egen
-   färg som enda accent, frostade paneler över restaurangens foto. */
+/* Kundsajtens skal och sidor. Designsystem: Booqys bongrail (tokens i
+   src/index.css) - papper på ett skrivbord, restaurangens egen färg som
+   enda accent. world.css laddas efter den här filen och skriver över. */
 
 .site {
   display: flex;
@@ -28,9 +28,6 @@
   padding: 0;
   border: none;
   background: var(--scrim);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
-  backdrop-filter: blur(5px);
   cursor: pointer;
 }
 
@@ -875,9 +872,7 @@
   margin-bottom: clamp(18px, 3.5vw, 26px);
   padding: clamp(18px, 3.2vw, 26px);
   border-radius: var(--r-md);
-  background: var(--surface-glass);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
-  backdrop-filter: saturate(180%) blur(20px);
+  background: var(--surface);
   border: 1px solid var(--border);
   box-shadow: var(--shadow);
 }

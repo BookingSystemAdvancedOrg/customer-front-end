@@ -1,10 +1,11 @@
-/* Världen: restaurangen sedd ovanifrån.
+/* Världen: Booqys bongrail, sedd från restaurangens sida.
 
    Laddas efter customer.css och äger skalet (headerband, hero, footer),
-   menyn som tallrikar, beställningens bricka och bokningens steg och
-   planritning. Restaurangens färg (--accent) bär skalet; underlaget är en
-   bordsskiva (--table) och rätterna ligger på vita tallrikar. Tokens i
-   src/index.css. */
+   menyn, beställningens kvitto och bokningens steg och planritning.
+   Restaurangens färg (--accent) bär skalet; underlaget är ett skrivbord i
+   papperston (--table) och innehållet trycks på kvittopapper (--surface)
+   med riven underkant. Tokens i src/index.css; Booqy-blocket längst ner i
+   den här filen skriver över de äldre reglerna ovanför. */
 
 /* --- Grund ------------------------------------------------------------------ */
 
@@ -73,7 +74,9 @@ svg {
   padding: 0 0 clamp(56px, 8vw, 96px);
 }
 
-.site-main > :not(.home-hero) {
+/* Sidorna ligger i .page (tryck-in-animationen); heron får gå kant till kant. */
+.site-main > :not(.home-hero, .page),
+.page > :not(.home-hero) {
   width: min(100% - var(--gutter) * 2, var(--wrap));
   margin-inline: auto;
 }
@@ -367,22 +370,6 @@ svg {
   padding: clamp(40px, 7vw, 88px) 0 clamp(36px, 6vw, 72px);
 }
 
-/* Utan foto: en dukning sedd ovanifrån i bakgrunden (tallrik, bestick). */
-.home-hero:not(.home-hero--photo)::after {
-  content: '';
-  position: absolute;
-  z-index: -1;
-  right: max(-120px, -8vw);
-  top: 50%;
-  width: clamp(300px, 46vw, 560px);
-  aspect-ratio: 1;
-  transform: translateY(-50%);
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 400' fill='none' stroke='white' stroke-width='3'%3E%3Ccircle cx='200' cy='200' r='118'/%3E%3Ccircle cx='200' cy='200' r='86' stroke-width='2' stroke-dasharray='2 7'/%3E%3Cpath d='M40 120v52a14 14 0 0 0 14 14h0v104M54 120v66M68 120v52a14 14 0 0 1-14 14' stroke-linecap='round'/%3E%3Cpath d='M346 120c-16 10-20 40-20 66h20v104' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
-    center / contain no-repeat;
-  opacity: 0.16;
-  pointer-events: none;
-}
-
 .home-hero--photo {
   min-height: clamp(420px, 62vh, 620px);
   display: flex;
@@ -574,9 +561,7 @@ svg {
   padding: 12px var(--gutter);
   overflow-x: auto;
   scrollbar-width: none;
-  background: color-mix(in srgb, var(--table) 92%, transparent);
-  backdrop-filter: saturate(1.4) blur(10px);
-  -webkit-backdrop-filter: saturate(1.4) blur(10px);
+  background: var(--surface);
 }
 
 .chip-rail::-webkit-scrollbar {
@@ -765,7 +750,7 @@ svg {
 
 /* --- Beställ: tallrikar med plus, brickan vid sidan ----------------------------------- */
 
-.site-main > .order-hint {
+.page > .order-hint {
   display: flex;
   width: fit-content;
   max-width: calc(100% - var(--gutter) * 2);
@@ -1238,7 +1223,7 @@ svg {
 
 /* --- Boka bord ------------------------------------------------------------------- */
 
-.site-main > .booking {
+.page > .booking {
   display: grid;
   gap: 16px;
   padding: 0;
@@ -1817,5 +1802,1546 @@ svg {
 
   .site-footer-credit {
     margin-left: 0;
+  }
+}
+
+/* =========================================================================
+   Booqy: bongrailen. Det här blocket skriver över skalet ovanför med
+   booqy.se:s formspråk: papper med riven underkant som hänger från en
+   stålrail, Archivo (bred, tung) för rubriker, Martian Mono för allt
+   skrivaren skriver (tider, priser, bord, statusar), 3 px hörn på allt
+   tryckt, och djup bara från papper som hänger. Restaurangens färg
+   (--accent) behåller headerbandet, heron, huvudknapparna och valda
+   tillstånd. Tokens i src/index.css.
+   ========================================================================= */
+
+/* --- Grund ---------------------------------------------------------------- */
+
+body {
+  font-feature-settings: normal;
+}
+
+::selection {
+  background: var(--ink-red);
+  color: #fff;
+}
+
+html {
+  scrollbar-color: color-mix(in srgb, var(--ink) 28%, transparent) transparent;
+  caret-color: var(--ink);
+}
+
+:focus-visible {
+  outline: 3px solid var(--ink-red);
+  outline-offset: 3px;
+  box-shadow: none;
+  border-radius: 2px;
+}
+
+.site-header :focus-visible,
+.home-hero :focus-visible,
+.site-footer :focus-visible,
+.order-mobile-bar:focus-visible {
+  outline-color: var(--on-accent);
+}
+
+.site-footer :focus-visible {
+  outline-color: var(--paper);
+}
+
+a {
+  color: var(--accent-ink);
+  text-underline-offset: 0.18em;
+  text-decoration-thickness: 1px;
+}
+
+a:hover {
+  text-decoration-thickness: 2px;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font);
+  font-stretch: 112%;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+/* Etikett: det skrivaren skriver i marginalen (EXEMPEL, KATEGORI, FÄLTNAMN). */
+.hero-kicker,
+.category-sidebar-kicker,
+.category-dropdown-label,
+.booking-field > span:first-child,
+.contact-form-field label,
+.offer-stub-label,
+.order-only-table,
+.site-footer h3,
+.storage-table th,
+.opening-hours-table th {
+  font: 500 0.6875rem/1.3 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Tryck: tider, priser, bord, antal. */
+.dish-price,
+.cart-item-price,
+.cart-total,
+.cart-total-before,
+.cart-discount,
+.booking-summary dd,
+.footer-hours,
+.opening-hours-table td,
+.hold-clock,
+.date-tile-day,
+.chip-count,
+.stepper > span,
+.cart-qty span,
+.party-stepper select,
+.order-mobile-bar-total,
+.order-mobile-bar-count,
+.offer-peek-percent,
+.open-chip,
+.home-hero-status,
+.location-picker label,
+.storage-table code,
+.catering-offer code {
+  font-family: var(--mono);
+  font-stretch: 87.5%;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Kvittot: papper, riven underkant, hänger från railen --------------- */
+
+.menu,
+.order-menu,
+.order-cart,
+.booking-step,
+.booking-confirmation,
+.catering-details,
+.page-prose,
+.printing {
+  position: relative;
+  background: var(--surface);
+  border: 0;
+  border-radius: 0;
+  box-shadow: var(--shadow);
+}
+
+.menu::after,
+.order-menu::after,
+.booking-step::after,
+.booking-confirmation::after,
+.catering-details::after,
+.page-prose::after,
+.printing::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--tooth-h);
+  background: conic-gradient(from -45deg at 50% 100%, var(--table) 0deg, transparent 1deg 89deg, var(--table) 90deg) 0 100% / var(--tooth) var(--tooth-h) repeat-x;
+  pointer-events: none;
+}
+
+/* Brickan rullar inuti (max-height på skrivbord): kanten följer med sist i innehållet. */
+.order-cart::after {
+  content: '';
+  display: block;
+  position: sticky;
+  left: 0;
+  flex: none;
+  height: var(--tooth-h);
+  margin: 0 -22px calc(var(--tooth-h) * -1 - 22px);
+  background: conic-gradient(from -45deg at 50% 100%, var(--table) 0deg, transparent 1deg 89deg, var(--table) 90deg) 0 100% / var(--tooth) var(--tooth-h) repeat-x;
+  pointer-events: none;
+}
+
+/* Sidorna trycks fram: ett kort fall från railen, kvittona faller efter. */
+.page {
+  animation: page-in 520ms var(--ease) both;
+}
+
+.menu,
+.order-menu,
+.order-cart,
+.booking-step,
+.booking-confirmation,
+.catering-details,
+.page-prose {
+  animation: drop 640ms var(--ease) both;
+}
+
+.booking-step:nth-of-type(2),
+.order-cart {
+  animation-delay: 80ms;
+}
+
+.booking-step:nth-of-type(3) {
+  animation-delay: 160ms;
+}
+
+.booking-step:nth-of-type(4) {
+  animation-delay: 240ms;
+}
+
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes drop {
+  from { opacity: 0; transform: translateY(-14px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes thunk {
+  0% { transform: scale(1.5) rotate(-4deg); opacity: 0; }
+  55% { transform: scale(0.95) rotate(-4deg); opacity: 1; }
+  100% { transform: scale(1) rotate(-4deg); }
+}
+
+@keyframes print-line {
+  0%, 10% { transform: scaleX(0); }
+  45%, 100% { transform: scaleX(1); }
+}
+
+/* Laddning: en remsa som skrivs ut. */
+.printing {
+  width: 220px;
+  margin: 28px auto;
+  padding: 16px 18px calc(12px + var(--tooth-h));
+  display: grid;
+  gap: 9px;
+  animation: drop 600ms var(--ease) both;
+}
+
+.printing__label {
+  font: 760 0.6875rem/1 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+  padding-bottom: 8px;
+  border-bottom: 1.5px dashed var(--paper-line);
+}
+
+.printing i {
+  display: block;
+  height: 7px;
+  border-radius: 2px;
+  background: var(--paper-line);
+  transform-origin: left;
+  animation: print-line 1600ms steps(14, end) infinite;
+}
+
+.printing i:nth-child(2) { width: 78%; animation-delay: 220ms; }
+.printing i:nth-child(3) { width: 62%; animation-delay: 440ms; }
+.printing i:nth-child(4) { width: 86%; animation-delay: 660ms; }
+
+.site-boot {
+  display: grid;
+  place-content: center;
+  gap: 12px;
+  min-height: 100svh;
+  padding: 24px;
+  text-align: center;
+  background: var(--table);
+}
+
+.site-boot h1 {
+  font: 860 clamp(1.8rem, 1rem + 2.6vw, 2.6rem)/1.02 var(--font);
+  font-stretch: 125%;
+  letter-spacing: -0.025em;
+}
+
+.site-boot p {
+  color: var(--muted);
+  max-width: 44ch;
+}
+
+.site-boot .btn-primary {
+  justify-self: center;
+}
+
+/* Stämpeln: status i rött (öppet läge) eller svart (klart). */
+.booking-status {
+  display: inline-block;
+  width: fit-content;
+  max-width: 100%;
+  padding: 3px 8px 2px;
+  border: 2px solid currentColor;
+  border-radius: 3px;
+  font: 800 0.78rem/1.2 var(--mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-red);
+  transform: rotate(-4deg);
+  margin: 6px 0 14px;
+  animation: thunk 420ms var(--ease) both;
+}
+
+/* --- Header: bandet i restaurangens färg -------------------------------- */
+
+.site-header {
+  box-shadow: none;
+}
+
+.site-header-brand img {
+  border-radius: 3px;
+  object-fit: contain;
+  background: var(--paper);
+  box-shadow: none;
+}
+
+.site-header-wordmark {
+  font-weight: 800;
+  font-stretch: 112%;
+  font-size: 1.25rem;
+  letter-spacing: -0.02em;
+}
+
+.site-header-nav a {
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: var(--r-nav);
+  font-weight: 560;
+  font-size: 0.95rem;
+  color: color-mix(in srgb, var(--on-accent) 82%, transparent);
+}
+
+.site-header-nav a:hover,
+.site-header-nav a[aria-current='page'] {
+  background: color-mix(in srgb, var(--on-accent) 9%, transparent);
+  color: var(--on-accent);
+}
+
+.site-header-nav a[aria-current='page'] {
+  background: color-mix(in srgb, var(--on-accent) 14%, transparent);
+}
+
+.open-chip {
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 3px;
+  border: 1.5px solid color-mix(in srgb, var(--on-accent) 45%, transparent);
+  background: transparent;
+  font: 600 0.75rem/1 var(--mono);
+  letter-spacing: 0.04em;
+}
+
+.open-chip:hover {
+  background: color-mix(in srgb, var(--on-accent) 10%, transparent);
+  border-color: var(--on-accent);
+}
+
+.location-picker select {
+  border-radius: 3px;
+  font: 600 0.8rem/1 var(--mono);
+}
+
+.site-header-burger {
+  border-radius: 3px;
+}
+
+.site-header-burger-line {
+  border-radius: 0;
+}
+
+.mobile-drawer {
+  border-radius: 0;
+  padding: 84px 20px 24px;
+  background: var(--surface);
+  box-shadow: -14px 0 18px rgba(0, 0, 0, 0.22);
+}
+
+.mobile-drawer-list a,
+.mobile-drawer-hours-trigger {
+  border-radius: 3px;
+  font: 800 1.15rem/1 var(--font);
+  font-stretch: 110%;
+  letter-spacing: -0.01em;
+  border-bottom: 1.5px dashed var(--paper-line);
+}
+
+.mobile-drawer-list li:last-child .mobile-drawer-hours-trigger {
+  border-bottom: 0;
+}
+
+/* --- Startsidans hero: bandet, railen, menyn som hänger under ------------ */
+
+.home-hero {
+  padding-bottom: 22px;
+}
+
+.home-hero::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  height: 22px;
+  background: linear-gradient(var(--steel) 0 14px, var(--steel-lo) 14px 16px, var(--steel) 16px);
+  box-shadow: var(--rail-shadow);
+}
+
+.home-hero--photo::after {
+  opacity: 1;
+}
+
+.home-hero-body {
+  padding: clamp(40px, 7vw, 88px) 0 clamp(44px, 6vw, 80px);
+}
+
+.home-hero h1 {
+  font-weight: 860;
+  font-stretch: 125%;
+  font-size: clamp(2.4rem, 1.4rem + 3.6vw, 4.6rem);
+  line-height: 0.96;
+  letter-spacing: -0.025em;
+  max-width: 14ch;
+}
+
+.home-hero-tagline {
+  font-size: clamp(1.08rem, 1rem + 0.35vw, 1.25rem);
+  line-height: 1.55;
+}
+
+.home-hero-status {
+  font-weight: 500;
+  font-size: 0.82rem;
+  letter-spacing: 0.02em;
+}
+
+.home-hero-address {
+  font-weight: 400;
+}
+
+.action {
+  min-height: 48px;
+  padding: 0 20px;
+  border-radius: 3px;
+  font: 700 1rem/1 var(--font);
+  font-stretch: 112%;
+  letter-spacing: 0.01em;
+}
+
+.action svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2.2;
+}
+
+.action--primary {
+  background: var(--paper);
+  color: var(--print);
+  box-shadow: 0 2px 6px -2px rgba(0, 0, 0, 0.35);
+}
+
+.action--primary svg {
+  stroke: var(--print);
+}
+
+.action--primary:hover {
+  background: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px -6px rgba(0, 0, 0, 0.5);
+}
+
+.action--secondary {
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, currentColor 60%, transparent);
+}
+
+.action--secondary:hover {
+  background: color-mix(in srgb, currentColor 10%, transparent);
+  transform: translateY(-1px);
+}
+
+.menu {
+  margin-top: 0;
+  padding: clamp(22px, 3vw, 36px) clamp(18px, 3vw, 40px) calc(clamp(26px, 3vw, 40px) + var(--tooth-h));
+}
+
+.menu-heading {
+  font: 760 0.8125rem/1.6 var(--mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding-bottom: 10px;
+  margin-bottom: 4px;
+  border-bottom: 1.5px dashed var(--paper-line);
+}
+
+.chip-rail {
+  margin: 0 calc(clamp(18px, 3vw, 40px) * -1) 4px;
+  padding: 10px clamp(18px, 3vw, 40px);
+  background: var(--surface);
+  border-bottom: 1.5px dashed var(--paper-line);
+}
+
+.chip {
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: 3px;
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--paper-line);
+  font: 700 0.9rem/1 var(--font);
+  font-stretch: 108%;
+}
+
+.chip:hover {
+  box-shadow: inset 0 0 0 1.5px var(--ink);
+}
+
+.chip.is-active {
+  background: var(--print);
+  color: var(--paper);
+  box-shadow: none;
+}
+
+.chip-count {
+  min-width: 0;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+.chip.is-active .chip-count {
+  background: transparent;
+  color: color-mix(in srgb, var(--paper) 70%, transparent);
+}
+
+.menu-section-title {
+  font-weight: 800;
+  font-stretch: 118%;
+  font-size: clamp(1.3rem, 1.15rem + 0.6vw, 1.6rem);
+  letter-spacing: -0.02em;
+}
+
+.dish {
+  gap: 14px;
+  padding: 12px 0;
+  border-bottom: 1.5px dashed var(--paper-line);
+}
+
+.dish-name {
+  font-weight: 750;
+  font-stretch: 108%;
+  font-size: 1.05rem;
+}
+
+.dish-desc {
+  font-size: 0.92rem;
+}
+
+.dish-price {
+  font-weight: 600;
+  font-size: 0.9rem;
+  letter-spacing: 0.01em;
+}
+
+.menu-allergy {
+  font-size: 0.95rem;
+  padding-top: 14px;
+}
+
+/* Tallriken blev ett tryckt foto: fyrkant med 3 px hörn. */
+.plate {
+  --size: 76px;
+  padding: 0;
+  border-radius: 3px;
+  background: var(--fill);
+  box-shadow: none;
+  overflow: hidden;
+}
+
+.plate img {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 3px;
+}
+
+.plate--empty::before {
+  content: none;
+}
+
+.plate-initial {
+  font: 500 calc(var(--size) * 0.26)/1 var(--mono);
+  color: var(--muted);
+}
+
+.plate--sm {
+  --size: 32px;
+  box-shadow: 0 0 0 2px var(--surface);
+}
+
+.plate--lg {
+  --size: 110px;
+}
+
+/* --- Sidhuvud på undersidor ------------------------------------------- */
+
+.page-head h1,
+.page-hero h1,
+.photo-hero h1,
+.booking-confirmation h1 {
+  font-weight: 800;
+  font-stretch: 118%;
+  font-size: clamp(1.9rem, 1.2rem + 2.2vw, 3rem);
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+}
+
+.page-lede,
+.hero-sub {
+  color: var(--muted);
+  font-size: clamp(1.02rem, 1rem + 0.2vw, 1.12rem);
+}
+
+/* --- Knappar: skrivarens omvända block ---------------------------------- */
+
+.btn-primary,
+.btn-secondary,
+.btn,
+.offer-submit {
+  min-height: 48px;
+  padding: 0 20px;
+  border-radius: 3px;
+  font: 700 1rem/1 var(--font);
+  font-stretch: 112%;
+  letter-spacing: 0.01em;
+  transition: background-color 160ms var(--ease), transform 160ms var(--ease), box-shadow 160ms var(--ease), border-color 160ms var(--ease);
+}
+
+.btn-primary,
+.btn.primary,
+.offer-submit {
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: 0 2px 6px -2px rgba(0, 0, 0, 0.35);
+}
+
+.btn-primary:hover:not(:disabled),
+.btn.primary:hover:not(:disabled),
+.offer-submit:hover:not(:disabled) {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px -6px rgba(0, 0, 0, 0.5);
+}
+
+.btn-primary:active:not(:disabled),
+.btn.primary:active:not(:disabled),
+.btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.btn-primary:disabled,
+.btn.primary:disabled,
+.offer-submit:disabled {
+  background: var(--fill);
+  color: var(--muted);
+  box-shadow: none;
+}
+
+.btn-secondary,
+.btn.ghost,
+.btn.small {
+  background: transparent;
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1.5px var(--paper-line);
+}
+
+.btn-secondary:hover:not(:disabled),
+.btn.ghost:hover:not(:disabled),
+.btn.small:hover:not(:disabled) {
+  box-shadow: inset 0 0 0 1.5px var(--ink);
+  filter: none;
+  transform: translateY(-1px);
+}
+
+.btn.small {
+  min-height: 40px;
+  padding: 0 14px;
+  font-size: 0.92rem;
+}
+
+.link-button {
+  color: var(--accent-ink);
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+/* --- Fält: tryckta i papperets skugga ----------------------------------- */
+
+.booking-field,
+.contact-form-field {
+  gap: 6px;
+}
+
+.booking-field input,
+.booking-field select,
+.booking-field textarea,
+.contact-form-field input,
+.contact-form-field select,
+.contact-form-field textarea,
+.catering-dishes input,
+.cart-code-row input,
+.offer-field input {
+  min-height: 48px;
+  padding: 10px 14px;
+  border: 1.5px solid var(--paper-line);
+  border-radius: 3px;
+  background: var(--fill);
+  box-shadow: none;
+  color: var(--ink);
+  font: 400 1rem/1.4 var(--font);
+  transition: border-color 160ms var(--ease), background-color 160ms var(--ease);
+}
+
+.booking-field input:hover,
+.booking-field select:hover,
+.booking-field textarea:hover,
+.contact-form-field input:hover,
+.contact-form-field textarea:hover {
+  border-color: var(--muted);
+}
+
+.booking-field input:focus,
+.booking-field select:focus,
+.booking-field textarea:focus,
+.contact-form-field input:focus,
+.contact-form-field select:focus,
+.contact-form-field textarea:focus,
+.catering-dishes input:focus,
+.cart-code-row input:focus,
+.offer-field input:focus {
+  outline: none;
+  background: var(--surface);
+  border-color: var(--ink);
+  box-shadow: none;
+}
+
+.field-hint {
+  font-weight: 400;
+  font-size: 0.85rem;
+  text-transform: none;
+  letter-spacing: 0;
+  font-family: var(--font);
+}
+
+.booking-check {
+  font-size: 0.95rem;
+}
+
+.booking-check input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--ink);
+}
+
+.notice {
+  border: 1.5px dashed var(--paper-line);
+  border-radius: 3px;
+  background: var(--surface);
+  box-shadow: none;
+  color: var(--muted);
+  padding: 12px 16px;
+  font-size: 0.95rem;
+}
+
+.notice.error {
+  background: var(--surface);
+  border-color: var(--ink-red);
+  box-shadow: none;
+  color: var(--ink-red);
+}
+
+/* Fliken (tider, våningar, bord, filter): tryckt val. */
+.filter-pill {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1.5px var(--paper-line);
+  font: 600 0.9rem/1 var(--mono);
+  font-stretch: 87.5%;
+  letter-spacing: 0.01em;
+  transition: background-color 160ms var(--ease), color 160ms var(--ease), box-shadow 160ms var(--ease);
+}
+
+.filter-pill:hover {
+  filter: none;
+  box-shadow: inset 0 0 0 1.5px var(--ink);
+}
+
+.filter-pill:active {
+  transform: none;
+}
+
+.filter-pill.active {
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: none;
+}
+
+.filter-pill.is-special:not(.active) {
+  box-shadow: none;
+  outline: 1.5px dashed var(--paper-line);
+  outline-offset: -1.5px;
+}
+
+/* --- Beställ: kvittot till vänster, brickan till höger ------------------ */
+
+.page > .order-hint,
+.order-hint {
+  border-radius: 3px;
+  border: 1.5px dashed var(--paper-line);
+  background: var(--surface);
+  box-shadow: none;
+  text-align: left;
+}
+
+.order-menu {
+  display: block;
+  padding: clamp(18px, 3vw, 28px) clamp(18px, 3vw, 28px) calc(24px + var(--tooth-h));
+}
+
+.order-menu .chip-rail {
+  margin: 0 calc(clamp(18px, 3vw, 28px) * -1) 4px;
+  padding: 10px clamp(18px, 3vw, 28px);
+}
+
+.order-menu .menu-section + .menu-section {
+  margin-top: 8px;
+}
+
+.dish--order.is-in-cart .plate {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.add-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 3px;
+  box-shadow: 0 2px 6px -2px rgba(0, 0, 0, 0.35);
+}
+
+.add-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px -6px rgba(0, 0, 0, 0.5);
+}
+
+.add-btn:active:not(:disabled) {
+  transform: none;
+  box-shadow: none;
+}
+
+.add-btn:disabled {
+  box-shadow: none;
+}
+
+.stepper {
+  padding: 2px;
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+}
+
+.stepper button {
+  width: 38px;
+  height: 38px;
+  border-radius: 3px;
+}
+
+.stepper > span {
+  font-weight: 700;
+}
+
+.order-only-table {
+  border-radius: 3px;
+  padding: 6px 8px;
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--paper-line);
+  white-space: normal;
+  text-align: center;
+}
+
+.order-cart {
+  gap: 14px;
+  padding: 22px 22px calc(22px + var(--tooth-h));
+  overscroll-behavior: contain;
+}
+
+.tray-head h2,
+.order-cart h2 {
+  font: 760 0.8125rem/1.6 var(--mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.tray-plates .plate + .plate {
+  margin-left: -8px;
+}
+
+.cart-empty {
+  font-size: 0.95rem;
+}
+
+.cart-list li {
+  padding: 8px 0;
+  border-bottom: 1.5px dashed var(--paper-line);
+}
+
+.cart-item-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.cart-item-price {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.cart-list .cart-qty button,
+.cart-qty button {
+  width: 30px;
+  height: 30px;
+  border-radius: 3px;
+  background: var(--fill);
+  font: 700 1rem/1 var(--font);
+}
+
+.cart-total {
+  font-weight: 800;
+  font-size: 1rem;
+  padding-top: 4px;
+  gap: 12px;
+}
+
+.cart-total > span:last-child {
+  white-space: nowrap;
+}
+
+.cart-note {
+  font-size: 0.82rem;
+}
+
+.order-form {
+  padding-top: 14px;
+  border-top: 1.5px dashed var(--paper-line);
+}
+
+.order-cart .order-form .btn-primary {
+  width: 100%;
+}
+
+@media (max-width: 1000px) {
+  .order-mobile-bar {
+    border-radius: 3px;
+    box-shadow: var(--shadow);
+    font-family: var(--font);
+  }
+
+  .order-mobile-bar-count {
+    border-radius: 3px;
+    font-weight: 700;
+  }
+}
+
+/* --- Boka bord: fyra kvitton, ett per steg ------------------------------ */
+
+.page > .booking {
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: stretch;
+  gap: 22px;
+}
+
+.booking > * {
+  width: 100%;
+  min-width: 0;
+  max-width: 860px;
+}
+
+.booking-step {
+  gap: 16px;
+  padding: clamp(18px, 3vw, 28px) clamp(18px, 3vw, 28px) calc(clamp(20px, 3vw, 28px) + var(--tooth-h));
+}
+
+.booking-step legend {
+  font-weight: 800;
+  font-stretch: 118%;
+  font-size: 1.3rem;
+  letter-spacing: -0.02em;
+}
+
+.step-no {
+  width: 30px;
+  height: 30px;
+  border-radius: 3px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font: 760 0.8rem/1 var(--mono);
+}
+
+.party-stepper {
+  padding: 3px;
+  border-radius: 3px;
+  background: var(--fill);
+}
+
+.party-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 3px;
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+.party-stepper select {
+  min-height: 44px;
+  border-radius: 3px;
+  font: 700 1rem/1 var(--mono);
+  font-stretch: 87.5%;
+}
+
+.date-tile {
+  width: 68px;
+  min-height: 80px;
+  border-radius: 3px;
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--paper-line);
+}
+
+.date-tile:hover {
+  box-shadow: inset 0 0 0 1.5px var(--ink);
+}
+
+.date-tile-wd {
+  font: 500 0.66rem/1.2 var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.date-tile-day {
+  font-weight: 700;
+  font-size: 1.4rem;
+}
+
+.date-tile-mon,
+.date-tile .pill-note {
+  font: 500 0.66rem/1.2 var(--mono);
+}
+
+.date-tile.active {
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: none;
+}
+
+.booking-summary-line {
+  border-radius: 3px;
+  border: 1.5px dashed var(--paper-line);
+  background: var(--fill);
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.floor-view-toggle {
+  padding: 3px;
+  border-radius: 3px;
+  background: var(--fill);
+}
+
+.floor-view-toggle button {
+  border-radius: 3px;
+  font: 700 0.8rem/1 var(--mono);
+}
+
+.floor-view-toggle button.active {
+  background: var(--print);
+  color: var(--paper);
+  box-shadow: none;
+}
+
+.floor-svg-frame {
+  border-radius: 3px;
+  background: var(--table);
+  box-shadow: inset 0 0 0 1.5px var(--paper-line);
+}
+
+.floor-legend {
+  font: 500 0.72rem/1.4 var(--mono);
+  letter-spacing: 0.03em;
+}
+
+.floor-legend-swatch {
+  border-radius: 2px;
+}
+
+.hold-banner {
+  border: 0;
+  border-top: 4px solid var(--steel);
+  border-radius: 0 0 3px 3px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  font-size: 0.95rem;
+}
+
+.hold-banner .btn-secondary {
+  min-height: 40px;
+  padding: 0 14px;
+  font-size: 0.92rem;
+}
+
+.hold-clock {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.hold-banner.urgent {
+  border-top-color: var(--ink-red);
+}
+
+.hold-banner.urgent .hold-clock {
+  color: var(--ink-red);
+}
+
+.guarantee-notice {
+  border: 1.5px dashed var(--paper-line);
+  border-radius: 3px;
+  background: var(--fill);
+  font-size: 0.92rem;
+}
+
+.table-reasons summary,
+.catering-terms summary {
+  font-weight: 650;
+  color: var(--accent-ink);
+}
+
+/* Bekräftelsen: kvittot som skrivs ut när bokningen är klar. */
+.booking-confirmation {
+  max-width: 640px;
+  margin-top: clamp(28px, 5vw, 52px);
+  padding: clamp(22px, 4vw, 36px) clamp(22px, 4vw, 36px) calc(clamp(24px, 4vw, 36px) + var(--tooth-h));
+}
+
+.booking-summary > div {
+  padding: 9px 0;
+  border-bottom: 1.5px dashed var(--paper-line);
+}
+
+.booking-summary dt {
+  font: 500 0.6875rem/1.6 var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.booking-summary dd {
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.booking-sent,
+.booking-manage-link {
+  font-size: 0.95rem;
+}
+
+.order-steps {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+}
+
+/* --- Catering: rätterna som rader, kalkylen som kvitto ------------------- */
+
+.catering-dishes {
+  gap: 0;
+  margin-bottom: 16px;
+}
+
+.catering-dishes li {
+  padding: 10px 0;
+  border: 0;
+  border-bottom: 1.5px dashed var(--paper-line);
+  border-radius: 0;
+  background: transparent;
+}
+
+.catering-dishes input {
+  min-height: 42px;
+  padding: 6px 10px;
+  text-align: right;
+  font-family: var(--mono);
+  font-stretch: 87.5%;
+  font-variant-numeric: tabular-nums;
+}
+
+.catering-dishes .dish-price {
+  font-size: 0.85rem;
+}
+
+.catering-details {
+  gap: 14px;
+  margin-top: 18px;
+  padding: clamp(18px, 3vw, 28px) clamp(18px, 3vw, 28px) calc(24px + var(--tooth-h));
+}
+
+.catering-step-title {
+  font-weight: 800;
+  font-stretch: 118%;
+  font-size: 1.3rem;
+  letter-spacing: -0.02em;
+}
+
+.menu-content-title {
+  font-weight: 800;
+  font-stretch: 112%;
+  font-size: 1.1rem;
+  margin: 14px 0 2px;
+}
+
+.segmented {
+  padding: 3px;
+  border-radius: 3px;
+  background: var(--fill);
+}
+
+.segmented label {
+  border-radius: 3px;
+  font: 600 0.92rem/1 var(--font);
+}
+
+.segmented label.on {
+  background: var(--print);
+  color: var(--paper);
+  box-shadow: none;
+}
+
+.catering-discount {
+  color: var(--ink-red);
+}
+
+.catering-offer,
+.bankid-box {
+  border: 1.5px dashed var(--paper-line);
+  border-radius: 3px;
+  background: var(--fill);
+}
+
+.catering-offer h2 {
+  font: 760 0.8125rem/1.6 var(--mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.catering-message {
+  font-style: normal;
+  color: var(--ink);
+}
+
+.bankid-qr {
+  border-radius: 3px;
+}
+
+/* --- Kontakt: formuläret på ett kvitto ---------------------------------- */
+
+.photo-hero {
+  text-align: left;
+  padding-top: clamp(28px, 5vw, 52px);
+}
+
+.page > .contact-form {
+  margin-inline: 0;
+}
+
+.booking-status:empty {
+  display: none;
+}
+
+.photo-hero .hero-sub {
+  margin: 0;
+}
+
+.contact-form {
+  position: relative;
+  max-width: 34rem;
+  margin: 0 0 clamp(28px, 4vw, 48px);
+  padding: clamp(20px, 3vw, 28px) clamp(20px, 3vw, 28px) calc(24px + var(--tooth-h));
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  animation: drop 640ms var(--ease) both;
+}
+
+.contact-form::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--tooth-h);
+  background: conic-gradient(from -45deg at 50% 100%, var(--table) 0deg, transparent 1deg 89deg, var(--table) 90deg) 0 100% / var(--tooth) var(--tooth-h) repeat-x;
+  pointer-events: none;
+}
+
+.contact-form-field label {
+  font-size: 0.6875rem;
+}
+
+/* --- Textsidor: kvittot med villkoren ---------------------------------- */
+
+.page-prose {
+  max-width: 820px;
+  margin: clamp(20px, 3vw, 32px) auto clamp(28px, 4vw, 48px);
+  padding: clamp(26px, 4vw, 48px) clamp(22px, 4vw, 56px) calc(40px + var(--tooth-h));
+  line-height: 1.6;
+}
+
+.page-prose h1 {
+  font-weight: 800;
+  font-stretch: 118%;
+  font-size: clamp(1.9rem, 1.2rem + 2.2vw, 3rem);
+  line-height: 1.02;
+  margin-bottom: 10px;
+}
+
+.page-prose h2 {
+  margin: 28px 0 8px;
+  font: 760 0.8125rem/1.6 var(--mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.page-prose p,
+.page-prose li {
+  color: var(--ink);
+}
+
+.page-prose .cell-muted {
+  color: var(--muted);
+}
+
+.page-hero.page-prose {
+  text-align: left;
+}
+
+.storage-table th {
+  border-bottom: 1.5px solid var(--ink);
+}
+
+.storage-table td {
+  border-bottom: 1.5px dashed var(--paper-line);
+}
+
+@media (max-width: 600px) {
+  .storage-table tr {
+    border-bottom: 1.5px dashed var(--paper-line);
+  }
+}
+
+/* --- Öppettider (modal): ett kvitto på väggen --------------------------- */
+
+.opening-hours-modal-panel {
+  width: min(26rem, 100%);
+  padding: 1.2rem 1.4rem calc(1.4rem + var(--tooth-h));
+  border: 0;
+  border-radius: 0;
+  background: var(--surface);
+  box-shadow: none;
+  animation: drop 480ms var(--ease) both;
+  -webkit-mask:
+    conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / var(--tooth) var(--tooth-h) repeat-x,
+    linear-gradient(#000 0 0) top / 100% calc(100% - var(--tooth-h) + 1px) no-repeat;
+  mask:
+    conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / var(--tooth) var(--tooth-h) repeat-x,
+    linear-gradient(#000 0 0) top / 100% calc(100% - var(--tooth-h) + 1px) no-repeat;
+}
+
+.opening-hours-modal-header {
+  border-bottom: 1.5px dashed var(--paper-line);
+}
+
+.opening-hours-modal-heading {
+  font: 760 0.8125rem/1.6 var(--mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.opening-hours-modal-close {
+  width: 2.2rem;
+  height: 2.2rem;
+  border: 1.5px solid var(--paper-line);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--ink);
+}
+
+.opening-hours-modal-close:hover {
+  border-color: var(--ink);
+  background: transparent;
+}
+
+.opening-hours-table {
+  font-size: 0.85rem;
+}
+
+.opening-hours-table th,
+.opening-hours-table td {
+  padding: 0.45rem 0;
+  border-top: 1.5px dashed var(--paper-line);
+}
+
+.opening-hours-table td {
+  text-align: right;
+  color: var(--ink);
+}
+
+.opening-hours-special-heading {
+  font: 760 0.75rem/1.6 var(--mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* --- Footer: tryckfärgsvart, pappersvit text ---------------------------- */
+
+.site-footer {
+  background: var(--print);
+  color: color-mix(in srgb, var(--paper) 72%, transparent);
+  font-size: 0.95rem;
+}
+
+.site-footer a {
+  color: var(--paper);
+}
+
+.footer-brand h2 {
+  color: var(--paper);
+  font-weight: 820;
+  font-stretch: 118%;
+  font-size: 1.5rem;
+}
+
+.site-footer h3 {
+  color: color-mix(in srgb, var(--paper) 60%, transparent);
+  margin-bottom: 10px;
+}
+
+.footer-hours {
+  font-size: 0.82rem;
+  gap: 6px;
+}
+
+.footer-hours li {
+  border-bottom: 1.5px dashed color-mix(in srgb, var(--paper) 16%, transparent);
+  padding-bottom: 6px;
+}
+
+.site-footer-main {
+  border-top: 1.5px dashed color-mix(in srgb, var(--paper) 22%, transparent);
+  font-size: 0.82rem;
+}
+
+.site-footer-credit {
+  color: color-mix(in srgb, var(--paper) 55%, transparent);
+}
+
+.site-footer-booqy {
+  color: var(--paper);
+}
+
+/* --- Kupongen: samma papper, samma hörn --------------------------------- */
+
+.offer-card {
+  filter: drop-shadow(0 14px 18px rgba(0, 0, 0, 0.3)) drop-shadow(0 2px 3px rgba(0, 0, 0, 0.2));
+}
+
+.offer-ticket,
+.offer-stub,
+.offer-peek,
+.offer-tab,
+.offer-peek-percent,
+.offer-close,
+.offer-dish {
+  border-radius: 3px;
+}
+
+.offer-stub::after {
+  border-right-color: color-mix(in srgb, var(--print) 25%, transparent);
+}
+
+.offer-stub-percent {
+  font: 820 2.3rem/1 var(--font);
+  font-stretch: 125%;
+  letter-spacing: -0.02em;
+}
+
+.offer-stub-percent small {
+  font-size: 1.2rem;
+}
+
+.offer-form h2,
+.offer-done h2 {
+  font-weight: 800;
+  font-stretch: 112%;
+}
+
+.offer-submit {
+  min-height: 44px;
+}
+
+.offer-field input {
+  min-height: 44px;
+}
+
+@media (max-width: 760px) {
+  .menu {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .chip-rail {
+    margin: 0 -18px 4px;
+    padding: 10px 18px;
+  }
+}
+
+@media (max-width: 560px) {
+  :root {
+    font-size: 16px;
+  }
+
+  .home-hero-actions .action {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page,
+  .menu,
+  .order-menu,
+  .order-cart,
+  .booking-step,
+  .booking-confirmation,
+  .catering-details,
+  .page-prose,
+  .booking-status,
+  .opening-hours-modal-panel,
+  .printing,
+  .printing i {
+    animation: none !important;
+  }
+
+  .printing i {
+    transform: none;
   }
 }

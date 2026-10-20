@@ -131,7 +131,14 @@ export function SiteProvider({ children }: { children: ReactNode }) {
   }, [query, attempt])
 
   if (state.status === 'loading') {
-    return <div className="site-boot" role="status" aria-live="polite">Laddar…</div>
+    return (
+      <div className="site-boot">
+        <div className="printing" role="status" aria-live="polite" aria-label="Laddar">
+          <span className="printing__label">Laddar</span>
+          <i /><i /><i /><i />
+        </div>
+      </div>
+    )
   }
   if (state.status === 'error') {
     return (

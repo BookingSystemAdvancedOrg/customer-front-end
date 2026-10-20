@@ -208,7 +208,9 @@ export function CustomerLayout() {
       <OpeningHoursModal open={hoursOpen} onClose={() => setHoursOpen(false)} />
 
       <main className="site-main">
-        <Outlet key={current.locationId} />
+        <div className="page" key={`${current.locationId}:${pathname}`}>
+          <Outlet />
+        </div>
       </main>
 
       {marketing && <OfferCard key={current.locationId} />}
