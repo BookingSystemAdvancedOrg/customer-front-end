@@ -11,10 +11,10 @@ import { LOCATION_KEY_PREFIX, SLUG_KEY } from './storageRegistry'
  * juridisk person och publika nycklar. Ingen restaurangs data byggs in i
  * sajten.
  *
- * Utanför produktion (localhost, *.cloudfront.net) kan domänen inte avgöra
+ * I dev (localhost, *.cloudfront.net) kan domänen inte avgöra
  * restaurangen, så den väljs med `?restaurang=<slug>` (sparas för resten av
  * besöket) eller byggvärdet VITE_DEV_TENANT_SLUG. API:t godtar slug bara
- * utanför prod.
+ * i dev.
  */
 
 /** Kortgarantins villkor för en plats (null = inget kort krävs). Avgifter i kr. */
