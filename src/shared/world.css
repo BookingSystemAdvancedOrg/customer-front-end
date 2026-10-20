@@ -3060,15 +3060,16 @@ h1, h2, h3, h4 {
 }
 
 .photo-hero .hero-sub {
-  margin-inline: auto;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.photo-hero .hero-sub + .hero-sub {
+  margin-top: 6px;
 }
 
 .booking-status:empty {
   display: none;
-}
-
-.photo-hero .hero-sub {
-  margin: 0;
 }
 
 .contact-form {
