@@ -30,6 +30,9 @@ import {
 import type { Cart, OrderMode, OrderingState } from './orderApi'
 import { checkCode, codeErrorMessage, discounted, normalizeCode } from '../erbjudande/offerApi'
 import type { CodeTerms } from '../erbjudande/offerApi'
+import { FlowSteps } from '../../shared/FlowSteps'
+
+const STEPS = [{ label: 'Välj rätter' }, { label: 'Dina uppgifter' }, { label: 'Betala' }, { label: 'Klart' }]
 
 interface Guest {
   name: string
@@ -79,6 +82,8 @@ export default function BestallPage() {
   const [guest, setGuest] = useState<Guest>(EMPTY_GUEST)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  // Beställningen är registrerad och gästen är på väg till Stripe.
+  const [redirecting, setRedirecting] = useState(false)
   const turnstileSiteKey = config.turnstile?.siteKey ?? null
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
   const [turnstileReset, setTurnstileReset] = useState(0)
@@ -123,6 +128,10 @@ export default function BestallPage() {
   const tooLarge = subtotal > MAX_ORDER_ORE
   const open = Boolean(ordering?.open && ordering[mode])
   const tableLabel = ordering?.forTable?.label
+  const count = lines.reduce((n, l) => n + l.quantity, 0)
+  // Stegraden: rätter -> uppgifter -> betala. Uppgifterna är klara när
+  // samma kontroll som vid Betala går igenom.
+  const stepAt = redirecting ? 4 : lines.length === 0 ? 1 : guestError(guest) ? 2 : 3
 
   function change(id: string, delta: number) {
     setError(null)
@@ -220,6 +229,7 @@ export default function BestallPage() {
       })
       rememberToken(created.orderId, created.statusToken)
       clearCart(locationId)
+      setRedirecting(true)
       window.location.assign(created.checkoutUrl)
     } catch (err) {
       setError(orderErrorMessage(err))
@@ -241,6 +251,7 @@ export default function BestallPage() {
             ? `Välj, betala i mobilen - vi serverar vid ${tableLabel ? (/^bord/i.test(tableLabel) ? tableLabel : `bord ${tableLabel}`) : 'ditt bord'}.`
             : `Välj, betala här och hämta hos ${config.tenant.name}. Du får ett sms när maten är klar.`}
         </p>
+        <FlowSteps steps={STEPS} current={stepAt} label="Beställning" />
       </section>
 
       {cancelledOrder && (
@@ -337,12 +348,12 @@ export default function BestallPage() {
             </span>
           </div>
           {lines.length === 0 ? (
-            <p className="cart-empty">Tryck på + vid en rätt för att lägga den här.</p>
+            <p className="cart-empty">Brickan är tom. Tryck på + vid en rätt, så hamnar den här.</p>
           ) : (
             <ul className="cart-list">
               {lines.map(({ dish, quantity }) => (
                 <li key={dish.menuItemId}>
-                  <span className="cart-item-name">{quantity} × {dish.name}</span>
+                  <span className="cart-item-name" key={quantity}>{quantity} × {dish.name}</span>
                   <span className="cart-qty">
                     <button type="button" aria-label={`En ${dish.name} mindre`}
                       onClick={() => change(dish.menuItemId, -1)}>−</button>
@@ -399,7 +410,8 @@ export default function BestallPage() {
           <p className="cart-note">Priserna inkluderar moms.</p>
 
           {lines.length > 0 && (
-          <form className="order-form" onSubmit={submit} noValidate>
+          <form className="order-form" onSubmit={submit} noValidate aria-busy={busy || undefined}>
+            <fieldset className="order-fields" disabled={busy}>
             <label className="booking-field">
               Namn
               <input autoComplete="name" value={guest.name}
@@ -452,8 +464,20 @@ export default function BestallPage() {
                 {error}
               </p>
             )}
-            <button type="submit" className="btn-primary" disabled={!open || busy || lines.length === 0 || tooLarge}>
-              {busy ? 'Skickar…' : `Betala ${kronor(total)}`}
+            </fieldset>
+            {redirecting && (
+              <p className="notice is-ok" role="status">
+                Tack! Beställningen är registrerad. Vi skickar dig vidare till den säkra betalningen hos Stripe…
+              </p>
+            )}
+            <button
+              type="submit"
+              className={`btn-primary${busy ? ' is-busy' : ''}`}
+              disabled={!open || busy || lines.length === 0 || tooLarge}
+            >
+              {busy
+                ? <><span className="spinner" aria-hidden="true" />{redirecting ? 'Till betalningen…' : 'Skickar beställningen…'}</>
+                : `Betala ${kronor(total)}`}
             </button>
           </form>
           )}
@@ -462,7 +486,7 @@ export default function BestallPage() {
 
       {lines.length > 0 && (
         <a className="order-mobile-bar" href="#order-cart" ref={barRef}>
-          <span className="order-mobile-bar-count">{lines.reduce((n, l) => n + l.quantity, 0)}</span>
+          <span className="order-mobile-bar-count" key={count}>{count}</span>
           <strong>Visa beställning</strong>
           <span className="order-mobile-bar-total">{kronor(total)}</span>
         </a>

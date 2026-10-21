@@ -85,6 +85,21 @@ describe('BestallPage', () => {
     expect(sessionStorage.getItem(`order-token:${'o'.repeat(32)}`)).toBe('tok')
   })
 
+  it('says the guest is on the way to the payment once the order is registered', async () => {
+    const user = userEvent.setup()
+    render(<WithSite config={config()} path="/bestall"><BestallPage /></WithSite>)
+    expect(screen.getByRole('list', { name: 'Beställning: steg 1 av 4' })).toBeInTheDocument()
+    await user.click(await screen.findByRole('button', { name: 'Lägg till Cola' }))
+    expect(screen.getByRole('list', { name: 'Beställning: steg 2 av 4' })).toBeInTheDocument()
+    await fill(user)
+    expect(screen.getByRole('list', { name: 'Beställning: steg 3 av 4' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /Betala/ }))
+    expect(await screen.findByText(/vidare till den säkra betalningen/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Till betalningen/ })).toBeDisabled()
+    expect(screen.getByLabelText('Namn')).toBeDisabled()
+    expect(screen.getByRole('list', { name: 'Beställning: steg 4 av 4' })).toBeInTheDocument()
+  })
+
   it('blocks an order above 50 000 kr before sending it', async () => {
     const user = userEvent.setup()
     MENU.items.push({ menuItemId: 'car', name: 'Porsche', description: '', price: 3500000, category: 'mains', imageKey: 'k' })

@@ -64,6 +64,24 @@ export function liftForDark(hex: string, min: number): string {
   return '#ffffff'
 }
 
+/**
+ * Mörkar en färg mot tryckfärgsvart tills den når `min` i kontrast mot
+ * papperet (#fbfaf6). Ljusa märkesfärger (guld, pastell) går annars inte att
+ * läsa som länk- eller rubriktext på papper - knapparna behåller den
+ * riktiga färgen, texten får den här.
+ */
+export function deepenForLight(hex: string, min: number): string {
+  const rgb = parseHex(hex)
+  if (!rgb) return hex
+  const paper: [number, number, number] = [251, 250, 246]
+  const black: [number, number, number] = [28, 25, 24]
+  for (let t = 0; t <= 1.0001; t += 0.05) {
+    const mixed = rgb.map((v, i) => v + (black[i] - v) * t) as [number, number, number]
+    if (contrast(mixed, paper) >= min) return toHex(mixed)
+  }
+  return toHex(black)
+}
+
 function applyBranding(config: SiteConfig): void {
   const { branding, name } = config.tenant
   document.title = name
@@ -77,6 +95,7 @@ function applyBranding(config: SiteConfig): void {
     const dark = liftForDark(color, 3)
     root.setProperty('--tenant-accent', color)
     root.setProperty('--tenant-on-accent', textOn(color))
+    root.setProperty('--tenant-accent-ink', deepenForLight(color, 4.5))
     root.setProperty('--tenant-accent-dark', dark)
     root.setProperty('--tenant-on-accent-dark', textOn(dark))
     root.setProperty('--tenant-accent-ink-dark', liftForDark(color, 4.5))
@@ -131,7 +150,14 @@ export function SiteProvider({ children }: { children: ReactNode }) {
   }, [query, attempt])
 
   if (state.status === 'loading') {
-    return <div className="site-boot" role="status" aria-live="polite">Laddar…</div>
+    return (
+      <div className="site-boot">
+        <div className="printing" role="status" aria-live="polite" aria-label="Laddar">
+          <span className="printing__label">Laddar</span>
+          <i /><i /><i /><i />
+        </div>
+      </div>
+    )
   }
   if (state.status === 'error') {
     return (

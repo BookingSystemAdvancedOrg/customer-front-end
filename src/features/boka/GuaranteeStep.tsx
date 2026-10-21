@@ -48,6 +48,25 @@ function minutesLeft(expiresAt: string, now: number): number {
   return Math.max(0, Math.ceil((Date.parse(expiresAt) - now) / 60000))
 }
 
+/** Stripes formulär i sajtens egna färger: papper, tryckfärg och
+ * restaurangens färg på knappen i formuläret (läses ur CSS-variablerna, så
+ * mörkt läge och varje restaurangs färg följer med). */
+function stripeAppearance() {
+  const css = typeof getComputedStyle === 'function' ? getComputedStyle(document.documentElement) : null
+  const read = (name: string, fallback: string) => css?.getPropertyValue(name).trim() || fallback
+  return {
+    theme: 'stripe' as const,
+    variables: {
+      colorPrimary: read('--accent', '#350001'),
+      colorBackground: read('--surface', '#fbfaf6'),
+      colorText: read('--ink', '#1c1918'),
+      colorDanger: read('--bad', '#9e1d26'),
+      borderRadius: '3px',
+      fontFamily: 'system-ui, -apple-system, "Segoe UI", sans-serif',
+    },
+  }
+}
+
 export function GuaranteeTermsText({ booking }: { booking: GuestReservation }) {
   const g = booking.guarantee
   if (!g) return null
@@ -111,7 +130,7 @@ function CardForm({
   }
 
   return (
-    <form onSubmit={submit} className="guarantee-form">
+    <form onSubmit={submit} className="guarantee-form" aria-busy={busy || undefined}>
       <PaymentElement
         onReady={() => setReady(true)}
         options={{
@@ -129,8 +148,13 @@ function CardForm({
         }}
       />
       {error && <p className="notice error" role="alert">{error}</p>}
-      <button type="submit" className="btn-primary" disabled={!stripe || !ready || busy}>
-        {busy ? 'Bekräftar…' : 'Spara kortet och boka'}
+      {busy && (
+        <p className="notice is-ok" role="status">
+          Kortet kontrolleras hos Stripe och bordet bokas. Det tar bara en liten stund - stäng inte sidan.
+        </p>
+      )}
+      <button type="submit" className={`btn-primary${busy ? ' is-busy' : ''}`} disabled={!stripe || !ready || busy}>
+        {busy ? <><span className="spinner" aria-hidden="true" />Sparar kortet…</> : 'Spara kortet och boka'}
       </button>
     </form>
   )
@@ -164,12 +188,12 @@ export function GuaranteeStep({
   const left = minutesLeft(setup.expiresAt, now)
 
   return (
-    <section className="booking-confirmation guarantee-step" aria-live="polite">
+    <section className="booking-confirmation guarantee-step step-enter" aria-live="polite">
       <p className="hero-kicker">Nästan klart</p>
       <h1>Kortgaranti</h1>
       <p>
-        Restaurangen tar kortgaranti för den här bokningen. Lägg in ditt kort för att slutföra -
-        bordet hålls åt dig {left > 0 ? `i ${left} min till` : 'en kort stund till'}.
+        Restaurangen tar kortgaranti för den här bokningen. Lägg in ditt kort så är bordet bokat -
+        det hålls åt dig {left > 0 ? `i ${left} min till` : 'en kort stund till'}.
       </p>
       <GuaranteeTermsText booking={booking} />
       {!stripePromise ? (
@@ -185,13 +209,13 @@ export function GuaranteeStep({
           stripe={stripePromise}
           options={{
             clientSecret: setup.clientSecret,
-            appearance: { theme: 'night', variables: { colorPrimary: '#c9a24a', borderRadius: '8px' } },
+            appearance: stripeAppearance(),
           }}
         >
           <CardForm booking={booking} guest={guest} locationId={locationId} returnUrl={returnUrl} onConfirmed={onConfirmed} />
         </Elements>
       )}
-      <p className="cell-muted">Kortuppgifterna hanteras av Stripe och sparas aldrig hos oss.</p>
+      <p className="cell-muted">Kortuppgifterna går direkt till Stripe och sparas aldrig hos oss.</p>
     </section>
   )
 }

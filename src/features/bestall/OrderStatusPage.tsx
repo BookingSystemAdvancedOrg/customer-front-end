@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { clock, getOrder, kronor, orderErrorMessage, recallToken } from './orderApi'
 import type { GuestOrder } from './orderApi'
+import { FlowSteps } from '../../shared/FlowSteps'
+import { Celebrate } from '../../shared/Celebrate'
 
 /** Hur ofta sidan frågar om beställningen medan gästen väntar. */
 export const STATUS_POLL_MS = 5_000
@@ -47,7 +49,32 @@ const STEPS: { status: GuestOrder['status']; label: string }[] = [
   { status: 'confirmed', label: 'Betald' },
   { status: 'preparing', label: 'Tillagas' },
   { status: 'ready', label: 'Klar' },
+  { status: 'completed', label: 'Hämtad' },
 ]
+
+/** Vad som händer härnäst, under rubriken. */
+function nextUp(order: GuestOrder): string | null {
+  const table = order.tableLabel
+    ? /^bord/i.test(order.tableLabel) ? order.tableLabel : `bord ${order.tableLabel}`
+    : 'ditt bord'
+  switch (order.status) {
+    case 'pending_payment':
+      return 'Det brukar ta några sekunder. Sidan uppdateras av sig själv.'
+    case 'confirmed':
+      return order.mode === 'pickup'
+        ? 'Köket har fått beställningen. Vi sms:ar när maten lagas och när den är klar att hämta.'
+        : `Köket har fått beställningen. Vi sms:ar när maten lagas och kommer till ${table}.`
+    case 'preparing':
+      return order.mode === 'pickup' ? 'Snart klart. Du får ett sms när maten går att hämta.' : 'Snart klart. Maten kommer till bordet.'
+    case 'ready':
+      return order.mode === 'pickup' ? 'Säg ditt namn eller beställningsnumret i kassan.' : null
+    default:
+      return null
+  }
+}
+
+/** Ögonblicken som firas: betalningen gick igenom och maten är klar. */
+const CELEBRATE = new Set<GuestOrder['status']>(['confirmed', 'ready'])
 
 /**
  * Gästens beställning: /bestallning/<plats>/<id>. Hit skickar Stripe
@@ -92,23 +119,28 @@ export default function OrderStatusPage() {
 
   const stepIndex = order ? STEPS.findIndex((s) => s.status === order.status) : -1
   const reachedAll = order?.status === 'completed'
+  const steps = order?.mode === 'table' ? STEPS.map((s) => (s.status === 'completed' ? { ...s, label: 'Serverad' } : s)) : STEPS
+  const hint = order ? nextUp(order) : null
 
   return (
-    <section className="booking-confirmation order-status">
+    <section className={`booking-confirmation order-status${order && CELEBRATE.has(order.status) ? ' is-success' : ''}`}>
+      {order && CELEBRATE.has(order.status) && <Celebrate key={order.status} />}
       <h1>{order?.number ? `Beställning #${order.number}` : 'Din beställning'}</h1>
-      {!order && !error && <p className="notice" role="status">Hämtar beställningen…</p>}
+      {!order && !error && (
+        <div className="printing printing--inline" role="status" aria-label="Hämtar beställningen">
+          <span className="printing__label">Hämtar beställningen</span>
+          <i /><i /><i />
+        </div>
+      )}
       {error && <p className="notice error" role="alert">{error}</p>}
       {order && (
         <>
-          <p className="booking-status" aria-live="polite">{headline(order)}</p>
+          <p className={`booking-status${['ready', 'completed'].includes(order.status) ? ' stamp-ok' : ''}`} aria-live="polite" key={order.status}>
+            {headline(order)}
+          </p>
+          {hint && <p className="order-next" aria-live="polite">{hint}</p>}
           {!['pending_payment', 'failed', 'cancelled'].includes(order.status) && (
-            <ol className="order-steps">
-              {STEPS.map((step, i) => (
-                <li key={step.status} className={reachedAll || i <= stepIndex ? 'done' : ''}>
-                  {step.label}
-                </li>
-              ))}
-            </ol>
+            <FlowSteps steps={steps} current={stepIndex + 1} done={reachedAll} label="Beställning" />
           )}
           {order.mode === 'pickup' && ['confirmed', 'preparing'].includes(order.status) && order.readyEstimate && (
             <p className="order-hint">
@@ -126,7 +158,8 @@ export default function OrderStatusPage() {
           )}
           {order.status === 'failed' && (
             <p className="notice error" role="status">
-              Inget har dragits från ditt kort. <Link to="/bestall">Försök igen</Link>.
+              Banken godkände inte betalningen, så inget har dragits från ditt kort. Varukorgen finns kvar:{' '}
+              <Link to="/bestall">Försök igen</Link>.
             </p>
           )}
           {order.status === 'cancelled' && (

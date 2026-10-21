@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { liftForDark, textOn } from './SiteProvider'
+import { deepenForLight, liftForDark, textOn } from './SiteProvider'
 
 describe('textOn', () => {
   it('uses white on dark colours and near-black on light ones', () => {
@@ -27,5 +27,21 @@ describe('liftForDark', () => {
 
   it('leaves invalid input untouched', () => {
     expect(liftForDark('not-a-colour', 3)).toBe('not-a-colour')
+  })
+})
+
+describe('deepenForLight', () => {
+  it('darkens a light brand colour until it reads as text on paper', () => {
+    const deepened = deepenForLight('#c9a24a', 4.5)
+    expect(deepened).not.toBe('#c9a24a')
+    expect(deepened).toMatch(/^#[0-9a-f]{6}$/)
+  })
+
+  it('keeps colours that already have enough contrast', () => {
+    expect(deepenForLight('#350001', 4.5)).toBe('#350001')
+  })
+
+  it('leaves invalid input untouched', () => {
+    expect(deepenForLight('not-a-colour', 4.5)).toBe('not-a-colour')
   })
 })

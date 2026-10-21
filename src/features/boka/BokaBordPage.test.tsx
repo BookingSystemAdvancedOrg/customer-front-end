@@ -320,6 +320,43 @@ describe('BokaBordPage', () => {
     expect(availabilityCalls()).toBe(before)
   })
 
+  it('shows where the guest is in the flow', async () => {
+    const user = userEvent.setup()
+    render(<WithSite><BokaBordPage /></WithSite>)
+    expect(screen.getByRole('list', { name: 'Bokning: steg 2 av 5' })).toBeInTheDocument()
+    await user.click(await screen.findByRole('button', { name: '18:00' }))
+    expect(screen.getByRole('list', { name: 'Bokning: steg 3 av 5' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /Bord 1 · 2 platser/ }))
+    await user.click(screen.getByRole('button', { name: 'Bekräfta bord' }))
+    expect(await screen.findByRole('list', { name: 'Bokning: steg 4 av 5' })).toBeInTheDocument()
+  })
+
+  it('offers the next day when there are no free times', async () => {
+    const user = userEvent.setup()
+    availabilityBody = { ...availability(), slots: [] }
+    render(<WithSite><BokaBordPage /></WithSite>)
+    expect(await screen.findByText(/Inga lediga tider för 2 personer/)).toBeInTheDocument()
+    const days = within(screen.getByRole('group', { name: 'Välj datum' })).getAllByRole('button')
+    await user.click(screen.getByRole('button', { name: 'Prova nästa dag' }))
+    expect(days[1]).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('lets the guest try again when the times could not be fetched', async () => {
+    const user = userEvent.setup()
+    let failing = true
+    const base = fetchMock.getMockImplementation() as (url: string, init?: RequestInit) => Promise<Response>
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (failing && String(url).includes('/availability')) return json({ error: 'unavailable' }, 503)
+      return base(url, init)
+    })
+    render(<WithSite><BokaBordPage /></WithSite>)
+    expect(await screen.findByRole('alert')).toHaveTextContent('Vi kunde inte hämta tiderna just nu.')
+    failing = false
+    await user.click(screen.getByRole('button', { name: 'Försök igen' }))
+    expect(await screen.findByRole('button', { name: '18:00' })).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
   it('explains a closed day and a day without online booking', async () => {
     const user = userEvent.setup()
     availabilityBody = { ...availability(), slots: [], day: { kind: 'closed', note: 'Privat fest' } }
