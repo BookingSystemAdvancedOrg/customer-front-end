@@ -2450,6 +2450,8 @@ h1, h2, h3, h4 {
   background: var(--fill);
   color: var(--muted);
   box-shadow: none;
+  /* Ingen tonad knapp: dämpat bläck på pappersskugga läses i båda lägena. */
+  opacity: 1;
 }
 
 .btn-secondary,
@@ -3783,7 +3785,8 @@ a,
 }
 
 .order-fields:disabled {
-  opacity: 0.6;
+  /* Medan det skickas: dämpat men läsbart (texten håller 4,5:1). */
+  opacity: 0.85;
 }
 
 /* --- Det hållna bordet: ett kvitto som hänger kvar högst upp ------------- */
@@ -4240,4 +4243,84 @@ a,
   .order-mobile-bar-count {
     animation: none !important;
   }
+}
+
+/* --- Ljust/mörkt läge: knappen i sidhuvudet (shared/ThemeToggle) --------
+   En tryckknapp på bandet, bredvid öppet-chippet. Ikonen visar läget som
+   gäller; vid byte tonar den bort medan den andra vrids in. */
+
+.theme-toggle {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: color-mix(in srgb, var(--on-accent) 86%, transparent);
+  cursor: pointer;
+  transition: background-color 160ms var(--ease), color 160ms var(--ease);
+}
+
+.theme-toggle:hover {
+  background: color-mix(in srgb, var(--on-accent) 10%, transparent);
+  color: var(--on-accent);
+}
+
+.theme-toggle-icon {
+  position: relative;
+  display: inline-grid;
+  width: 20px;
+  height: 20px;
+}
+
+.theme-toggle-icon svg {
+  grid-area: 1 / 1;
+  width: 20px;
+  height: 20px;
+  transition: opacity 320ms var(--ease), rotate 360ms var(--ease), scale 360ms var(--ease);
+}
+
+.theme-toggle[aria-pressed='false'] .theme-toggle-moon {
+  opacity: 0;
+  rotate: -90deg;
+  scale: 0.6;
+}
+
+.theme-toggle[aria-pressed='true'] .theme-toggle-sun {
+  opacity: 0;
+  rotate: 90deg;
+  scale: 0.6;
+}
+
+@media (max-width: 1000px) {
+  .open-chip {
+    margin-left: auto;
+  }
+
+  .site-header-theme {
+    margin-right: -4px;
+  }
+}
+
+@media (max-width: 420px) {
+  .site-header-theme {
+    width: 36px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-toggle,
+  .theme-toggle-icon svg {
+    transition: none;
+  }
+}
+
+/* Platshållare i fält: dämpat bläck, aldrig webbläsarens eget grå. */
+::placeholder {
+  color: var(--muted);
+  opacity: 1;
 }

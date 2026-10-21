@@ -37,6 +37,7 @@ export const TABLE_KEY = 'order-table-code'
 export const ORDER_TOKEN_PREFIX = 'order-token:'
 export const CATERING_TOKEN_PREFIX = 'catering-token:'
 export const OFFER_CARD_KEY = 'offer-card'
+export const THEME_KEY = 'booqy-theme'
 
 export const STORAGE_REGISTRY: readonly StorageEntry[] = [
   {
@@ -44,6 +45,14 @@ export const STORAGE_REGISTRY: readonly StorageEntry[] = [
     kind: 'localStorage',
     setBy: 'Webbplatsen',
     purpose: 'Vilken av restaurangens platser du har valt.',
+    lifetime: 'Tills du rensar webbläsaren',
+    category: 'nödvändig',
+  },
+  {
+    name: THEME_KEY,
+    kind: 'localStorage',
+    setBy: 'Webbplatsen',
+    purpose: 'Ditt val av ljust eller mörkt läge (knappen i sidhuvudet). Sätts bara om du trycker på den; annars följer sidan din enhets inställning.',
     lifetime: 'Tills du rensar webbläsaren',
     category: 'nödvändig',
   },

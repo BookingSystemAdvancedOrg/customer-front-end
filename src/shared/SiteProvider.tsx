@@ -48,15 +48,70 @@ export function textOn(hex: string): string {
   return contrast(rgb, [255, 255, 255]) >= contrast(rgb, [29, 26, 26]) ? '#ffffff' : '#1d1a1a'
 }
 
+const WHITE: [number, number, number] = [255, 255, 255]
+const NEAR_BLACK: [number, number, number] = [29, 26, 26]
+/** Kvittopapperet i mörkt läge: det accentfärgen som fyllning ska stå emot. */
+const TICKET_DARK: [number, number, number] = [42, 37, 35]
+
+const mix = (rgb: [number, number, number], to: [number, number, number], t: number) =>
+  rgb.map((v, i) => v + (to[i] - v) * t) as [number, number, number]
+
+/** Bästa kontrast någon text (vit eller nästan svart) får på färgen. */
+function textContrast(rgb: [number, number, number]): number {
+  return Math.max(contrast(rgb, WHITE), contrast(rgb, NEAR_BLACK))
+}
+
+/**
+ * Restaurangens färg som den används på knappar och bandet, med den text
+ * som går att läsa på den. Ljust läge behåller färgen; bara om varken vit
+ * eller svart text når 4,5:1 (mellantoner) knuffas den det minsta som
+ * behövs. Mörkt läge ljusar upp den tills den som fyllning står emot
+ * kvittopapperet (3:1) och texten på den läses (4,5:1).
+ */
+export function accentPair(hex: string, mode: 'light' | 'dark'): { accent: string; onAccent: string } {
+  const rgb = parseHex(hex)
+  if (!rgb) return { accent: hex, onAccent: '#ffffff' }
+  let best = rgb
+  if (mode === 'light') {
+    if (textContrast(rgb) < 4.5) {
+      for (let t = 0.05; t <= 1.0001; t += 0.05) {
+        const darker = mix(rgb, NEAR_BLACK, t)
+        const lighter = mix(rgb, WHITE, t)
+        if (textContrast(darker) >= 4.5) {
+          best = darker
+          break
+        }
+        if (textContrast(lighter) >= 4.5) {
+          best = lighter
+          break
+        }
+      }
+    }
+  } else {
+    best = WHITE
+    for (let t = 0; t <= 1.0001; t += 0.05) {
+      const mixed = mix(rgb, WHITE, t)
+      if (contrast(mixed, TICKET_DARK) >= 3 && textContrast(mixed) >= 4.5) {
+        best = mixed
+        break
+      }
+    }
+  }
+  const accent = toHex(best)
+  return { accent, onAccent: textOn(accent) }
+}
+
 /**
  * Ljusar upp en färg mot vitt tills den når `min` i kontrast mot mörkt
- * läges yta (#1c1a1a). Mörka märkesfärger (t.ex. Booqys #350001) försvinner
+ * läges yta. Mörka märkesfärger (t.ex. Booqys #350001) försvinner
  * annars mot svart bakgrund.
  */
 export function liftForDark(hex: string, min: number): string {
   const rgb = parseHex(hex)
   if (!rgb) return hex
-  const surface: [number, number, number] = [28, 26, 26]
+  // Mot det ljusaste mörka underlaget text ligger på (fälten, #332e2b), inte
+  // skrivbordet: annars blir länkar i formulär för svaga.
+  const surface: [number, number, number] = [51, 46, 43]
   for (let t = 0; t <= 1.0001; t += 0.05) {
     const mixed = rgb.map((v) => v + (255 - v) * t) as [number, number, number]
     if (contrast(mixed, surface) >= min) return toHex(mixed)
@@ -73,7 +128,8 @@ export function liftForDark(hex: string, min: number): string {
 export function deepenForLight(hex: string, min: number): string {
   const rgb = parseHex(hex)
   if (!rgb) return hex
-  const paper: [number, number, number] = [251, 250, 246]
+  // Mot pappersskuggan (fälten, #f1eee6) så att texten håller även där.
+  const paper: [number, number, number] = [241, 238, 230]
   const black: [number, number, number] = [28, 25, 24]
   for (let t = 0; t <= 1.0001; t += 0.05) {
     const mixed = rgb.map((v, i) => v + (black[i] - v) * t) as [number, number, number]
@@ -92,12 +148,13 @@ function applyBranding(config: SiteConfig): void {
   // Utan egen färg gäller Booqys standardfärger i index.css.
   if (branding.primaryColor && parseHex(branding.primaryColor)) {
     const color = branding.primaryColor
-    const dark = liftForDark(color, 3)
-    root.setProperty('--tenant-accent', color)
-    root.setProperty('--tenant-on-accent', textOn(color))
+    const light = accentPair(color, 'light')
+    const dark = accentPair(color, 'dark')
+    root.setProperty('--tenant-accent', light.accent)
+    root.setProperty('--tenant-on-accent', light.onAccent)
     root.setProperty('--tenant-accent-ink', deepenForLight(color, 4.5))
-    root.setProperty('--tenant-accent-dark', dark)
-    root.setProperty('--tenant-on-accent-dark', textOn(dark))
+    root.setProperty('--tenant-accent-dark', dark.accent)
+    root.setProperty('--tenant-on-accent-dark', dark.onAccent)
     root.setProperty('--tenant-accent-ink-dark', liftForDark(color, 4.5))
   }
   if (branding.faviconUrl) {
