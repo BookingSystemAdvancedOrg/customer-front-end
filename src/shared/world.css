@@ -2450,6 +2450,8 @@ h1, h2, h3, h4 {
   background: var(--fill);
   color: var(--muted);
   box-shadow: none;
+  /* Ingen tonad knapp: dämpat bläck på pappersskugga läses i båda lägena. */
+  opacity: 1;
 }
 
 .btn-secondary,
@@ -3783,7 +3785,8 @@ a,
 }
 
 .order-fields:disabled {
-  opacity: 0.6;
+  /* Medan det skickas: dämpat men läsbart (texten håller 4,5:1). */
+  opacity: 0.85;
 }
 
 /* --- Det hållna bordet: ett kvitto som hänger kvar högst upp ------------- */
@@ -4314,4 +4317,10 @@ a,
   .theme-toggle-icon svg {
     transition: none;
   }
+}
+
+/* Platshållare i fält: dämpat bläck, aldrig webbläsarens eget grå. */
+::placeholder {
+  color: var(--muted);
+  opacity: 1;
 }

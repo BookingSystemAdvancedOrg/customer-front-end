@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { deepenForLight, liftForDark, textOn } from './SiteProvider'
+import { accentPair, deepenForLight, liftForDark, textOn } from './SiteProvider'
 
 describe('textOn', () => {
   it('uses white on dark colours and near-black on light ones', () => {
@@ -43,5 +43,32 @@ describe('deepenForLight', () => {
 
   it('leaves invalid input untouched', () => {
     expect(deepenForLight('not-a-colour', 4.5)).toBe('not-a-colour')
+  })
+})
+
+describe('accentPair', () => {
+  const lum = (hex: string) => {
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4))
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+  }
+  const ratio = (a: string, b: string) => (Math.max(lum(a), lum(b)) + 0.05) / (Math.min(lum(a), lum(b)) + 0.05)
+
+  it('keeps a readable brand colour as it is in light mode', () => {
+    expect(accentPair('#350001', 'light')).toEqual({ accent: '#350001', onAccent: '#ffffff' })
+    expect(accentPair('#ffd60a', 'light')).toEqual({ accent: '#ffd60a', onAccent: '#1d1a1a' })
+  })
+
+  it('nudges a mid-tone until its text reads, in both modes', () => {
+    for (const hex of ['#578374', '#1f5a46', '#0071e3', '#c9a24a', '#777777']) {
+      for (const mode of ['light', 'dark'] as const) {
+        const { accent, onAccent } = accentPair(hex, mode)
+        expect(ratio(accent, onAccent), `${hex} ${mode}`).toBeGreaterThanOrEqual(4.5)
+        if (mode === 'dark') expect(ratio(accent, '#2a2523'), `${hex} fill`).toBeGreaterThanOrEqual(3)
+      }
+    }
+  })
+
+  it('leaves invalid input untouched', () => {
+    expect(accentPair('nope', 'light')).toEqual({ accent: 'nope', onAccent: '#ffffff' })
   })
 })
