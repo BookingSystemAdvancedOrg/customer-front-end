@@ -36,6 +36,8 @@ import { TurnstileWidget } from './TurnstileWidget'
 import { ApiError } from '../../shared/api'
 import { FloorPlanSvg } from './FloorPlanSvg'
 import { FloorPlan3D } from './FloorPlan3D'
+import { FlowSteps } from '../../shared/FlowSteps'
+import { Celebrate } from '../../shared/Celebrate'
 
 const DEFAULT_MAX_PARTY = 12
 /** Hur ofta lediga tider hämtas om medan gästen väljer (tider inom 30
@@ -63,22 +65,35 @@ function guestError(g: Guest): string | null {
   return null
 }
 
-/** Hur länge bordet hålls - visas medan gästen fyller i uppgifterna och kortet. */
-function HoldBanner({ secondsLeft, tables, onChange }: {
+/** Mjuk rullning, utom för den som bett om mindre rörelse. */
+function scrollBehavior(): ScrollBehavior {
+  return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+}
+
+/** Kvittot som hänger kvar högst upp medan bordet hålls: vilket bord, hur
+ * länge till (klockan och en remsa som töms) och Byt bord. Under två
+ * minuter blir det rött. */
+function HoldBanner({ secondsLeft, totalSeconds, tables, onChange }: {
   secondsLeft: number
+  totalSeconds: number
   tables: string
   onChange?: () => void
 }) {
   const urgent = secondsLeft <= 120
+  const left = totalSeconds > 0 ? Math.min(1, Math.max(0, secondsLeft / totalSeconds)) : 0
   return (
     <div className={`hold-banner${urgent ? ' urgent' : ''}`} role="timer" aria-label={`Bordet hålls i ${clockText(secondsLeft)}`}>
-      <span>
-        Bord {tables} hålls åt dig i <strong className="hold-clock">{clockText(secondsLeft)}</strong>
-        {urgent ? ' - slutför bokningen snart.' : '.'}
-      </span>
+      <div className="hold-text">
+        <span className="hold-kicker">{urgent ? 'Snart släpps bordet' : 'Bordet är ditt'}</span>
+        <span>
+          Bord {tables} hålls åt dig i <strong className="hold-clock">{clockText(secondsLeft)}</strong>
+          {urgent ? ' - slutför bokningen nu.' : '.'}
+        </span>
+      </div>
       {onChange && (
         <button type="button" className="btn-secondary" onClick={onChange}>Byt bord</button>
       )}
+      <span className="hold-bar" aria-hidden="true"><i style={{ transform: `scaleX(${left})` }} /></span>
     </div>
   )
 }
@@ -144,10 +159,13 @@ export default function BokaBordPage() {
     key: string
     availability: Availability | null
     error: string | null
+    /** Felet var tillfälligt (nätet, servern): visa Försök igen. */
+    retry?: boolean
   } | null>(null)
   const current = fetched?.key === slotsKey ? fetched : null
   const availability = current?.availability ?? null
   const slotsError = current?.error ?? null
+  const slotsRetry = Boolean(current?.retry)
   const loadingSlots = enabled && current === null
   const [startTime, setStartTime] = useState<string | null>(null)
   // Det valda bordet - eller den valda bordskombinationen - för tiden.
@@ -174,7 +192,10 @@ export default function BokaBordPage() {
   const [now, setNow] = useState(() => Date.now())
   const [holding, setHolding] = useState(false)
   const [restartNotice, setRestartNotice] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
   const secondsLeft = deadline === null ? null : Math.max(0, Math.ceil((deadline - now) / 1000))
+  const headRef = useRef<HTMLElement>(null)
+  const confirmRef = useRef<HTMLDivElement>(null)
   const terms = location.guarantee ?? null
   const cardNeeded = needsCard(terms, partySize, true)
   const turnstileSiteKey = config.turnstile?.siteKey ?? null
@@ -294,7 +315,8 @@ export default function BokaBordPage() {
             : {
                 key: slotsKey,
                 availability: null,
-                error: refused ? 'Den dagen går inte att boka online.' : bookingErrorMessage(err),
+                error: refused ? 'Den dagen går inte att boka online.' : 'Vi kunde inte hämta tiderna just nu.',
+                retry: !refused,
               },
         )
       })
@@ -341,6 +363,28 @@ export default function BokaBordPage() {
   )
   const labels = useMemo(() => labelTables(allTables), [allTables])
   const activeFloor = floors?.find((g) => g.floor?.floorId === floorId) ?? floors?.[0] ?? null
+  const nextDate = dates[dates.indexOf(date) + 1] ?? null
+
+  // Stegraden: var gästen är. Dag och sällskap har alltid ett giltigt val,
+  // så det steget räknas som klart från början.
+  const steps = useMemo(
+    () => [
+      { label: 'Dag & sällskap' },
+      { label: 'Tid' },
+      { label: 'Bord' },
+      { label: 'Uppgifter' },
+      ...(cardNeeded ? [{ label: 'Kort' }] : []),
+      { label: 'Klart' },
+    ],
+    [cardNeeded],
+  )
+  const stepAt = pending ? 5 : hold ? 4 : slot ? 3 : 2
+
+  // Ett valt bord: sammanfattningen och Bekräfta-knappen ligger under
+  // planritningen - rulla fram dem så gästen ser vad som händer härnäst.
+  useEffect(() => {
+    if (option && !hold) confirmRef.current?.scrollIntoView?.({ block: 'nearest', behavior: scrollBehavior() })
+  }, [option, hold])
 
   // Byter man dag, tid eller sällskap gäller inte gamla bordsval längre.
   function choose(change: () => void) {
@@ -436,6 +480,9 @@ export default function BokaBordPage() {
       setHold(held)
       setNow(Date.now())
       setDeadline(Date.now() + held.holdMinutes * 60_000)
+      // Stegen 1-3 viks ihop: visa stegraden och uppgifterna från början,
+      // inte sidfoten som sidan annars står kvar vid på en telefon.
+      headRef.current?.scrollIntoView?.({ block: 'start', behavior: scrollBehavior() })
     } catch (err) {
       setFormError(
         !turnstileSiteKey && turnstileMissing(err)
@@ -469,6 +516,13 @@ export default function BokaBordPage() {
     setOption(null)
     setFormError(null)
     setRefresh((n) => n + 1)
+    headRef.current?.scrollIntoView?.({ block: 'start', behavior: scrollBehavior() })
+  }
+
+  function copyLink(link: string) {
+    void navigator.clipboard?.writeText(link)
+    setCopied(true)
+    window.setTimeout(() => setCopied(false), 2000)
   }
 
   async function submit(e: FormEvent) {
@@ -539,7 +593,12 @@ export default function BokaBordPage() {
   if (pending && !booked) {
     return (
       <>
-      {hold && secondsLeft !== null && <HoldBanner secondsLeft={secondsLeft} tables={heldTables} />}
+      {hold && secondsLeft !== null && (
+        <HoldBanner secondsLeft={secondsLeft} totalSeconds={hold.holdMinutes * 60} tables={heldTables} />
+      )}
+      <section className="page-head page-head--rail">
+        <FlowSteps steps={steps} current={stepAt} label="Bokning" />
+      </section>
       <GuaranteeStep
         booking={pending}
         guest={{ name: guest.name.trim(), email: guest.email.trim(), phone: normalizePhone(guest.phone) }}
@@ -563,9 +622,16 @@ export default function BokaBordPage() {
       ? manageLink(window.location.origin, booked, location.locationId, booked.manageToken)
       : null
     return (
-      <section className="booking-confirmation" aria-live="polite">
+      <>
+      <section className="page-head page-head--rail">
+        <FlowSteps steps={steps} current={steps.length} done label="Bokning" />
+      </section>
+      <section className="booking-confirmation is-success" aria-live="polite">
+        <Celebrate />
+        <p className="booking-status stamp-ok">Bokat</p>
         <p className="hero-kicker">Tack, {booked.customerName}!</p>
         <h1>Ditt bord är bokat</h1>
+        <p className="confirmation-lede">Vi ses {formatDate(booked.date)} kl {booked.startTime}. Välkommen!</p>
         <dl className="booking-summary">
           <div><dt>Restaurang</dt><dd>{booked.location?.name ?? info.name}</dd></div>
           <div><dt>Datum</dt><dd>{formatDate(booked.date)}</dd></div>
@@ -580,10 +646,14 @@ export default function BokaBordPage() {
         {booked.guarantee?.cardOnFile && (
           <p className="booking-sent">Kortgarantin är sparad - inget har dragits från kortet.</p>
         )}
-        <p className="booking-sent">
-          Vi skickar en bekräftelse till <strong>{guest.email.trim()}</strong> med en
-          länk där du kan se och avboka din bokning.
-        </p>
+        <div className="next-up">
+          <h2>Vad händer nu</h2>
+          <ol>
+            <li>Vi mejlar en bekräftelse till <strong>{guest.email.trim()}</strong> inom några minuter.</li>
+            <li>I mejlet finns en länk där du kan se eller avboka bokningen.</li>
+            <li>Kom {formatDate(booked.date)} kl {booked.startTime}, så står bordet klart.</li>
+          </ol>
+        </div>
         {link && (
           <div className="booking-manage">
             <p>
@@ -592,12 +662,8 @@ export default function BokaBordPage() {
             <p className="booking-manage-link">
               <a href={link}>{link}</a>
             </p>
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={() => void navigator.clipboard?.writeText(link)}
-            >
-              Kopiera länken
+            <button type="button" className="btn-secondary" onClick={() => copyLink(link)}>
+              {copied ? 'Länken är kopierad' : 'Kopiera länken'}
             </button>
           </div>
         )}
@@ -605,14 +671,16 @@ export default function BokaBordPage() {
           Frågor? Ring {info.phone || 'restaurangen'}{info.email ? ` eller mejla ${info.email}` : ''}.
         </p>
       </section>
+      </>
     )
   }
 
   return (
     <>
-      <section className="page-head">
+      <section className="page-head" ref={headRef}>
         <h1>Boka bord</h1>
         <p className="page-lede">Välj hur många ni är, dag och tid - sedan ert bord. {info.name !== config.tenant.name ? info.name : ''}</p>
+        <FlowSteps steps={steps} current={stepAt} label="Bokning" />
         {restartNotice && <p className="notice error" role="alert">{restartNotice}</p>}
       </section>
 
@@ -667,13 +735,33 @@ export default function BokaBordPage() {
 
         <fieldset className="booking-step" disabled={holding}>
           <legend><span className="step-no">2</span>Välj tid</legend>
-          {loadingSlots && <p className="notice" role="status">Hämtar lediga tider…</p>}
-          {slotsError && <p className="notice error" role="alert">{slotsError}</p>}
+          {loadingSlots && (
+            <div className="skeleton-pills" role="status" aria-live="polite">
+              <span className="sr-only">Hämtar lediga tider…</span>
+              {Array.from({ length: 5 }, (_, i) => <i key={i} aria-hidden="true" />)}
+            </div>
+          )}
+          {slotsError && (
+            <div className="notice error notice--stack" role="alert">
+              <p>{slotsError}</p>
+              {slotsRetry && (
+                <button type="button" className="btn-secondary btn-small" onClick={() => setRefresh((n) => n + 1)}>
+                  Försök igen
+                </button>
+              )}
+            </div>
+          )}
           {!loadingSlots && dayText && <p className="notice" role="status">{dayText}</p>}
           {!loadingSlots && !slotsError && slots.length === 0 && (!day || day.kind === 'hours') && (
-            <p className="notice" role="status">
-              Inga lediga tider för {partySize} personer {formatDate(date)}. Prova en annan dag.
-            </p>
+            <div className="notice notice--stack" role="status">
+              <p>Inga lediga tider för {partySize} personer {formatDate(date)}.</p>
+              <p className="cell-muted">Prova en annan dag, eller ändra antalet personer.</p>
+              {nextDate && (
+                <button type="button" className="btn-secondary btn-small" onClick={() => chooseDate(nextDate)}>
+                  Prova nästa dag
+                </button>
+              )}
+            </div>
           )}
           {slotNotice?.step === 'time' && <p className="notice" role="status">{slotNotice.text}</p>}
           <div className="booking-times" role="group" aria-label="Välj tid">
@@ -695,9 +783,18 @@ export default function BokaBordPage() {
           <fieldset className="booking-step" disabled={holding}>
             <legend><span className="step-no">3</span>Välj ert bord</legend>
             <p className="cell-muted">
-              Tryck på ett ledigt bord. Grå bord går inte att välja - tryck på dem för att se varför.
+              Tryck på ett grått bord för att välja det. Röda bord är upptagna - tryck på dem så berättar vi varför.
             </p>
             {slotNotice?.step === 'tables' && <p className="notice" role="status">{slotNotice.text}</p>}
+            {floors === null && (
+              <div className="printing printing--inline" role="status" aria-label="Ritar upp lokalen">
+                <span className="printing__label">Ritar upp lokalen</span>
+                <i /><i /><i />
+              </div>
+            )}
+            {floors && floors.length === 0 && (
+              <p className="cell-muted">Planritningen kan inte visas just nu. Välj bord i listan nedanför.</p>
+            )}
             {floors && floors.length > 1 && (
               <div className="filter-row" role="group" aria-label="Välj våning">
                 {floors.map((g) => (
@@ -768,10 +865,13 @@ export default function BokaBordPage() {
               </details>
             )}
             {option && !hold && (
-              <div className="booking-confirm-tables">
+              <div className="booking-confirm-tables step-enter" ref={confirmRef}>
                 <p className="booking-summary-line" aria-live="polite">
-                  {formatDate(date)} kl {slot.startTime}–{slot.endTime} · {partySize} personer · bord{' '}
-                  {option.tableIds.map((id) => labels.get(id) ?? id).join(' + ')}
+                  <span className="summary-kicker">Ditt val</span>
+                  <span>
+                    {formatDate(date)} kl {slot.startTime}–{slot.endTime} · {partySize} personer · bord{' '}
+                    {option.tableIds.map((id) => labels.get(id) ?? id).join(' + ')}
+                  </span>
                 </p>
                 {option.tableIds.length > 1 && (
                   <p className="cell-muted">
@@ -779,7 +879,7 @@ export default function BokaBordPage() {
                   </p>
                 )}
                 <p className="cell-muted">
-                  Bordet hålls åt dig i 15 minuter medan du fyller i dina uppgifter.
+                  När du bekräftar hålls bordet åt dig i 15 minuter medan du fyller i dina uppgifter.
                 </p>
                 {turnstileSiteKey && (
                   <TurnstileWidget
@@ -789,8 +889,13 @@ export default function BokaBordPage() {
                   />
                 )}
                 {formError && <p className="notice error" role="alert">{formError}</p>}
-                <button type="button" className="btn-primary" disabled={holding} onClick={() => void confirmTables()}>
-                  {holding ? 'Bekräftar…' : 'Bekräfta bord'}
+                <button
+                  type="button"
+                  className={`btn-primary${holding ? ' is-busy' : ''}`}
+                  disabled={holding}
+                  onClick={() => void confirmTables()}
+                >
+                  {holding ? <><span className="spinner" aria-hidden="true" />Håller bordet åt dig…</> : 'Bekräfta bord'}
                 </button>
               </div>
             )}
@@ -799,12 +904,19 @@ export default function BokaBordPage() {
         </>)}
 
         {hold && secondsLeft !== null && (
-          <HoldBanner secondsLeft={secondsLeft} tables={heldTables} onChange={changeTables} />
+          <HoldBanner secondsLeft={secondsLeft} totalSeconds={hold.holdMinutes * 60} tables={heldTables} onChange={changeTables} />
         )}
 
         {hold && (
-          <fieldset className="booking-step">
+          <fieldset className="booking-step step-enter" aria-busy={submitting || undefined}>
             <legend><span className="step-no">4</span>Dina uppgifter</legend>
+            <div className="booking-summary-line" aria-live="polite">
+              <span className="summary-kicker">Ditt bord</span>
+              <span>
+                {formatDate(hold.date)} kl {hold.startTime}–{hold.endTime} · {hold.partySize} personer · bord{' '}
+                {heldTables}
+              </span>
+            </div>
             <div className="booking-grid">
               <label className="booking-field">
                 <span>Namn</span>
@@ -843,13 +955,11 @@ export default function BokaBordPage() {
                   ` Avbokning senare än ${terms.cancelCutoffHours} timmar före kostar ${terms.lateCancelFeePerPerson} kr per person.`}
               </div>
             )}
-            <div className="booking-summary-line" aria-live="polite">
-              {formatDate(hold.date)} kl {hold.startTime}–{hold.endTime} · {hold.partySize} personer · bord{' '}
-              {heldTables}
-            </div>
             {formError && <p className="notice error" role="alert">{formError}</p>}
-            <button type="submit" className="btn-primary" disabled={submitting}>
-              {submitting ? 'Bokar…' : cardNeeded ? 'Fortsätt till kortgaranti' : 'Boka bordet'}
+            <button type="submit" className={`btn-primary${submitting ? ' is-busy' : ''}`} disabled={submitting}>
+              {submitting
+                ? <><span className="spinner" aria-hidden="true" />{cardNeeded ? 'Förbereder kortsteget…' : 'Bokar bordet…'}</>
+                : cardNeeded ? 'Fortsätt till kortgaranti' : 'Boka bordet'}
             </button>
           </fieldset>
         )}

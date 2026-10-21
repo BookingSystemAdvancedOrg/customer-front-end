@@ -20,6 +20,9 @@ import {
   rememberToken,
 } from './cateringApi'
 import type { CateringSettings, Tier } from './cateringApi'
+import { FlowSteps } from '../../shared/FlowSteps'
+
+const STEPS = [{ label: 'Rätter' }, { label: 'När & var' }, { label: 'Uppgifter' }, { label: 'Skicka' }]
 
 interface Form {
   customerType: 'private' | 'company'
@@ -117,6 +120,7 @@ export default function CateringPage() {
     : form.deliveryZone === 'beyond' ? settings.priceBeyondLimit : settings.priceWithinLimit
   const calc = estimate(chosen.map(([id, q]) => ({ price: byId.get(id)!.price, quantity: q })), tiers, deliveryFeeKr)
   const upcoming = nextTier(tiers, calc.portions)
+  const stepAt = calc.portions === 0 ? 1 : !form.deliveryDate ? 2 : !(form.name.trim() && form.email.trim() && form.phone) ? 3 : 4
 
   function setQty(id: string, value: number) {
     setQuantities((q) => ({ ...q, [id]: Math.max(0, Math.min(5000, Math.round(value) || 0)) }))
@@ -182,6 +186,7 @@ export default function CateringPage() {
         <p className="hero-sub">
           Välj rätter, se priset direkt och skicka en förfrågan. Du får en offert som du godkänner med BankID.
         </p>
+        <FlowSteps steps={STEPS} current={stepAt} label="Catering" />
       </section>
 
       <form className="order-layout" onSubmit={submit} noValidate>
@@ -389,8 +394,8 @@ export default function CateringPage() {
               onToken={setTurnstileToken} />
           )}
           {error && <p className="notice error" role="alert">{error}</p>}
-          <button type="submit" className="btn-primary" disabled={busy || calc.portions === 0}>
-            {busy ? 'Skickar…' : 'Skicka förfrågan'}
+          <button type="submit" className={`btn-primary${busy ? ' is-busy' : ''}`} disabled={busy || calc.portions === 0}>
+            {busy ? <><span className="spinner" aria-hidden="true" />Skickar förfrågan…</> : 'Skicka förfrågan'}
           </button>
         </aside>
       </form>
