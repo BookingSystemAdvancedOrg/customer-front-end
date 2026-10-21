@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { OpeningHoursModal } from './OpeningHoursModal'
+import { ThemeToggle } from './ThemeToggle'
 import { useLocationInfo } from './useLocationInfo'
 import { openStatus } from './locationApi'
 import { useSite } from './SiteContext'
@@ -135,6 +136,8 @@ export function CustomerLayout() {
             <span>{status.text}</span>
             <span className="sr-only"> - visa öppettider</span>
           </button>
+
+          <ThemeToggle className="site-header-theme" />
 
           <button
             ref={menuBtnRef}
