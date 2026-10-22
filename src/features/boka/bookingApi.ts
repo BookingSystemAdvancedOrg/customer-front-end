@@ -46,6 +46,33 @@ export interface AvailabilitySlot {
   options?: TableOption[]
   /** Varför övriga bord inte går att välja (gästvyn). */
   unavailable?: TableUnavailable[]
+  /** Hur länge bordet är ert, om det kan förlängas och specialtidens namn. */
+  durationMinutes?: number
+  extendable?: boolean
+  ruleName?: string | null
+}
+
+/** Bokningens längd som den visas för gästen. */
+export interface BookingLength {
+  durationMinutes?: number
+  extendable?: boolean
+  ruleName?: string | null
+}
+
+function minutesText(minutes: number): string {
+  if (minutes <= 60) return `${minutes} min`
+  const rest = minutes % 60
+  const hours = Math.floor(minutes / 60)
+  return rest ? `${hours} tim ${rest} min` : `${hours} tim`
+}
+
+/** "1 tim 30 min, kan förlängas på plats om bordet är ledigt" /
+ * "60 min (Lunchbuffé), kan inte förlängas" (null utan uppgift). */
+export function lengthText({ durationMinutes, extendable, ruleName }: BookingLength): string | null {
+  if (!durationMinutes) return null
+  const rule = ruleName ? ` (${ruleName})` : ''
+  const ext = extendable ? 'kan förlängas på plats om bordet är ledigt' : 'kan inte förlängas'
+  return `${minutesText(durationMinutes)}${rule}, ${ext}`
 }
 
 function people(n: number): string {
@@ -148,6 +175,9 @@ export interface TableHold {
   tableIds: string[]
   partySize: number
   cardRequired: boolean
+  durationMinutes?: number
+  extendable?: boolean
+  ruleName?: string | null
 }
 
 export interface HoldRequest {
@@ -169,6 +199,9 @@ export interface GuestReservation {
   tableIds: string[]
   customerName?: string
   cancellable: boolean
+  durationMinutes?: number
+  extendable?: boolean
+  ruleName?: string | null
   location?: {
     locationId: string
     name: string

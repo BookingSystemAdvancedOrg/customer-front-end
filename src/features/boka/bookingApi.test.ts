@@ -180,3 +180,15 @@ describe('table rules, special days and the bot check', () => {
   })
 })
 
+
+describe('lengthText', () => {
+  it('describes the booking length and whether it can be extended', async () => {
+    const { lengthText } = await import('./bookingApi')
+    expect(lengthText({ durationMinutes: 90, extendable: true })).toBe(
+      '1 tim 30 min, kan förlängas på plats om bordet är ledigt')
+    expect(lengthText({ durationMinutes: 60, extendable: false, ruleName: 'Lunchbuffé' })).toBe(
+      '60 min (Lunchbuffé), kan inte förlängas')
+    expect(lengthText({ durationMinutes: 120, extendable: false, ruleName: null })).toBe('2 tim, kan inte förlängas')
+    expect(lengthText({})).toBeNull()
+  })
+})

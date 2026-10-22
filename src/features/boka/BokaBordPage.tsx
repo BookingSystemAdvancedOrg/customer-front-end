@@ -20,6 +20,7 @@ import {
   formatShortDate,
   getAvailability,
   holdTables,
+  lengthText,
   manageLink,
   needsCard,
   normalizePhone,
@@ -639,6 +640,7 @@ export default function BokaBordPage() {
           <div><dt>Restaurang</dt><dd>{booked.location?.name ?? info.name}</dd></div>
           <div><dt>Datum</dt><dd>{formatDate(booked.date)}</dd></div>
           <div><dt>Tid</dt><dd>{booked.startTime}-{booked.endTime}</dd></div>
+          {lengthText(booked) && <div><dt>Bokningstid</dt><dd>{lengthText(booked)}</dd></div>}
           <div><dt>Antal</dt><dd>{booked.partySize} personer</dd></div>
           <div>
             <dt>Bord</dt>
@@ -876,6 +878,7 @@ export default function BokaBordPage() {
                     {option.tableIds.map((id) => labels.get(id) ?? id).join(' + ')}
                   </span>
                 </p>
+                {lengthText(slot) && <p className="cell-muted booking-length">Bokningstid: {lengthText(slot)}.</p>}
                 {option.tableIds.length > 1 && (
                   <p className="cell-muted">
                     Borden {option.tableIds.map((id) => labels.get(id) ?? id).join(' och ')} ställs ihop för ert sällskap.
@@ -920,6 +923,7 @@ export default function BokaBordPage() {
                 {heldTables}
               </span>
             </div>
+            {lengthText(hold) && <p className="cell-muted booking-length">Bokningstid: {lengthText(hold)}.</p>}
             <div className="booking-grid">
               <label className="booking-field">
                 <span>Namn</span>

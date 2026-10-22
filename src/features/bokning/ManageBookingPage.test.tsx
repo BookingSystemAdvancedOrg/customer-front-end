@@ -11,6 +11,12 @@ const BOOKING = {
   location: { locationId: 'loc-1', name: 'Testkrogen', address: 'Gatan 1', phoneNumber: '08-1' },
 }
 
+it('shows the booking length', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => json({ ...BOOKING, durationMinutes: 120, extendable: false, ruleName: null })))
+  renderAt('#tok')
+  expect(await screen.findByText('2 tim, kan inte förlängas')).toBeInTheDocument()
+})
+
 function renderAt(hash: string) {
   window.location.hash = hash
   return render(
