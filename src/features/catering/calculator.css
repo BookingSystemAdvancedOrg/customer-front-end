@@ -50,3 +50,16 @@
     grid-row: 1 / span 2;
   }
 }
+
+/* Gästens förfrågan: offerten och den signerade kopian som PDF. */
+.catering-documents {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin: 12px 0 0;
+}
+
+/* Godkänn utan BankID: kryssrutorna behåller sin storlek när texten radbryts. */
+.catering-actions .booking-check input {
+  flex-shrink: 0;
+}

@@ -12,7 +12,7 @@ import { siteConfig } from '../../test/siteData'
 
 const api = vi.hoisted(() => ({
   getSettings: vi.fn(), getTiers: vi.fn(), createRequest: vi.fn(), getRequest: vi.fn(), getQuote: vi.fn(),
-  getCateringMenu: vi.fn(), acceptOffer: vi.fn(),
+  getCateringMenu: vi.fn(), acceptOffer: vi.fn(), documentLink: vi.fn(),
   startSigning: vi.fn(), signingStatus: vi.fn(), startCheckout: vi.fn(), requestChange: vi.fn(), rejectOffer: vi.fn(),
 }))
 vi.mock('./cateringApi', async (orig) => {
@@ -289,6 +289,49 @@ describe('CateringRequestPage', () => {
     renderGuest()
     expect(await screen.findByText('Rengöringsavgift')).toBeInTheDocument()
     expect(screen.getAllByText('1 650 kr').length).toBeGreaterThan(0)
+  })
+
+  it('waits for the restaurant to sign before the guest can', async () => {
+    api.getRequest.mockResolvedValue(guest({ canSign: false }))
+    renderGuest()
+    expect(await screen.findByText(/Restaurangen signerar offerten först/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Signera med BankID' })).not.toBeInTheDocument()
+  })
+
+  it("goes to the signing provider's page when it signs there", async () => {
+    const user = userEvent.setup()
+    api.getRequest.mockResolvedValue(guest())
+    api.startSigning.mockResolvedValue({ status: 'pending', kind: 'redirect', url: 'https://sign.example/p/1' })
+    renderGuest()
+    await user.click(await screen.findByRole('button', { name: 'Signera med BankID' }))
+    expect(assign).toHaveBeenCalledWith('https://sign.example/p/1')
+  })
+
+  it('a company accepts without BankID and downloads the signed copy', async () => {
+    const user = userEvent.setup()
+    const open = vi.fn()
+    vi.stubGlobal('open', open)
+    api.getRequest.mockResolvedValue(guest({ customerType: 'company', companyName: 'Acme AB', canAccept: true,
+      documents: ['offer'] }))
+    api.acceptOffer.mockResolvedValue(guest({ status: 'signed', canSign: false, canAccept: false, customerType: 'company',
+      signedBy: 'Karl Ek', signedMethod: 'simple_acceptance', documents: ['offer', 'signed'] }))
+    api.documentLink.mockResolvedValue({ url: 'https://s3.example/signed.pdf' })
+    renderGuest()
+    await user.click(await screen.findByRole('button', { name: 'Godkänn utan BankID' }))
+    const box = screen.getByRole('group', { name: 'Godkänn utan BankID' })
+    await user.type(within(box).getByLabelText('Ditt namn'), 'Karl Ek')
+    await user.click(within(box).getByRole('button', { name: 'Godkänn offerten' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Fyll i din roll i företaget.')
+    await user.type(within(box).getByLabelText('Din roll i företaget'), 'VD')
+    await user.click(within(box).getByRole('checkbox', { name: /teckna avtal för Acme AB/ }))
+    await user.click(within(box).getByRole('checkbox', { name: /Jag godkänner offerten/ }))
+    await user.click(within(box).getByRole('button', { name: 'Godkänn offerten' }))
+    expect(api.acceptOffer).toHaveBeenCalledWith('loc-1', 'req-1', 'tok-1',
+      { name: 'Karl Ek', role: 'VD', confirmAuthority: true, acceptTerms: true })
+    expect(await screen.findByText(/Godkänd av Karl Ek/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Signerad offert (PDF)' }))
+    expect(api.documentLink).toHaveBeenCalledWith('loc-1', 'req-1', 'tok-1', 'signed')
+    expect(open).toHaveBeenCalledWith('https://s3.example/signed.pdf', '_blank', 'noopener')
   })
 
   it('without a token it explains the link is incomplete', async () => {
