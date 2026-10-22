@@ -1,17 +1,18 @@
-import { act, render, screen, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import CateringPage from './CateringPage'
 import CateringRequestPage, { SIGN_POLL_MS } from './CateringRequestPage'
-import { estimate, firstDate, tokenFor } from './cateringApi'
-import type { CateringSettings, GuestRequest, Tier } from './cateringApi'
+import { firstDate, tokenFor } from './cateringApi'
+import type { CateringSettings, GuestRequest, Quote, Tier } from './cateringApi'
 import { WithSite } from '../../test/siteFixture'
 import { SiteContext } from '../../shared/SiteContext'
 import { siteConfig } from '../../test/siteData'
 
 const api = vi.hoisted(() => ({
-  getSettings: vi.fn(), getTiers: vi.fn(), createRequest: vi.fn(), getRequest: vi.fn(),
+  getSettings: vi.fn(), getTiers: vi.fn(), createRequest: vi.fn(), getRequest: vi.fn(), getQuote: vi.fn(),
+  getCateringMenu: vi.fn(), acceptOffer: vi.fn(),
   startSigning: vi.fn(), signingStatus: vi.fn(), startCheckout: vi.fn(), requestChange: vi.fn(), rejectOffer: vi.fn(),
 }))
 vi.mock('./cateringApi', async (orig) => {
@@ -43,7 +44,13 @@ vi.mock('@stripe/react-stripe-js/checkout', () => ({
 const SETTINGS: CateringSettings = {
   enabled: true, minPortions: 10, maxPortions: 300, advanceDays: 5, pickup: true, delivery: false,
   deliveryArea: 'Norrköping', maxDistanceKm: 25, priceWithinLimit: 395, priceBeyondLimit: 795,
-  allowOutsideArea: false, terms: 'Villkor', offerValidDays: 7, paymentTermsDays: 30,
+  allowOutsideArea: false, terms: 'Villkor', offerValidDays: 7, paymentTermsDays: 30, minGuests: 15,
+}
+const QUOTE: Quote = {
+  lines: [{ kind: 'menu', menuItemId: 'm1', name: 'Lasagne', unitPrice: 5000, quantity: 30, vatRate: 12 }],
+  guests: 30, portions: 30, tierName: 'Nivå 1', subtotal: 150000, discountPercent: 10, discount: 15000, deliveryFee: 0,
+  cleaningFee: 0, total: 135000, vat: 14464, vatRate: 12, serviceIncluded: true, distanceKm: null,
+  deliveryFeeManual: false, earliestDate: '2026-11-01',
 }
 const TIERS: Tier[] = [{ tierId: 't1', name: 'Nivå 1', fromPortions: 30, toPortions: null, discountPercent: 10, active: true }]
 const TOTALS = { subtotal: 150000, discountPercent: 10, discount: 15000, deliveryFee: 0, total: 135000, vat: 14464 }
@@ -86,20 +93,7 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-describe('catering pricing helpers', () => {
-  it('applies the matching tier to the dishes and adds delivery', () => {
-    const r = estimate([{ price: 50, quantity: 30 }], TIERS, 395)
-    expect(r).toMatchObject({ portions: 30, subtotal: 150000, discount: 15000, deliveryFee: 39500, total: 174500 })
-    expect(estimate([{ price: 50, quantity: 29 }], TIERS, 0).discount).toBe(0)
-  })
-
-  it('adds the cleaning fee after the discount, VAT 12 % on the whole total', () => {
-    const r = estimate([{ price: 50, quantity: 30 }], TIERS, 395, 300)
-    // 1500 - 150 + 395 + 300 kr
-    expect(r).toMatchObject({ discount: 15000, deliveryFee: 39500, cleaningFee: 30000, total: 204500, vat: 21911 })
-    expect(estimate([{ price: 50, quantity: 30 }], TIERS, 0).cleaningFee).toBe(0)
-  })
-
+describe('catering helpers', () => {
   it('first date is advanceDays after today in Stockholm', () => {
     expect(firstDate(5, new Date('2026-10-12T23:30:00Z'))).toBe('2026-10-18')
   })
@@ -110,32 +104,45 @@ describe('catering pricing helpers', () => {
   })
 })
 
+function renderCalculator() {
+  const config = siteConfig({ features: { reservations: true, ordering: false, catering: true, terminal: false } })
+  return render(
+    <WithSite config={config} path="/catering">
+      <Routes>
+        <Route path="/catering" element={<CateringPage />} />
+        <Route path="/catering/:locationId/:requestId" element={<p>Skickad sida</p>} />
+      </Routes>
+    </WithSite>,
+  )
+}
+
 describe('CateringPage', () => {
-  it('prices the choice, shows the discount and sends the request', async () => {
+  it('shows the server price for guests and dishes and sends the request', async () => {
     const user = userEvent.setup()
     api.getSettings.mockResolvedValue(SETTINGS)
     api.getTiers.mockResolvedValue(TIERS)
+    api.getCateringMenu.mockResolvedValue({ dishes: [], packages: [] })
+    api.getQuote.mockResolvedValue(QUOTE)
     getPublicMenu.mockResolvedValue([
       { menuItemId: 'm1', name: 'Lasagne', description: '', price: 50, category: 'mains' },
       { menuItemId: 'w1', name: 'Vin', description: '', price: 95, category: 'drinks', alcohol: true },
     ])
     api.createRequest.mockResolvedValue({ requestId: 'req-9', locationId: 'loc-1', token: 'tok-9' })
-    const config = siteConfig({ features: { reservations: true, ordering: false, catering: true, terminal: false } })
-    render(
-      <WithSite config={config} path="/catering">
-        <Routes>
-          <Route path="/catering" element={<CateringPage />} />
-          <Route path="/catering/:locationId/:requestId" element={<p>Skickad sida</p>} />
-        </Routes>
-      </WithSite>,
-    )
+    renderCalculator()
     const input = await screen.findByLabelText('Portioner Lasagne')
     expect(screen.queryByLabelText('Portioner Vin')).not.toBeInTheDocument()
     await user.type(input, '30')
-    await user.click(screen.getByRole('radio', { name: 'Rengjord utrustning (ingen extra kostnad)' }))
     const cart = screen.getByRole('complementary', { name: 'Kalkyl' })
-    expect(within(cart).getByText(/Rabatt Nivå 1/)).toBeInTheDocument()
+    expect(within(cart).getByText(/Fyll i antal gäster/)).toBeInTheDocument()
+    expect(api.getQuote).not.toHaveBeenCalled()
+    await user.type(screen.getByLabelText('Antal gäster'), '30')
+    expect(await within(cart).findByText(/Rabatt Nivå 1/)).toBeInTheDocument()
     expect(within(cart).getByText('1 350 kr')).toBeInTheDocument()
+    expect(within(cart).getByText('Uppskattat pris, bindande först när offerten signerats.')).toBeInTheDocument()
+    expect(api.getQuote).toHaveBeenLastCalledWith('loc-1', expect.objectContaining({
+      guests: 30, items: [{ menuItemId: 'm1', quantity: 30 }], fulfilment: 'pickup',
+    }))
+    await user.click(screen.getByRole('radio', { name: 'Rengjord utrustning (ingen extra kostnad)' }))
 
     await user.click(within(cart).getByRole('button', { name: 'Skicka förfrågan' }))
     expect(await within(cart).findByRole('alert')).toHaveTextContent('Fyll i ditt namn.')
@@ -145,52 +152,79 @@ describe('CateringPage', () => {
     await user.click(within(cart).getByRole('checkbox', { name: /kontaktar mig/ }))
     await user.click(within(cart).getByRole('button', { name: 'Skicka förfrågan' }))
     expect(api.createRequest).toHaveBeenCalledWith('loc-1', expect.objectContaining({
-      items: [{ menuItemId: 'm1', quantity: 30 }], customerType: 'private', fulfilment: 'pickup',
-      name: 'Anna Andersson', acceptTerms: true,
+      guests: 30, items: [{ menuItemId: 'm1', quantity: 30 }], customerType: 'private', fulfilment: 'pickup',
+      name: 'Anna Andersson', acceptTerms: true, equipmentReturn: 'cleaned',
     }))
     expect(await screen.findByText('Skickad sida')).toBeInTheDocument()
     expect(sessionStorage.length).toBeGreaterThan(0)
   })
 
-  it('asks how the equipment comes back and adds the cleaning fee when not cleaned', async () => {
+  it('offers the catering packages per guest and asks a company for its signatory', async () => {
     const user = userEvent.setup()
-    api.getSettings.mockResolvedValue({ ...SETTINGS, cleaningFee: 300 })
-    api.getTiers.mockResolvedValue(TIERS)
-    getPublicMenu.mockResolvedValue([{ menuItemId: 'm1', name: 'Lasagne', description: '', price: 50, category: 'mains' }])
+    api.getSettings.mockResolvedValue({ ...SETTINGS, delivery: true, cleaningFee: 300 })
+    api.getTiers.mockResolvedValue([])
+    api.getCateringMenu.mockResolvedValue({
+      dishes: [{ dishId: 'd1', name: 'Kycklingspett', pricePerPortion: 85, allergens: ['milk'], dietary: ['gluten_free'] }],
+      packages: [{ packageId: 'p1', name: 'Buffé Roma', pricePerGuest: 245, dishIds: ['d1'], minGuests: 20 }],
+    })
+    api.getQuote.mockResolvedValue({ ...QUOTE, lines: [{ kind: 'package', packageId: 'p1', name: 'Buffé Roma',
+      unitPrice: 24500, quantity: 40 }], discount: 0, deliveryFee: 59500, distanceKm: 12.4, total: 1039500 })
     api.createRequest.mockResolvedValue({ requestId: 'req-9', locationId: 'loc-1', token: 'tok-9' })
-    const config = siteConfig({ features: { reservations: true, ordering: false, catering: true, terminal: false } })
-    render(
-      <WithSite config={config} path="/catering">
-        <Routes>
-          <Route path="/catering" element={<CateringPage />} />
-          <Route path="/catering/:locationId/:requestId" element={<p>Skickad sida</p>} />
-        </Routes>
-      </WithSite>,
-    )
-    await user.type(await screen.findByLabelText('Portioner Lasagne'), '30')
+    renderCalculator()
+    await user.type(await screen.findByLabelText('Antal gäster'), '40')
+    expect(screen.getAllByText('Innehåller mjölk')).toHaveLength(2)
+    expect(screen.getByText('Glutenfri')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Alla 40' }))
     const cart = screen.getByRole('complementary', { name: 'Kalkyl' })
-    const dirty = screen.getByRole('radio', { name: /Ej rengjord utrustning \(rengöringsavgift tillkommer\)/ })
-    expect(dirty).not.toBeChecked()
-    expect(screen.getByRole('radio', { name: 'Rengjord utrustning (ingen extra kostnad)' })).not.toBeChecked()
-    await user.click(within(cart).getByRole('button', { name: 'Skicka förfrågan' }))
-    expect(await within(cart).findByRole('alert')).toHaveTextContent('Välj hur fat och utrustning lämnas tillbaka.')
-    expect(within(cart).queryByText('Rengöringsavgift')).not.toBeInTheDocument()
-
-    await user.click(dirty)
-    expect(within(cart).getByText('Rengöringsavgift')).toBeInTheDocument()
-    expect(within(cart).getByText('300 kr')).toBeInTheDocument()
-    expect(within(cart).getByText('1 650 kr')).toBeInTheDocument()
-    await user.type(screen.getByLabelText('Namn'), 'Anna Andersson')
+    expect(await within(cart).findByText('40 × Buffé Roma')).toBeInTheDocument()
+    await user.type(screen.getByLabelText('Gatuadress'), 'Storgatan 1')
+    await user.type(screen.getByLabelText('Postnummer'), '111 22')
+    await user.type(screen.getByLabelText('Ort'), 'Stockholm')
+    expect(await within(cart).findByText('Leverans (12,4 km)')).toBeInTheDocument()
+    await waitFor(() => expect(api.getQuote).toHaveBeenLastCalledWith('loc-1', expect.objectContaining({
+      guests: 40, packages: [{ packageId: 'p1', quantity: 40 }], fulfilment: 'delivery',
+      deliveryAddress: { street: 'Storgatan 1', postalCode: '111 22', city: 'Stockholm' },
+    })))
+    await user.click(screen.getByRole('radio', { name: 'Rengjord utrustning (ingen extra kostnad)' }))
+    await user.click(screen.getByRole('radio', { name: 'Företag' }))
+    await user.type(screen.getByRole('textbox', { name: 'Företag' }), 'Acme AB')
+    await user.type(screen.getByLabelText('Organisationsnummer'), '556000-1234')
+    await user.type(screen.getByLabelText('Kontaktperson'), 'Anna Andersson')
     await user.type(screen.getByLabelText('E-post'), 'anna@example.se')
     await user.type(screen.getByLabelText('Mobilnummer'), '070-123 45 67')
     await user.click(within(cart).getByRole('checkbox', { name: /kontaktar mig/ }))
     await user.click(within(cart).getByRole('button', { name: 'Skicka förfrågan' }))
-    expect(api.createRequest).toHaveBeenCalledWith('loc-1', expect.objectContaining({ equipmentReturn: 'not_cleaned' }))
+    expect(await within(cart).findByRole('alert')).toHaveTextContent('Fyll i vem som signerar')
+    await user.type(screen.getByLabelText('Den som signerar'), 'Karl Ek')
+    await user.type(screen.getByLabelText(/^Roll/), 'VD')
+    await user.click(within(cart).getByRole('button', { name: 'Skicka förfrågan' }))
+    expect(await within(cart).findByRole('alert')).toHaveTextContent('Bekräfta att den som signerar')
+    await user.click(screen.getByRole('checkbox', { name: /rätt att teckna avtal/ }))
+    await user.click(within(cart).getByRole('button', { name: 'Skicka förfrågan' }))
+    expect(api.createRequest).toHaveBeenCalledWith('loc-1', expect.objectContaining({
+      customerType: 'company', signatoryName: 'Karl Ek', signatoryRole: 'VD', signatoryAuthority: true,
+      packages: [{ packageId: 'p1', quantity: 40 }],
+    }))
+  })
+
+  it('shows the server error, for example outside the delivery area', async () => {
+    const user = userEvent.setup()
+    const { ApiError } = await import('../../shared/api')
+    api.getSettings.mockResolvedValue(SETTINGS)
+    api.getTiers.mockResolvedValue([])
+    api.getCateringMenu.mockResolvedValue({ dishes: [{ dishId: 'd1', name: 'Kycklingspett', pricePerPortion: 85 }], packages: [] })
+    api.getQuote.mockRejectedValue(new ApiError(409, 'catering_outside_area'))
+    renderCalculator()
+    await user.type(await screen.findByLabelText('Antal gäster'), '20')
+    await user.type(screen.getByLabelText('Portioner Kycklingspett'), '20')
+    const cart = screen.getByRole('complementary', { name: 'Kalkyl' })
+    expect(await within(cart).findByText(/utanför restaurangens leveransområde/)).toBeInTheDocument()
   })
 
   it('says so when the restaurant has catering switched off', async () => {
     api.getSettings.mockResolvedValue({ ...SETTINGS, enabled: false })
     api.getTiers.mockResolvedValue([])
+    api.getCateringMenu.mockResolvedValue({ dishes: [], packages: [] })
     getPublicMenu.mockResolvedValue([])
     render(<WithSite path="/catering"><CateringPage /></WithSite>)
     expect(await screen.findByText(/tar inte emot cateringförfrågningar/)).toBeInTheDocument()
