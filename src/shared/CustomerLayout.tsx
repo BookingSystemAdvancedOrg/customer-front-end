@@ -249,6 +249,7 @@ export function CustomerLayout() {
           </p>
           <nav className="site-footer-legal" aria-label="Juridiskt">
             <Link to="/integritetspolicy">Integritetspolicy</Link>
+            <Link to="/cookies">Cookies</Link>
             {tenant.features.reservations && <Link to="/bokningsvillkor">Bokningsvillkor</Link>}
           </nav>
           <p className="site-footer-credit">Drivs av <BooqyWordmark className="site-footer-booqy" /></p>

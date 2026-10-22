@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { isApiConfigured } from '../../shared/api'
 import { useSite } from '../../shared/SiteContext'
 import { PhoneInput } from '../../shared/PhoneInput'
@@ -19,8 +19,12 @@ import {
   nextTier,
   rememberToken,
 } from './cateringApi'
-import type { CateringSettings, Tier } from './cateringApi'
+import type { CateringSettings, EquipmentReturn, Tier } from './cateringApi'
+import './equipment-return.css'
 import { FlowSteps } from '../../shared/FlowSteps'
+import { GuestDataNotice } from '../../shared/GuestDataNotice'
+import { MarketingConsent, NO_CONSENT, consentFields } from '../../shared/MarketingConsent'
+import type { ConsentChoice } from '../../shared/MarketingConsent'
 
 const STEPS = [{ label: 'Rätter' }, { label: 'När & var' }, { label: 'Uppgifter' }, { label: 'Skicka' }]
 
@@ -35,6 +39,8 @@ interface Form {
   deliveryDate: string
   deliveryTime: string
   fulfilment: 'pickup' | 'delivery'
+  /** Inget förvalt: gästen väljer själv (avgiften ska vara ett aktivt val). */
+  equipmentReturn: EquipmentReturn | ''
   deliveryZone: 'within' | 'beyond'
   street: string
   postalCode: string
@@ -42,13 +48,13 @@ interface Form {
   guests: string
   notes: string
   accept: boolean
-  offers: boolean
+  consent: ConsentChoice
 }
 
 const EMPTY: Form = {
   customerType: 'private', name: '', email: '', phone: '', companyName: '', orgNumber: '', invoiceReference: '',
-  deliveryDate: '', deliveryTime: '12:00', fulfilment: 'delivery', deliveryZone: 'within', street: '', postalCode: '',
-  city: '', guests: '', notes: '', accept: false, offers: false,
+  deliveryDate: '', deliveryTime: '12:00', fulfilment: 'delivery', equipmentReturn: '', deliveryZone: 'within', street: '', postalCode: '',
+  city: '', guests: '', notes: '', accept: false, consent: NO_CONSENT,
 }
 
 function check(form: Form, portions: number, settings: CateringSettings): string | null {
@@ -59,6 +65,7 @@ function check(form: Form, portions: number, settings: CateringSettings): string
   if (form.fulfilment === 'delivery' && (!form.street.trim() || !/^\d{3} ?\d{2}$/.test(form.postalCode.trim()) || !form.city.trim())) {
     return 'Fyll i leveransadressen (gata, postnummer och ort).'
   }
+  if (!form.equipmentReturn) return 'Välj hur fat och utrustning lämnas tillbaka.'
   if (!form.name.trim()) return 'Fyll i ditt namn.'
   if (!validEmail(form.email)) return 'Fyll i en giltig e-postadress - offerten skickas dit.'
   if (!normalizePhone(form.phone)) return 'Fyll i ett giltigt mobilnummer, t.ex. 070-123 45 67.'
@@ -118,9 +125,11 @@ export default function CateringPage() {
   const chosen = Object.entries(quantities).filter(([id, q]) => q > 0 && byId.has(id))
   const deliveryFeeKr = !settings || form.fulfilment === 'pickup' ? 0
     : form.deliveryZone === 'beyond' ? settings.priceBeyondLimit : settings.priceWithinLimit
-  const calc = estimate(chosen.map(([id, q]) => ({ price: byId.get(id)!.price, quantity: q })), tiers, deliveryFeeKr)
+  const cleaningFeeKr = settings?.cleaningFee ?? 0
+  const calc = estimate(chosen.map(([id, q]) => ({ price: byId.get(id)!.price, quantity: q })), tiers, deliveryFeeKr,
+    form.equipmentReturn === 'not_cleaned' ? cleaningFeeKr : 0)
   const upcoming = nextTier(tiers, calc.portions)
-  const stepAt = calc.portions === 0 ? 1 : !form.deliveryDate ? 2 : !(form.name.trim() && form.email.trim() && form.phone) ? 3 : 4
+  const stepAt = calc.portions === 0 ? 1 : !form.deliveryDate || !form.equipmentReturn ? 2 : !(form.name.trim() && form.email.trim() && form.phone) ? 3 : 4
 
   function setQty(id: string, value: number) {
     setQuantities((q) => ({ ...q, [id]: Math.max(0, Math.min(5000, Math.round(value) || 0)) }))
@@ -131,7 +140,7 @@ export default function CateringPage() {
     e.preventDefault()
     if (!settings) return
     const problem = check(form, calc.portions, settings)
-    if (problem) return setError(problem)
+    if (problem || !form.equipmentReturn) return setError(problem)
     if (turnstileSiteKey && !turnstileToken) return setError('Bekräfta säkerhetskontrollen ovanför knappen.')
     setBusy(true)
     try {
@@ -148,6 +157,7 @@ export default function CateringPage() {
         deliveryDate: form.deliveryDate,
         deliveryTime: form.deliveryTime,
         fulfilment: form.fulfilment,
+        equipmentReturn: form.equipmentReturn,
         ...(form.fulfilment === 'delivery'
           ? { deliveryZone: form.deliveryZone,
               deliveryAddress: { street: form.street.trim(), postalCode: form.postalCode.trim(), city: form.city.trim() } }
@@ -157,7 +167,7 @@ export default function CateringPage() {
         acceptTerms: true,
         language: 'sv',
         ...(turnstileToken ? { turnstileToken } : {}),
-        ...(config.tenant.features.marketing && form.offers ? { marketingOptIn: true } : {}),
+        ...consentFields(form.consent, config.privacy, Boolean(config.tenant.features.marketing)),
       })
       rememberToken(created.requestId, created.token)
       navigate(`/catering/${created.locationId}/${created.requestId}?skickad=1`)
@@ -285,6 +295,23 @@ export default function CateringPage() {
                 </label>
               </div>
             )}
+            <fieldset className="equipment-return">
+              <legend>Hur lämnas fat och utrustning tillbaka?</legend>
+              {(['cleaned', 'not_cleaned'] as const).map((v) => (
+                <label key={v} className={`booking-check${form.equipmentReturn === v ? ' on' : ''}`}>
+                  <input type="radio" name="equipmentReturn" value={v} checked={form.equipmentReturn === v}
+                    onChange={() => set('equipmentReturn', v)} />
+                  <span>
+                    {v === 'cleaned'
+                      ? 'Rengjord utrustning (ingen extra kostnad)'
+                      : 'Ej rengjord utrustning (rengöringsavgift tillkommer)'}
+                    {v === 'not_cleaned' && cleaningFeeKr > 0 && (
+                      <span className="equipment-return-fee">{kronor(cleaningFeeKr * 100)}</span>
+                    )}
+                  </span>
+                </label>
+              ))}
+            </fieldset>
           </section>
 
           <section className="catering-details" aria-label="Dina uppgifter">
@@ -369,6 +396,9 @@ export default function CateringPage() {
           {calc.deliveryFee > 0 && (
             <div className="cart-total"><span>Leverans</span><span>{kronor(calc.deliveryFee)}</span></div>
           )}
+          {(calc.cleaningFee ?? 0) > 0 && (
+            <div className="cart-total"><span>Rengöringsavgift</span><span>{kronor(calc.cleaningFee)}</span></div>
+          )}
           <div className="cart-total"><span>Totalt inkl. moms</span><span>{kronor(calc.total)}</span></div>
           {upcoming && calc.portions > 0 && (
             <p className="cart-note">
@@ -378,17 +408,10 @@ export default function CateringPage() {
           <p className="cart-note">Preliminärt pris - restaurangen bekräftar med en offert.</p>
           <label className="booking-check">
             <input type="checkbox" checked={form.accept} onChange={(e) => set('accept', e.target.checked)} />
-            <span>
-              Jag godkänner att restaurangen kontaktar mig om förfrågan och har läst{' '}
-              <Link to="/integritetspolicy">integritetspolicyn</Link>.
-            </span>
+            <span>Jag godkänner att restaurangen kontaktar mig om förfrågan.</span>
           </label>
-          {config.tenant.features.marketing && (
-            <label className="booking-check">
-              <input type="checkbox" checked={form.offers} onChange={(e) => set('offers', e.target.checked)} />
-              <span>Skicka mig erbjudanden och nyheter från {config.tenant.name} via e-post (valfritt).</span>
-            </label>
-          )}
+          <MarketingConsent value={form.consent} onChange={(v) => set('consent', v)} />
+          <GuestDataNotice kind="catering" />
           {turnstileSiteKey && (
             <TurnstileWidget siteKey={turnstileSiteKey} resetKey={turnstileReset} action="catering"
               onToken={setTurnstileToken} />

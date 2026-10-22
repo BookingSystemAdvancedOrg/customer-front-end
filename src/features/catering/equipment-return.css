@@ -1,0 +1,38 @@
+/* Catering steg 2: hur fat och utrustning kommer tillbaka. Egen fil så
+   world.css inte behöver röras; samma tokens i ljust och mörkt läge. */
+.equipment-return {
+  margin: 18px 0 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.equipment-return legend {
+  padding: 0;
+  margin-bottom: 8px;
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.equipment-return .booking-check {
+  padding: 12px 14px;
+  border: 1.5px dashed var(--paper-line);
+  border-radius: 3px;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.equipment-return .booking-check.on {
+  border-style: solid;
+  border-color: var(--ink);
+}
+
+.equipment-return-fee {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.88rem;
+}

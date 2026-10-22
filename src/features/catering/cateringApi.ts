@@ -28,6 +28,8 @@ export interface CateringSettings {
   priceWithinLimit: number
   priceBeyondLimit: number
   allowOutsideArea: boolean
+  /** Kronor inkl. moms när utrustningen lämnas tillbaka ej rengjord (saknas hos äldre API). */
+  cleaningFee?: number
   terms: string
   offerValidDays: number
   paymentTermsDays: number
@@ -54,9 +56,14 @@ export interface Totals {
   discountPercent: number
   discount: number
   deliveryFee: number
+  /** Saknas på offerter från innan valet fanns. */
+  cleaningFee?: number
   total: number
   vat: number
 }
+
+/** Hur fat och utrustning kommer tillbaka till restaurangen. */
+export type EquipmentReturn = 'cleaned' | 'not_cleaned'
 
 export type Status =
   | 'requested'
@@ -84,7 +91,8 @@ export interface GuestRequest {
   deliveryAddress?: { street: string; postalCode: string; city: string }
   request: { lines: Line[]; portions: number; tierName?: string | null } & Totals
   offer?: { version: number; lines: Line[]; totals: Totals; validUntil: string; message?: string;
-    terms?: string; documentHash?: string }
+    terms?: string; documentHash?: string; equipmentReturn?: EquipmentReturn }
+  equipmentReturn?: EquipmentReturn
   validUntil?: string
   signedAt?: string
   signedBy?: string
@@ -112,6 +120,7 @@ export interface RequestInput {
   deliveryDate: string
   deliveryTime: string
   fulfilment: 'pickup' | 'delivery'
+  equipmentReturn: EquipmentReturn
   deliveryZone?: 'within' | 'beyond'
   deliveryAddress?: { street: string; postalCode: string; city: string }
   guests?: number
@@ -119,8 +128,10 @@ export interface RequestInput {
   acceptTerms: true
   language: 'sv'
   turnstileToken?: string
-  /** Gästen kryssade i "skicka mig erbjudanden". */
+  /** Gästen kryssade i "skicka mig erbjudanden" (äldre backend). */
   marketingOptIn?: boolean
+  /** Frivilligt samtycke till erbjudanden (shared/MarketingConsent.tsx). */
+  marketingConsent?: { channels: ('email' | 'sms')[]; textVersion: string }
 }
 
 export interface SignState {
@@ -227,6 +238,7 @@ export function estimate(
   lines: { price: number; quantity: number }[],
   tiers: Tier[],
   deliveryFeeKr: number,
+  cleaningFeeKr = 0,
 ): Totals & { portions: number; tier: Tier | null } {
   const portions = lines.reduce((n, l) => n + l.quantity, 0)
   const subtotal = lines.reduce((sum, l) => sum + Math.round(l.price * 100) * l.quantity, 0)
@@ -234,8 +246,10 @@ export function estimate(
   const discountPercent = tier?.discountPercent ?? 0
   const discount = Math.round((subtotal * discountPercent) / 100)
   const deliveryFee = Math.round(deliveryFeeKr * 100)
-  const total = subtotal - discount + deliveryFee
-  return { portions, tier, subtotal, discountPercent, discount, deliveryFee, total, vat: Math.round((total * 12) / 112) }
+  const cleaningFee = Math.round(cleaningFeeKr * 100)
+  const total = subtotal - discount + deliveryFee + cleaningFee
+  return { portions, tier, subtotal, discountPercent, discount, deliveryFee, cleaningFee, total,
+    vat: Math.round((total * 12) / 112) }
 }
 
 export function kronor(ore: number | undefined | null): string {

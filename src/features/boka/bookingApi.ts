@@ -126,6 +126,8 @@ export interface BookingRequest {
   notes?: string
   language?: 'sv' | 'en'
   marketingOptIn?: boolean
+  /** Frivilligt samtycke till erbjudanden (shared/MarketingConsent.tsx). */
+  marketingConsent?: { channels: ('email' | 'sms')[]; textVersion: string }
   acceptTerms: true
   /** Token från säkerhetskontrollen (Cloudflare Turnstile) när den visas. */
   turnstileToken?: string

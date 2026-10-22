@@ -38,6 +38,9 @@ import { FloorPlanSvg } from './FloorPlanSvg'
 import { FloorPlan3D } from './FloorPlan3D'
 import { FlowSteps } from '../../shared/FlowSteps'
 import { Celebrate } from '../../shared/Celebrate'
+import { GuestDataNotice } from '../../shared/GuestDataNotice'
+import { MarketingConsent, NO_CONSENT, consentFields } from '../../shared/MarketingConsent'
+import type { ConsentChoice } from '../../shared/MarketingConsent'
 
 const DEFAULT_MAX_PARTY = 12
 /** Hur ofta lediga tider hämtas om medan gästen väljer (tider inom 30
@@ -49,12 +52,12 @@ interface Guest {
   email: string
   phone: string
   notes: string
-  marketingOptIn: boolean
+  consent: ConsentChoice
   acceptTerms: boolean
 }
 
 const EMPTY_GUEST: Guest = {
-  name: '', email: '', phone: '', notes: '', marketingOptIn: false, acceptTerms: false,
+  name: '', email: '', phone: '', notes: '', consent: NO_CONSENT, acceptTerms: false,
 }
 
 function guestError(g: Guest): string | null {
@@ -551,7 +554,7 @@ export default function BokaBordPage() {
           phone: guest.phone.trim(),
           notes: guest.notes.trim() || undefined,
           language: 'sv',
-          marketingOptIn: guest.marketingOptIn,
+          ...consentFields(guest.consent, config.privacy, !!config.tenant.features.marketing),
           acceptTerms: true,
           holdId: hold.holdId,
         },
@@ -935,17 +938,14 @@ export default function BokaBordPage() {
                 <textarea maxLength={NOTES_MAX} rows={3} placeholder="Allergier, barnstol, firande…" value={guest.notes} onChange={(e) => setGuest({ ...guest, notes: e.target.value })} />
               </label>
             </div>
-            <label className="booking-check">
-              <input type="checkbox" checked={guest.marketingOptIn} onChange={(e) => setGuest({ ...guest, marketingOptIn: e.target.checked })} />
-              <span>Ja, {config.tenant.name} får skicka mig erbjudanden och nyheter (valfritt).</span>
-            </label>
+            <GuestDataNotice kind="booking" />
             <label className="booking-check">
               <input type="checkbox" checked={guest.acceptTerms} onChange={(e) => setGuest({ ...guest, acceptTerms: e.target.checked })} />
               <span>
-                Jag godkänner <Link to="/bokningsvillkor" target="_blank">bokningsvillkoren</Link> och har läst{' '}
-                <Link to="/integritetspolicy" target="_blank">integritetspolicyn</Link>.
+                Jag godkänner <Link to="/bokningsvillkor" target="_blank">bokningsvillkoren</Link>.
               </span>
             </label>
+            <MarketingConsent value={guest.consent} onChange={(consent) => setGuest({ ...guest, consent })} />
             {cardNeeded && terms && (
               <div className="guarantee-notice" role="note">
                 <strong>Kortgaranti krävs</strong> för sällskap om {terms.minPartySize} personer eller fler.

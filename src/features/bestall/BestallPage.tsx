@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { isApiConfigured } from '../../shared/api'
 import { useSite } from '../../shared/SiteContext'
 import { useLocationInfo } from '../../shared/useLocationInfo'
@@ -32,6 +32,9 @@ import { checkCode, codeErrorMessage, discounted, normalizeCode } from '../erbju
 import type { CodeTerms } from '../erbjudande/offerApi'
 import { FlowSteps } from '../../shared/FlowSteps'
 import { PaymentTicket } from '../../shared/payment/PaymentTicket'
+import { GuestDataNotice } from '../../shared/GuestDataNotice'
+import { MarketingConsent, NO_CONSENT, consentFields } from '../../shared/MarketingConsent'
+import type { ConsentChoice } from '../../shared/MarketingConsent'
 
 const STEPS = [{ label: 'Välj rätter' }, { label: 'Dina uppgifter' }, { label: 'Betala' }, { label: 'Klart' }]
 
@@ -41,10 +44,10 @@ interface Guest {
   email: string
   notes: string
   accept: boolean
-  offers: boolean
+  consent: ConsentChoice
 }
 
-const EMPTY_GUEST: Guest = { name: '', phone: '', email: '', notes: '', accept: false, offers: false }
+const EMPTY_GUEST: Guest = { name: '', phone: '', email: '', notes: '', accept: false, consent: NO_CONSENT }
 
 function guestError(g: Guest): string | null {
   if (!g.name.trim()) return 'Fyll i ditt namn.'
@@ -229,7 +232,7 @@ export default function BestallPage() {
         acceptTerms: true,
         ...(turnstileToken ? { turnstileToken } : {}),
         ...(applied ? { discountCode: applied.code } : {}),
-        ...(marketing && guest.offers ? { marketingOptIn: true } : {}),
+        ...consentFields(guest.consent, config.privacy, marketing),
         embedded: true,
       })
       rememberToken(created.orderId, created.statusToken)
@@ -506,16 +509,11 @@ export default function BestallPage() {
                 onChange={(e) => setGuest({ ...guest, accept: e.target.checked })} />
               <span>
                 Jag förstår att beställningen inte kan ändras efter betalning. Avbryter restaurangen får
-                jag pengarna tillbaka. <Link to="/integritetspolicy">Integritetspolicy</Link>
+                jag pengarna tillbaka.
               </span>
             </label>
-            {marketing && (
-              <label className="booking-check">
-                <input type="checkbox" checked={guest.offers}
-                  onChange={(e) => setGuest({ ...guest, offers: e.target.checked })} />
-                <span>Skicka mig erbjudanden och nyheter från {config.tenant.name} via e-post (valfritt).</span>
-              </label>
-            )}
+            <MarketingConsent value={guest.consent} onChange={(consent) => setGuest({ ...guest, consent })} />
+            <GuestDataNotice kind="order" />
             {turnstileSiteKey && (
               <TurnstileWidget siteKey={turnstileSiteKey} resetKey={turnstileReset} action="order"
                 onToken={setTurnstileToken} />

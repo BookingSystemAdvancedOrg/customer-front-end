@@ -50,8 +50,10 @@ export interface OrderRequest {
   turnstileToken?: string
   /** Välkomsterbjudandets kod (ABCD-EFGH). */
   discountCode?: string
-  /** Gästen kryssade i "skicka mig erbjudanden". */
+  /** Gästen kryssade i "skicka mig erbjudanden" (äldre backend). */
   marketingOptIn?: boolean
+  /** Frivilligt samtycke till erbjudanden (shared/MarketingConsent.tsx). */
+  marketingConsent?: { channels: ('email' | 'sms')[]; textVersion: string }
   /** Betalningen visas på sajtens egen sida (Payment Element), inte hos Stripe. */
   embedded: true
 }

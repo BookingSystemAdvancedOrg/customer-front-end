@@ -56,6 +56,9 @@ function LinesTable({ lines, totals }: { lines: Line[]; totals: Totals }) {
       {totals.deliveryFee > 0 && (
         <div className="cart-total"><span>Leverans</span><span>{kronor(totals.deliveryFee)}</span></div>
       )}
+      {(totals.cleaningFee ?? 0) > 0 && (
+        <div className="cart-total"><span>Rengöringsavgift</span><span>{kronor(totals.cleaningFee)}</span></div>
+      )}
       <div className="cart-total"><span>Totalt inkl. moms</span><span>{kronor(totals.total)}</span></div>
       <p className="cart-note">varav moms 12 %: {kronor(totals.vat)}</p>
     </>
