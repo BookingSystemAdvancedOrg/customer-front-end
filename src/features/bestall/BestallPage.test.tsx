@@ -3,6 +3,7 @@ import { Route, Routes } from 'react-router-dom'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import BestallPage from './BestallPage'
+import { loadCart } from './orderApi'
 import { WithSite } from '../../test/siteFixture'
 import { json, siteConfig } from '../../test/siteData'
 
@@ -87,6 +88,36 @@ function postedOrder() {
 }
 
 describe('BestallPage', () => {
+  it('drops a dish that expired before checkout by refetching the menu', async () => {
+    const user = userEvent.setup()
+    orderResponse = () => json({ error: 'menu_item_unavailable' }, 400)
+    render(
+      <WithSite config={config()} path="/bestall">
+        <Routes>
+          <Route path="bestall" element={<BestallPage />} />
+        </Routes>
+      </WithSite>,
+    )
+    await user.click(await screen.findByRole('button', { name: 'Lägg till Margherita' }))
+    await user.click(screen.getByRole('button', { name: 'Lägg till Cola' }))
+    await fill(user)
+    // Margherita har gått ut när beställningen skickas.
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url.includes('/ordering')) return json(ordering)
+      if (url.endsWith('/menu')) return json({ items: MENU.items.filter((d) => d.menuItemId !== 'pizza') })
+      if (url.endsWith('/order') && init?.method === 'POST') return orderResponse()
+      return json({ error: 'not found' }, 404)
+    })
+    await user.click(screen.getByRole('button', { name: 'Till betalning · 160,50 kr' }))
+    expect(
+      await screen.findByText('En rätt i varukorgen finns inte längre på menyn och har tagits bort. Kontrollera beställningen och försök igen.'),
+    ).toBeInTheDocument()
+    const cart = screen.getByRole('complementary', { name: 'Din beställning' })
+    expect(within(cart).queryByText('1 × Margherita')).not.toBeInTheDocument()
+    expect(within(cart).getByText('1 × Cola')).toBeInTheDocument()
+    expect(loadCart('loc-1')).toEqual({ cola: 1 })
+  })
+
   it('orders for pickup and pays on the page with Stripe in the site style', async () => {
     const user = userEvent.setup()
     render(

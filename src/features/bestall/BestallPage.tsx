@@ -242,6 +242,17 @@ export default function BestallPage() {
     } catch (err) {
       setError(orderErrorMessage(err))
       if (err instanceof Error && /^discount_/.test(err.message)) setCode(null)
+      if (err instanceof Error && err.message === 'menu_item_unavailable') {
+        // En rätt har gått ut eller stängts av sedan menyn hämtades: hämta om
+        // menyn så att rätten försvinner ur varukorgen.
+        await getPublicMenu(locationId)
+          .then((items) => {
+            setMenu(items)
+            const ids = new Set(items.map((d) => d.menuItemId))
+            setCart((prev) => Object.fromEntries(Object.entries(prev).filter(([id]) => ids.has(id))))
+          })
+          .catch(() => undefined)
+      }
       if (turnstileSiteKey) {
         setTurnstileToken(null)
         setTurnstileReset((n) => n + 1)
