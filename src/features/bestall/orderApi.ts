@@ -216,6 +216,10 @@ export function closedMessage(state: OrderingState, phone: string): string {
   }
 }
 
+/** När menyn hämtats om och rätten faktiskt plockats ur varukorgen. */
+export const MENU_ITEM_REMOVED =
+  'En rätt i varukorgen finns inte längre på menyn och har tagits bort. Kontrollera beställningen och försök igen.'
+
 const ORDER_ERRORS: Record<string, string> = {
   ordering_closed: 'Vi har precis slutat ta emot beställningar för idag.',
   ordering_paused: 'Köket har pausat beställningar en stund. Försök igen om en liten stund.',
@@ -224,7 +228,7 @@ const ORDER_ERRORS: Record<string, string> = {
   ordering_no_site: 'Det går inte att beställa online just nu.',
   ordering_pickup_off: 'Avhämtning går inte att beställa just nu.',
   ordering_table_off: 'Beställning vid bordet går inte just nu - fråga personalen.',
-  menu_item_unavailable: 'En rätt i varukorgen finns inte längre på menyn och har tagits bort. Kontrollera beställningen och försök igen.',
+  menu_item_unavailable: 'En rätt i varukorgen finns inte längre på menyn. Ta bort den och försök igen.',
   alcohol_not_for_pickup: 'Drycker med alkohol kan bara beställas vid bordet.',
   'table code is invalid': 'QR-koden känns inte igen. Skanna koden på bordet igen.',
   payment_unavailable: 'Betalningen är inte tillgänglig just nu. Försök igen om en stund.',

@@ -18,6 +18,7 @@ import {
   clearCart,
   closedMessage,
   createOrder,
+  MENU_ITEM_REMOVED,
   getOrdering,
   kronor,
   loadCart,
@@ -245,11 +246,16 @@ export default function BestallPage() {
       if (err instanceof Error && err.message === 'menu_item_unavailable') {
         // En rätt har gått ut eller stängts av sedan menyn hämtades: hämta om
         // menyn så att rätten försvinner ur varukorgen.
+        // Bara när en rätt verkligen plockats bort sägs det; annars gäller
+        // den neutrala texten.
         await getPublicMenu(locationId)
           .then((items) => {
             setMenu(items)
             const ids = new Set(items.map((d) => d.menuItemId))
-            setCart((prev) => Object.fromEntries(Object.entries(prev).filter(([id]) => ids.has(id))))
+            if (Object.keys(cart).some((id) => !ids.has(id))) {
+              setCart((prev) => Object.fromEntries(Object.entries(prev).filter(([id]) => ids.has(id))))
+              setError(MENU_ITEM_REMOVED)
+            }
           })
           .catch(() => undefined)
       }
