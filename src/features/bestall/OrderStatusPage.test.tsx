@@ -61,7 +61,7 @@ describe('OrderStatusPage', () => {
       await vi.advanceTimersByTimeAsync(STATUS_POLL_MS)
     })
     expect(await screen.findByText('Klar att hämta!')).toBeInTheDocument()
-    expect(screen.getByText(/Hämta hos City – Gatan 1/)).toBeInTheDocument()
+    expect(screen.getByText(/Hämta hos City - Gatan 1/)).toBeInTheDocument()
   })
 
   it('tells the guest a failed payment cost nothing', async () => {

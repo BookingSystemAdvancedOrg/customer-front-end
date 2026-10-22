@@ -502,11 +502,11 @@ describe('BokaBordPage - why a table cannot be chosen', () => {
     await user.click(await screen.findByRole('button', { name: '18:00' }))
 
     // The 2-seat table is shown, marked and tappable - but not selectable.
-    const small = screen.getByRole('button', { name: /^Bord 1, 2 platser, går inte att välja: 1–2 pers$/ })
+    const small = screen.getByRole('button', { name: /^Bord 1, 2 platser, går inte att välja: 1-2 pers$/ })
     expect(small).not.toHaveAttribute('aria-pressed')
     await user.click(small)
     expect(screen.getByRole('status')).toHaveTextContent(
-      'Bord 1 tar 1–2 personer - ni är 3 personer. Välj ett större bord.')
+      'Bord 1 tar 1-2 personer - ni är 3 personer. Välj ett större bord.')
     expect(screen.queryByRole('button', { name: 'Bekräfta bord' })).toBeNull()
 
     // The legend and the full list of reasons are there too.

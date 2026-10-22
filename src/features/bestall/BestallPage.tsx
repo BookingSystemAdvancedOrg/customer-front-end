@@ -64,7 +64,7 @@ function ore(price: number): number {
 }
 
 /**
- * Beställ mat: gästen väljer rätter (1–20 av varje), fyller i namn, mobil och
+ * Beställ mat: gästen väljer rätter (1-20 av varje), fyller i namn, mobil och
  * e-post och betalar här på sidan (steg 3: kvittot med Stripes formulär i
  * sajtens tryck, shared/payment). Med QR-koden på bordet (?bord=<kod>) blir
  * det en beställning till bordet; annars avhämtning med sms när maten är

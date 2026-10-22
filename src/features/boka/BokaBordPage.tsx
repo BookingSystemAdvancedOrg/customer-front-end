@@ -638,7 +638,7 @@ export default function BokaBordPage() {
         <dl className="booking-summary">
           <div><dt>Restaurang</dt><dd>{booked.location?.name ?? info.name}</dd></div>
           <div><dt>Datum</dt><dd>{formatDate(booked.date)}</dd></div>
-          <div><dt>Tid</dt><dd>{booked.startTime}–{booked.endTime}</dd></div>
+          <div><dt>Tid</dt><dd>{booked.startTime}-{booked.endTime}</dd></div>
           <div><dt>Antal</dt><dd>{booked.partySize} personer</dd></div>
           <div>
             <dt>Bord</dt>
@@ -872,7 +872,7 @@ export default function BokaBordPage() {
                 <p className="booking-summary-line" aria-live="polite">
                   <span className="summary-kicker">Ditt val</span>
                   <span>
-                    {formatDate(date)} kl {slot.startTime}–{slot.endTime} · {partySize} personer · bord{' '}
+                    {formatDate(date)} kl {slot.startTime}-{slot.endTime} · {partySize} personer · bord{' '}
                     {option.tableIds.map((id) => labels.get(id) ?? id).join(' + ')}
                   </span>
                 </p>
@@ -916,7 +916,7 @@ export default function BokaBordPage() {
             <div className="booking-summary-line" aria-live="polite">
               <span className="summary-kicker">Ditt bord</span>
               <span>
-                {formatDate(hold.date)} kl {hold.startTime}–{hold.endTime} · {hold.partySize} personer · bord{' '}
+                {formatDate(hold.date)} kl {hold.startTime}-{hold.endTime} · {hold.partySize} personer · bord{' '}
                 {heldTables}
               </span>
             </div>

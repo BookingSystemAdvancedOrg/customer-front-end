@@ -54,7 +54,7 @@ function people(n: number): string {
 
 function sizeRange(u: TableUnavailable): string {
   const { minParty: min, maxParty: max } = u
-  if (min && max) return min === max ? people(min) : `${min}–${max} personer`
+  if (min && max) return min === max ? people(min) : `${min}-${max} personer`
   return ''
 }
 
@@ -67,7 +67,7 @@ export function tableBadge(u: TableUnavailable): string {
     case 'too_small':
     case 'too_large': {
       const { minParty: min, maxParty: max } = u
-      return min && max ? (min === max ? `${min} pers` : `${min}–${max} pers`) : 'Passar ej'
+      return min && max ? (min === max ? `${min} pers` : `${min}-${max} pers`) : 'Passar ej'
     }
     default: return 'Ej ledigt'
   }
@@ -329,7 +329,7 @@ export function dayMessage(day: DayStatus | null | undefined, phone: string): st
   const call = phone ? ` Ring oss på ${phone}.` : ''
   if (day.kind === 'closed') return `Vi har stängt den dagen${note}.`
   if (day.kind === 'no_online') return `Den dagen går det inte att boka online${note}.${call}`
-  const hours = (day.intervals ?? []).map((i) => `${i.opensAt}–${i.closesAt}`).join(', ')
+  const hours = (day.intervals ?? []).map((i) => `${i.opensAt}-${i.closesAt}`).join(', ')
   return `Avvikande öppettider den dagen: ${hours}${note}.`
 }
 

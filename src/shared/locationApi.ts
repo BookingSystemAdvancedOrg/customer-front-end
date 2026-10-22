@@ -96,7 +96,7 @@ const WEEKDAY_SHORT: Record<Weekday, string> = {
 
 function formatRanges(ranges: DayHoursRange[] | undefined): string {
   if (!ranges || ranges.length === 0) return 'Stängt'
-  return ranges.map((r) => `${r.opensAt}–${r.closesAt}`).join(', ')
+  return ranges.map((r) => `${r.opensAt}-${r.closesAt}`).join(', ')
 }
 
 export interface OpeningHoursRow {
@@ -106,7 +106,7 @@ export interface OpeningHoursRow {
 
 /**
  * Öppettider per veckodag till visningsrader, med intilliggande dagar som
- * har identiska tider slagna ihop (t.ex. "Mån–Tor" · "11:00–22:00") -
+ * har identiska tider slagna ihop (t.ex. "Mån-Tor" · "11:00-22:00") -
  * samma visningsform som den tidigare hårdkodade listan i restaurant.ts.
  */
 export function businessHoursToRows(hours: BusinessHours): OpeningHoursRow[] {
@@ -122,7 +122,7 @@ export function businessHoursToRows(hours: BusinessHours): OpeningHoursRow[] {
     const daysLabel =
       i === j
         ? WEEKDAY_SHORT[days[i].day]
-        : `${WEEKDAY_SHORT[days[i].day]}–${WEEKDAY_SHORT[days[j].day]}`
+        : `${WEEKDAY_SHORT[days[i].day]}-${WEEKDAY_SHORT[days[j].day]}`
     rows.push({ days: daysLabel, hours: days[i].label })
     i = j + 1
   }
@@ -148,7 +148,7 @@ export function specialDayRows(
       d.kind === 'closed'
         ? 'Stängt'
         : d.kind === 'hours'
-          ? (d.intervals ?? []).map((i) => `${i.opensAt}–${i.closesAt}`).join(', ')
+          ? (d.intervals ?? []).map((i) => `${i.opensAt}-${i.closesAt}`).join(', ')
           : 'Vanliga tider, ingen onlinebokning'
     return { date: d.date, label, text: d.note ? `${base} (${d.note})` : base }
   })
@@ -191,7 +191,7 @@ function addDays(iso: string, n: number): string {
 /**
  * Är platsen öppen nu, och i så fall till när - annars när den öppnar.
  * Avvikande dagar (stängt / andra tider) går före veckoschemat. Ett pass som
- * går över midnatt (t.ex. 18:00–02:00) räknas som öppet efter midnatt.
+ * går över midnatt (t.ex. 18:00-02:00) räknas som öppet efter midnatt.
  */
 export function openStatus(
   hours: BusinessHours,

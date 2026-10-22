@@ -175,7 +175,7 @@ describe('table rules, special days and the bot check', () => {
     expect(dayMessage({ kind: 'closed', note: 'Julafton' }, '08-1')).toBe('Vi har stängt den dagen (Julafton).')
     expect(dayMessage({ kind: 'no_online' }, '08-1')).toBe('Den dagen går det inte att boka online. Ring oss på 08-1.')
     expect(dayMessage({ kind: 'hours', intervals: [{ opensAt: '17:00', closesAt: '22:00' }] }, '')).toBe(
-      'Avvikande öppettider den dagen: 17:00–22:00.',
+      'Avvikande öppettider den dagen: 17:00-22:00.',
     )
   })
 })

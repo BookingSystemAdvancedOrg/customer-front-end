@@ -95,7 +95,7 @@ export default function ManageBookingPage() {
             {booking.location?.name && <div><dt>Restaurang</dt><dd>{booking.location.name}</dd></div>}
             <div><dt>Namn</dt><dd>{booking.customerName}</dd></div>
             <div><dt>Datum</dt><dd>{formatDate(booking.date)}</dd></div>
-            <div><dt>Tid</dt><dd>{booking.startTime}–{booking.endTime}</dd></div>
+            <div><dt>Tid</dt><dd>{booking.startTime}-{booking.endTime}</dd></div>
             <div><dt>Antal</dt><dd>{booking.partySize} personer</dd></div>
             {booking.location?.address && <div><dt>Adress</dt><dd>{booking.location.address}</dd></div>}
           </dl>
