@@ -60,7 +60,7 @@ function LinesTable({ lines, totals }: { lines: Line[]; totals: Totals }) {
         <div className="cart-total"><span>Rengöringsavgift</span><span>{kronor(totals.cleaningFee)}</span></div>
       )}
       <div className="cart-total"><span>Totalt inkl. moms</span><span>{kronor(totals.total)}</span></div>
-      <p className="cart-note">varav moms 12 %: {kronor(totals.vat)}</p>
+      <p className="cart-note">varav moms {totals.vatRate ?? 12} %: {kronor(totals.vat)}</p>
     </>
   )
 }
