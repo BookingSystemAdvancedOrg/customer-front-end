@@ -7,6 +7,7 @@ import {
   formatDate,
   formatFee,
   getGuestReservation,
+  lengthText,
 } from '../boka/bookingApi'
 import type { GuestReservation } from '../boka/bookingApi'
 import { GuaranteeTermsText } from '../boka/GuaranteeStep'
@@ -96,6 +97,7 @@ export default function ManageBookingPage() {
             <div><dt>Namn</dt><dd>{booking.customerName}</dd></div>
             <div><dt>Datum</dt><dd>{formatDate(booking.date)}</dd></div>
             <div><dt>Tid</dt><dd>{booking.startTime}-{booking.endTime}</dd></div>
+            {lengthText(booking) && <div><dt>Bokningstid</dt><dd>{lengthText(booking)}</dd></div>}
             <div><dt>Antal</dt><dd>{booking.partySize} personer</dd></div>
             {booking.location?.address && <div><dt>Adress</dt><dd>{booking.location.address}</dd></div>}
           </dl>

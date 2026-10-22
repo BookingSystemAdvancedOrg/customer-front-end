@@ -123,6 +123,34 @@ describe('BokaBordPage', () => {
     expect(screen.getByRole('link', { name: /\/bokning\/loc-1\/r1#tok123$/ })).toBeInTheDocument()
   })
 
+  it('shows the booking length and extendability before and after confirming', async () => {
+    const user = userEvent.setup()
+    availabilityBody.slots[0] = { ...availabilityBody.slots[0], endTime: '19:30', durationMinutes: 90, extendable: true, ruleName: null } as typeof availabilityBody.slots[0]
+    holdResponse = () =>
+      json({
+        holdId: 'h'.repeat(32), manageToken: 'tok123', expiresAt: '2026-09-08T12:15:00Z', holdMinutes: 15,
+        date: '2026-09-20', startTime: '18:00', endTime: '19:30', tableIds: ['table-b'], partySize: 3,
+        cardRequired: false, durationMinutes: 90, extendable: true, ruleName: null,
+      }, 201)
+    bookingResponse = () =>
+      json({
+        reservationId: 'r1', status: 'reserved', date: '2026-09-20', startTime: '12:00', endTime: '13:00',
+        partySize: 3, tableIds: ['table-b'], customerName: 'Anna', cancellable: true, manageToken: 'tok123',
+        durationMinutes: 60, extendable: false, ruleName: 'Lunchbuffé',
+      }, 201)
+    render(<WithSite><BokaBordPage /></WithSite>)
+    await chooseTable(user)
+    expect(screen.getByText('Bokningstid: 1 tim 30 min, kan förlängas på plats om bordet är ledigt.')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Bekräfta bord' }))
+    expect(await screen.findByText(/Bokningstid: 1 tim 30 min/)).toBeInTheDocument()
+    await user.type(await screen.findByLabelText('Namn'), 'Anna')
+    await user.type(screen.getByLabelText('E-post'), 'anna@example.se')
+    await user.type(screen.getByLabelText('Telefon'), '0701234567')
+    await user.click(screen.getByRole('checkbox', { name: /bokningsvillkoren/ }))
+    await user.click(screen.getByRole('button', { name: 'Boka bordet' }))
+    expect(await screen.findByText('60 min (Lunchbuffé), kan inte förlängas')).toBeInTheDocument()
+  })
+
   it('hides times that cannot seat the party', async () => {
     const user = userEvent.setup()
     render(<WithSite><BokaBordPage /></WithSite>)
