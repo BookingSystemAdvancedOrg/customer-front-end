@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import { Route, Routes } from 'react-router-dom'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -88,6 +88,38 @@ function postedOrder() {
 }
 
 describe('BestallPage', () => {
+  it.each([
+    ['the refetch fails', () => json({ error: 'down' }, 503)],
+    ['the dish is still on the menu', () => json(MENU)],
+  ])('keeps the neutral text and the cart when %s', async (_case, menuResponse) => {
+    const user = userEvent.setup()
+    orderResponse = () => json({ error: 'menu_item_unavailable' }, 400)
+    render(
+      <WithSite config={config()} path="/bestall">
+        <Routes>
+          <Route path="bestall" element={<BestallPage />} />
+        </Routes>
+      </WithSite>,
+    )
+    await user.click(await screen.findByRole('button', { name: 'Lägg till Margherita' }))
+    await fill(user)
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url.includes('/ordering')) return json(ordering)
+      if (url.endsWith('/menu')) return menuResponse()
+      if (url.endsWith('/order') && init?.method === 'POST') return orderResponse()
+      return json({ error: 'not found' }, 404)
+    })
+    await user.click(screen.getByRole('button', { name: 'Till betalning · 125 kr' }))
+    expect(
+      await screen.findByText('En rätt i varukorgen finns inte längre på menyn. Ta bort den och försök igen.'),
+    ).toBeInTheDocument()
+    // The refetch has settled once the submit button is no longer busy.
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Till betalning · 125 kr' })).not.toHaveClass('is-busy'))
+    expect(fetchMock.mock.calls.filter(([url]) => String(url).endsWith('/menu')).length).toBeGreaterThan(1)
+    expect(screen.queryByText(/har tagits bort/)).not.toBeInTheDocument()
+    expect(loadCart('loc-1')).toEqual({ pizza: 1 })
+  })
+
   it('drops a dish that expired before checkout by refetching the menu', async () => {
     const user = userEvent.setup()
     orderResponse = () => json({ error: 'menu_item_unavailable' }, 400)
