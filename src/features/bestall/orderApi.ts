@@ -6,7 +6,8 @@ import { CART_KEY_PREFIX, ORDER_TOKEN_PREFIX, TABLE_KEY } from '../../shared/sto
  * Matbeställning (backend payment-intent / get-order, docs/ORDERS.md).
  *
  *   GET  /locations/{id}/ordering[?table=<kod>]  öppet nu? (och QR-kodens bord)
- *   POST /order                                  beställningen -> Stripe Checkout
+ *   POST /order                                  beställningen -> betalningen (Checkout
+ *                                                Session som sajten visar själv, embedded)
  *   GET  /locations/{id}/order-status/{orderId}  gästens beställning (X-Order-Token)
  *
  * Priserna räknas alltid om av servern från menyn - sajten skickar bara
@@ -51,12 +52,17 @@ export interface OrderRequest {
   discountCode?: string
   /** Gästen kryssade i "skicka mig erbjudanden". */
   marketingOptIn?: boolean
+  /** Betalningen visas på sajtens egen sida (Payment Element), inte hos Stripe. */
+  embedded: true
 }
 
 export interface OrderCreated {
   orderId: string
   locationId: string
-  checkoutUrl: string
+  /** Checkout Sessionens hemlighet för Payment Element. */
+  clientSecret: string
+  /** Restaurangens Stripe-konto (acct_...). */
+  stripeAccount: string
   statusToken: string
   totalAmount: number
 }

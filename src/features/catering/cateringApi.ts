@@ -163,8 +163,14 @@ export function signingStatus(locationId: string, requestId: string, token: stri
   return apiPost(`${cust(locationId, requestId)}/sign/status`, undefined, auth(token))
 }
 
-export function startCheckout(locationId: string, requestId: string, token: string): Promise<{ checkoutUrl: string }> {
-  return apiPost(`${cust(locationId, requestId)}/checkout`, undefined, auth(token))
+/** Betalningen på sajtens egen sida: Checkout Sessionens hemlighet för Payment Element. */
+export interface CateringPayment {
+  clientSecret: string
+  stripeAccount: string
+}
+
+export function startCheckout(locationId: string, requestId: string, token: string): Promise<CateringPayment> {
+  return apiPost(`${cust(locationId, requestId)}/checkout`, { embedded: true }, auth(token))
 }
 
 export function requestChange(locationId: string, requestId: string, token: string, message: string): Promise<GuestRequest> {
@@ -291,6 +297,7 @@ const ERRORS: Record<string, string> = {
   not_payable: 'Beställningen kan inte betalas just nu.',
   payment_unavailable: 'Betalningen är inte tillgänglig just nu. Försök igen om en stund.',
   payment_provider_rejected: 'Betalningen kunde inte startas. Försök igen eller kontakta restaurangen.',
+  payment_in_progress: 'Betalningen behandlas redan. Ladda om sidan om en liten stund.',
   not_changeable: 'Offerten kan inte ändras just nu.',
   not_rejectable: 'Förfrågan kan inte avböjas just nu.',
   verification_unavailable: 'Säkerhetskontrollen svarar inte just nu. Försök igen om en stund.',

@@ -13,7 +13,9 @@ import {
   startSigning,
   tokenFor,
 } from './cateringApi'
-import type { GuestRequest, Line, Totals } from './cateringApi'
+import type { CateringPayment, GuestRequest, Line, Totals } from './cateringApi'
+import { useSite } from '../../shared/SiteContext'
+import { PaidStamp, PaymentTicket } from '../../shared/payment/PaymentTicket'
 
 /** BankID: frågan om status en gång i sekunden (QR-koden byts varje sekund). */
 export const SIGN_POLL_MS = 1_000
@@ -78,6 +80,15 @@ export default function CateringRequestPage() {
   const [message, setMessage] = useState('')
   const timer = useRef<number | undefined>(undefined)
   const params = new URLSearchParams(search)
+  const { config } = useSite()
+  const [payment, setPayment] = useState<CateringPayment | null>(null)
+  // Betald här på sidan (eller tillbaka från Swish/Klarna): Stripes webhook bekräftar strax.
+  const [justPaid, setJustPaid] = useState(false)
+  const awaitingConfirm = (justPaid || params.get('betalning') === 'klar') && request?.status === 'signed'
+  const paid = useCallback(() => {
+    setPayment(null)
+    setJustPaid(true)
+  }, [])
 
   const load = useCallback(async () => {
     try {
@@ -102,10 +113,10 @@ export default function CateringRequestPage() {
 
   // Tillbaka från betalningen: Stripe bekräftar via webhook - fråga några gånger.
   useEffect(() => {
-    if (params.get('betalning') !== 'klar' || !request || request.status !== 'signed') return
+    if (!awaitingConfirm) return
     const t = window.setTimeout(() => void load(), 3000)
     return () => window.clearTimeout(t)
-  }, [request, load, search]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [request, load, awaitingConfirm])
 
   async function showQr(data: string | undefined) {
     if (!data) return undefined
@@ -162,10 +173,10 @@ export default function CateringRequestPage() {
     setError(null)
     setBusy(true)
     try {
-      const { checkoutUrl } = await startCheckout(locationId, requestId, token)
-      window.location.assign(checkoutUrl)
+      setPayment(await startCheckout(locationId, requestId, token))
     } catch (err) {
       setError(errorMessage(err))
+    } finally {
       setBusy(false)
     }
   }
@@ -294,13 +305,36 @@ export default function CateringRequestPage() {
           {request.signedBy && (
             <p className="order-hint">Signerad med BankID av {request.signedBy}{request.signedAt ? ` ${request.signedAt.slice(0, 10)}` : ''}.</p>
           )}
-          {request.canPay && (
+          {awaitingConfirm && (
+            <PaidStamp text="Betalt" next="Tack! Vi bekräftar betalningen hos restaurangen - sidan uppdateras av sig själv." />
+          )}
+          {request.canPay && !awaitingConfirm && payment && (
+            <PaymentTicket
+              publishableKey={config.stripe.publishableKey}
+              stripeAccount={payment.stripeAccount}
+              clientSecret={payment.clientSecret}
+              title="Betala cateringen"
+              summary={
+                <div className="cart-total">
+                  <span>Totalt inkl. moms</span>
+                  <span>{request.offer ? kronor(request.offer.totals.total) : ''}</span>
+                </div>
+              }
+              payLabel={`Betala ${request.offer ? kronor(request.offer.totals.total) : ''}`.trim()}
+              onPaid={paid}
+              onBack={() => setPayment(null)}
+              backLabel="Inte nu"
+            />
+          )}
+          {request.canPay && !awaitingConfirm && !payment && (
             <div className="catering-actions">
               {params.get('betalning') === 'avbruten' && (
                 <p className="notice" role="status">Betalningen avbröts - inget har dragits. Signaturen gäller fortfarande.</p>
               )}
-              <button type="button" className="btn-primary" disabled={busy} onClick={() => void pay()}>
-                Betala {request.offer ? kronor(request.offer.totals.total) : ''}
+              <button type="button" className={`btn-primary${busy ? ' is-busy' : ''}`} disabled={busy} onClick={() => void pay()}>
+                {busy
+                  ? <><span className="spinner" aria-hidden="true" />Förbereder betalningen…</>
+                  : `Betala ${request.offer ? kronor(request.offer.totals.total) : ''}`.trim()}
               </button>
             </div>
           )}

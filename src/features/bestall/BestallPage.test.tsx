@@ -1,9 +1,27 @@
 import { render, screen, within } from '@testing-library/react'
+import { Route, Routes } from 'react-router-dom'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import BestallPage from './BestallPage'
 import { WithSite } from '../../test/siteFixture'
 import { json, siteConfig } from '../../test/siteData'
+
+const stripe = vi.hoisted(() => ({
+  confirm: vi.fn(),
+  provider: vi.fn(),
+}))
+vi.mock('@stripe/stripe-js', () => ({ loadStripe: vi.fn(async () => ({})) }))
+vi.mock('@stripe/react-stripe-js/checkout', () => ({
+  CheckoutElementsProvider: ({ children, options }: { children: React.ReactNode; options: unknown }) => {
+    stripe.provider(options)
+    return <div data-testid="stripe-checkout">{children}</div>
+  },
+  PaymentElement: ({ onReady }: { onReady?: () => void }) => {
+    queueMicrotask(() => onReady?.())
+    return <div>Stripes betalformulär</div>
+  },
+  useCheckoutElements: () => ({ type: 'success', checkout: { confirm: stripe.confirm } }),
+}))
 
 vi.mock('../boka/TurnstileWidget', () => ({
   TurnstileWidget: ({ onToken, action }: { onToken: (t: string | null) => void; action: string }) => (
@@ -28,6 +46,7 @@ const assign = vi.fn()
 
 function config(turnstile: string | null = null) {
   const c = siteConfig({ features: { reservations: true, ordering: true, catering: false, terminal: false } })
+  c.stripe = { publishableKey: 'pk_test_1', accountId: 'acct_1' }
   c.locations[0].ordering = { pickup: true, table: true, prepMinutes: 20 }
   c.turnstile = { siteKey: turnstile }
   return c
@@ -36,8 +55,10 @@ function config(turnstile: string | null = null) {
 beforeEach(() => {
   sessionStorage.clear()
   ordering = { open: true, pickup: true, table: true, prepMinutes: 20, lastOrderAt: '21:45' }
-  orderResponse = () => json({ orderId: 'o'.repeat(32), locationId: 'loc-1', checkoutUrl: 'https://checkout.stripe.com/x',
-    statusToken: 'tok', totalAmount: 28550 }, 201)
+  orderResponse = () => json({ orderId: 'o'.repeat(32), locationId: 'loc-1', clientSecret: 'cs_test_secret',
+    stripeAccount: 'acct_1', statusToken: 'tok', totalAmount: 28550 }, 201)
+  stripe.confirm.mockReset().mockResolvedValue({ type: 'success', session: {} })
+  stripe.provider.mockReset()
   fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
     if (url.includes('/ordering')) return json(ordering)
     if (url.endsWith('/menu')) return json(MENU)
@@ -66,9 +87,16 @@ function postedOrder() {
 }
 
 describe('BestallPage', () => {
-  it('orders for pickup and goes to Stripe', async () => {
+  it('orders for pickup and pays on the page with Stripe in the site style', async () => {
     const user = userEvent.setup()
-    render(<WithSite config={config()} path="/bestall"><BestallPage /></WithSite>)
+    render(
+      <WithSite config={config()} path="/bestall">
+        <Routes>
+          <Route path="bestall" element={<BestallPage />} />
+          <Route path="bestallning/:locationId/:orderId" element={<p>Statussidan</p>} />
+        </Routes>
+      </WithSite>,
+    )
     await user.click(await screen.findByRole('button', { name: 'Lägg till Margherita' }))
     await user.click(screen.getAllByRole('button', { name: 'En Margherita till' })[0])
     await user.click(screen.getByRole('button', { name: 'Lägg till Cola' }))
@@ -76,16 +104,49 @@ describe('BestallPage', () => {
     expect(within(cart).getByText('2 × Margherita')).toBeInTheDocument()
     expect(within(cart).getByText('285,50 kr')).toBeInTheDocument()
     await fill(user)
-    await user.click(screen.getByRole('button', { name: 'Betala 285,50 kr' }))
+    await user.click(screen.getByRole('button', { name: 'Till betalning · 285,50 kr' }))
     expect(postedOrder()).toEqual({
       locationId: 'loc-1', mode: 'pickup', items: [{ menuItemId: 'pizza', quantity: 2 }, { menuItemId: 'cola', quantity: 1 }],
       name: 'Anna', phone: '+46701234567', email: 'anna@example.se', language: 'sv', acceptTerms: true,
+      embedded: true,
     })
-    expect(assign).toHaveBeenCalledWith('https://checkout.stripe.com/x')
+    expect(assign).not.toHaveBeenCalled()
     expect(sessionStorage.getItem(`order-token:${'o'.repeat(32)}`)).toBe('tok')
+
+    // Steg 3: kvittot med Stripes formulär, i sajtens typsnitt och färger, på svenska.
+    expect(await screen.findByRole('heading', { name: 'Din beställning' })).toBeInTheDocument()
+    expect(screen.getByRole('list', { name: 'Beställning: steg 3 av 4' })).toBeInTheDocument()
+    const options = stripe.provider.mock.calls[0][0]
+    expect(options.clientSecret).toBe('cs_test_secret')
+    expect(options.elementsOptions.loader).toBe('never')
+    expect(options.elementsOptions.appearance.variables).toMatchObject({ borderRadius: '3px', colorPrimary: '#350001' })
+    expect(options.elementsOptions.fonts.map((f: { family: string }) => f.family)).toContain('Martian Mono')
+    const loadStripe = (await import('@stripe/stripe-js')).loadStripe
+    expect(loadStripe).toHaveBeenCalledWith('pk_test_1', { stripeAccount: 'acct_1', locale: 'sv' })
+
+    await user.click(await screen.findByRole('button', { name: 'Betala 285,50 kr' }))
+    expect(stripe.confirm).toHaveBeenCalledWith({ redirect: 'if_required' })
+    expect(await screen.findByText('Betalt')).toBeInTheDocument()
+    expect(await screen.findByText('Statussidan', {}, { timeout: 3000 })).toBeInTheDocument()
+    expect(sessionStorage.getItem('order-cart:loc-1')).toBeNull()
   })
 
-  it('says the guest is on the way to the payment once the order is registered', async () => {
+  it('shows a declined card on the payment ticket and keeps the cart for going back', async () => {
+    const user = userEvent.setup()
+    stripe.confirm.mockResolvedValue({ type: 'error', error: { message: 'Kortet nekades.' } })
+    render(<WithSite config={config()} path="/bestall"><BestallPage /></WithSite>)
+    await user.click(await screen.findByRole('button', { name: 'Lägg till Cola' }))
+    await fill(user)
+    await user.click(screen.getByRole('button', { name: /Till betalning/ }))
+    await user.click(await screen.findByRole('button', { name: 'Betala 285,50 kr' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Kortet nekades.')
+    expect(screen.getByRole('button', { name: 'Betala 285,50 kr' })).toBeEnabled()
+    await user.click(screen.getByRole('button', { name: 'Ändra beställningen' }))
+    const cart = screen.getByRole('complementary', { name: 'Din beställning' })
+    expect(within(cart).getByText('1 × Cola')).toBeInTheDocument()
+  })
+
+  it('moves the step row to payment once the order is registered', async () => {
     const user = userEvent.setup()
     render(<WithSite config={config()} path="/bestall"><BestallPage /></WithSite>)
     expect(screen.getByRole('list', { name: 'Beställning: steg 1 av 4' })).toBeInTheDocument()
@@ -93,11 +154,10 @@ describe('BestallPage', () => {
     expect(screen.getByRole('list', { name: 'Beställning: steg 2 av 4' })).toBeInTheDocument()
     await fill(user)
     expect(screen.getByRole('list', { name: 'Beställning: steg 3 av 4' })).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: /Betala/ }))
-    expect(await screen.findByText(/vidare till den säkra betalningen/)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Till betalningen/ })).toBeDisabled()
-    expect(screen.getByLabelText('Namn')).toBeDisabled()
-    expect(screen.getByRole('list', { name: 'Beställning: steg 4 av 4' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /Till betalning/ }))
+    expect(await screen.findByRole('heading', { name: 'Betala' })).toBeInTheDocument()
+    expect(screen.getByRole('list', { name: 'Beställning: steg 3 av 4' })).toBeInTheDocument()
+    expect(screen.getByText(/sparas aldrig hos oss/)).toBeInTheDocument()
   })
 
   it('blocks an order above 50 000 kr before sending it', async () => {
@@ -107,7 +167,7 @@ describe('BestallPage', () => {
       render(<WithSite config={config()} path="/bestall"><BestallPage /></WithSite>)
       await user.click(await screen.findByRole('button', { name: 'Lägg till Porsche' }))
       expect(screen.getByRole('alert')).toHaveTextContent('för stor för att betalas online (högst 50 000 kr)')
-      expect(screen.getByRole('button', { name: /^Betala/ })).toBeDisabled()
+      expect(screen.getByRole('button', { name: /^Till betalning/ })).toBeDisabled()
       expect(postedOrder()).toBeNull()
     } finally {
       MENU.items.pop()
@@ -132,7 +192,7 @@ describe('BestallPage', () => {
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/ordering?table=code-5'))).toBe(true)
     await user.click(await screen.findByRole('button', { name: 'Lägg till Rödvin' }))
     await fill(user)
-    await user.click(screen.getByRole('button', { name: /Betala/ }))
+    await user.click(screen.getByRole('button', { name: /Till betalning/ }))
     expect(postedOrder()).toMatchObject({ mode: 'table', tableCode: 'code-5', items: [{ menuItemId: 'wine', quantity: 1 }] })
   })
 
@@ -153,13 +213,13 @@ describe('BestallPage', () => {
     const user = userEvent.setup()
     render(<WithSite config={config('site-key')} path="/bestall"><BestallPage /></WithSite>)
     await user.click(await screen.findByRole('button', { name: 'Lägg till Cola' }))
-    await user.click(screen.getByRole('button', { name: /Betala/ }))
+    await user.click(screen.getByRole('button', { name: /Till betalning/ }))
     expect(screen.getByRole('alert')).toHaveTextContent('Fyll i ditt namn.')
     await fill(user)
-    await user.click(screen.getByRole('button', { name: /Betala/ }))
+    await user.click(screen.getByRole('button', { name: /Till betalning/ }))
     expect(screen.getByRole('alert')).toHaveTextContent('säkerhetskontrollen')
     await user.click(screen.getByRole('button', { name: 'Jag är inte en robot' }))
-    await user.click(screen.getByRole('button', { name: /Betala/ }))
+    await user.click(screen.getByRole('button', { name: /Till betalning/ }))
     expect(postedOrder()).toMatchObject({ turnstileToken: 'token-order' })
   })
 
@@ -169,7 +229,7 @@ describe('BestallPage', () => {
     render(<WithSite config={config()} path="/bestall"><BestallPage /></WithSite>)
     await user.click(await screen.findByRole('button', { name: 'Lägg till Cola' }))
     await fill(user)
-    await user.click(screen.getByRole('button', { name: /Betala/ }))
+    await user.click(screen.getByRole('button', { name: /Till betalning/ }))
     expect(await screen.findByRole('alert')).toHaveTextContent('Köket har pausat')
     expect(assign).not.toHaveBeenCalled()
   })
@@ -209,7 +269,7 @@ describe('BestallPage discount code', () => {
     await user.type(screen.getByLabelText('E-post (kvitto)'), 'anna@example.se')
     await user.click(screen.getByRole('checkbox', { name: /inte kan ändras/ }))
     await user.click(screen.getByRole('checkbox', { name: /Skicka mig erbjudanden/ }))
-    await user.click(screen.getByRole('button', { name: 'Betala 112,50 kr' }))
+    await user.click(screen.getByRole('button', { name: 'Till betalning · 112,50 kr' }))
     expect(postedOrder()).toMatchObject({ discountCode: 'ABCD-EFGH', marketingOptIn: true })
   })
 

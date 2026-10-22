@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { isApiConfigured } from '../../shared/api'
 import { useSite } from '../../shared/SiteContext'
 import { useLocationInfo } from '../../shared/useLocationInfo'
@@ -27,10 +27,11 @@ import {
   stepQuantity,
   tableCodeFrom,
 } from './orderApi'
-import type { Cart, OrderMode, OrderingState } from './orderApi'
+import type { Cart, OrderCreated, OrderMode, OrderingState } from './orderApi'
 import { checkCode, codeErrorMessage, discounted, normalizeCode } from '../erbjudande/offerApi'
 import type { CodeTerms } from '../erbjudande/offerApi'
 import { FlowSteps } from '../../shared/FlowSteps'
+import { PaymentTicket } from '../../shared/payment/PaymentTicket'
 
 const STEPS = [{ label: 'Välj rätter' }, { label: 'Dina uppgifter' }, { label: 'Betala' }, { label: 'Klart' }]
 
@@ -61,15 +62,17 @@ function ore(price: number): number {
 
 /**
  * Beställ mat: gästen väljer rätter (1–20 av varje), fyller i namn, mobil och
- * e-post och betalar hos Stripe. Med QR-koden på bordet (?bord=<kod>) blir
+ * e-post och betalar här på sidan (steg 3: kvittot med Stripes formulär i
+ * sajtens tryck, shared/payment). Med QR-koden på bordet (?bord=<kod>) blir
  * det en beställning till bordet; annars avhämtning med sms när maten är
- * klar. Varukorgen sparas i fliken, så den finns kvar om gästen avbryter
- * betalningen.
+ * klar. Varukorgen sparas i fliken tills betalningen gått igenom, så den
+ * finns kvar om gästen går tillbaka och ändrar.
  */
 export default function BestallPage() {
   const { config, location } = useSite()
   const info = useLocationInfo()
   const { search } = useLocation()
+  const navigate = useNavigate()
   const locationId = location.locationId
   const [tableCode] = useState(() => tableCodeFrom(search))
   const cancelledOrder = new URLSearchParams(search).get('avbruten')
@@ -82,8 +85,9 @@ export default function BestallPage() {
   const [guest, setGuest] = useState<Guest>(EMPTY_GUEST)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  // Beställningen är registrerad och gästen är på väg till Stripe.
-  const [redirecting, setRedirecting] = useState(false)
+  // Beställningen är registrerad: betalningskvittot visas (steg 3).
+  const [payment, setPayment] = useState<OrderCreated | null>(null)
+  const headRef = useRef<HTMLElement>(null)
   const turnstileSiteKey = config.turnstile?.siteKey ?? null
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
   const [turnstileReset, setTurnstileReset] = useState(0)
@@ -131,7 +135,7 @@ export default function BestallPage() {
   const count = lines.reduce((n, l) => n + l.quantity, 0)
   // Stegraden: rätter -> uppgifter -> betala. Uppgifterna är klara när
   // samma kontroll som vid Betala går igenom.
-  const stepAt = redirecting ? 4 : lines.length === 0 ? 1 : guestError(guest) ? 2 : 3
+  const stepAt = payment ? 3 : lines.length === 0 ? 1 : guestError(guest) ? 2 : 3
 
   function change(id: string, delta: number) {
     setError(null)
@@ -226,11 +230,12 @@ export default function BestallPage() {
         ...(turnstileToken ? { turnstileToken } : {}),
         ...(applied ? { discountCode: applied.code } : {}),
         ...(marketing && guest.offers ? { marketingOptIn: true } : {}),
+        embedded: true,
       })
       rememberToken(created.orderId, created.statusToken)
-      clearCart(locationId)
-      setRedirecting(true)
-      window.location.assign(created.checkoutUrl)
+      setPayment(created)
+      setBusy(false)
+      window.requestAnimationFrame(() => headRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' }))
     } catch (err) {
       setError(orderErrorMessage(err))
       if (err instanceof Error && /^discount_/.test(err.message)) setCode(null)
@@ -242,9 +247,71 @@ export default function BestallPage() {
     }
   }
 
+  const paid = useCallback(() => {
+    if (!payment) return
+    clearCart(locationId)
+    navigate(`/bestallning/${encodeURIComponent(payment.locationId)}/${encodeURIComponent(payment.orderId)}`)
+  }, [payment, locationId, navigate])
+
+  /** Tillbaka till varukorgen: beställningen som inte betalades går ut av sig själv. */
+  function back() {
+    setPayment(null)
+    if (turnstileSiteKey) {
+      setTurnstileToken(null)
+      setTurnstileReset((n) => n + 1)
+    }
+  }
+
+  if (payment) {
+    return (
+      <>
+        <section className="page-head" ref={headRef}>
+          <h1>Betala</h1>
+          <p className="page-lede">
+            {mode === 'table' ? 'Betala här, så går beställningen direkt till köket.' : `Betala här och hämta hos ${config.tenant.name}.`}
+          </p>
+          <FlowSteps steps={STEPS} current={3} label="Beställning" />
+        </section>
+        <PaymentTicket
+          publishableKey={config.stripe.publishableKey}
+          stripeAccount={payment.stripeAccount}
+          clientSecret={payment.clientSecret}
+          title={mode === 'table' ? 'Din beställning till bordet' : 'Din beställning'}
+          payLabel={`Betala ${kronor(payment.totalAmount)}`}
+          summary={
+            <>
+              <ul className="cart-list">
+                {lines.map(({ dish, quantity }) => (
+                  <li key={dish.menuItemId}>
+                    <span className="cart-item-name">{quantity} × {dish.name}</span>
+                    <span />
+                    <span className="cart-item-price">{kronor(ore(dish.price) * quantity)}</span>
+                  </li>
+                ))}
+              </ul>
+              {applied && (
+                <div className="cart-discount">
+                  <span>Rabatt {applied.percent} % ({applied.code})</span>
+                  <span>-{kronor(subtotal - total)}</span>
+                </div>
+              )}
+              <div className="cart-total">
+                <span>Totalt</span>
+                <span>{kronor(payment.totalAmount)}</span>
+              </div>
+            </>
+          }
+          onPaid={paid}
+          onBack={back}
+          backLabel="Ändra beställningen"
+        />
+      </>
+    )
+  }
+
   return (
     <>
-      <section className="page-head">
+      <section className="page-head" ref={headRef}>
         <h1>{mode === 'table' ? 'Beställ till bordet' : 'Beställ för avhämtning'}</h1>
         <p className="page-lede">
           {mode === 'table'
@@ -465,19 +532,14 @@ export default function BestallPage() {
               </p>
             )}
             </fieldset>
-            {redirecting && (
-              <p className="notice is-ok" role="status">
-                Tack! Beställningen är registrerad. Vi skickar dig vidare till den säkra betalningen hos Stripe…
-              </p>
-            )}
             <button
               type="submit"
               className={`btn-primary${busy ? ' is-busy' : ''}`}
               disabled={!open || busy || lines.length === 0 || tooLarge}
             >
               {busy
-                ? <><span className="spinner" aria-hidden="true" />{redirecting ? 'Till betalningen…' : 'Skickar beställningen…'}</>
-                : `Betala ${kronor(total)}`}
+                ? <><span className="spinner" aria-hidden="true" />Skickar beställningen…</>
+                : `Till betalning · ${kronor(total)}`}
             </button>
           </form>
           )}

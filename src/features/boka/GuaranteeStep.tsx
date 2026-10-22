@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
-import { loadStripe } from '@stripe/stripe-js'
-import type { Stripe } from '@stripe/stripe-js'
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js'
+import { useTheme } from '../../shared/theme'
+import { paymentAppearance, paymentFonts } from '../../shared/payment/appearance'
+import { PaymentPrinting, SecureNote } from '../../shared/payment/PaymentTicket'
+import { stripeFor } from '../../shared/payment/stripe'
 import { bookingErrorMessage, confirmGuestReservation, formatFee } from './bookingApi'
 import type { GuestReservation } from './bookingApi'
 
@@ -32,39 +34,8 @@ export interface GuaranteeGuest {
   phone: string | null
 }
 
-// En Stripe-instans per (nyckel, konto) - loadStripe laddar js.stripe.com en gång.
-const stripeCache = new Map<string, Promise<Stripe | null>>()
-function stripeFor(publishableKey: string, account: string): Promise<Stripe | null> {
-  const key = `${publishableKey}|${account}`
-  let promise = stripeCache.get(key)
-  if (!promise) {
-    promise = loadStripe(publishableKey, { stripeAccount: account, locale: 'sv' })
-    stripeCache.set(key, promise)
-  }
-  return promise
-}
-
 function minutesLeft(expiresAt: string, now: number): number {
   return Math.max(0, Math.ceil((Date.parse(expiresAt) - now) / 60000))
-}
-
-/** Stripes formulär i sajtens egna färger: papper, tryckfärg och
- * restaurangens färg på knappen i formuläret (läses ur CSS-variablerna, så
- * mörkt läge och varje restaurangs färg följer med). */
-function stripeAppearance() {
-  const css = typeof getComputedStyle === 'function' ? getComputedStyle(document.documentElement) : null
-  const read = (name: string, fallback: string) => css?.getPropertyValue(name).trim() || fallback
-  return {
-    theme: 'stripe' as const,
-    variables: {
-      colorPrimary: read('--accent', '#350001'),
-      colorBackground: read('--surface', '#fbfaf6'),
-      colorText: read('--ink', '#1c1918'),
-      colorDanger: read('--bad', '#9e1d26'),
-      borderRadius: '3px',
-      fontFamily: 'system-ui, -apple-system, "Segoe UI", sans-serif',
-    },
-  }
 }
 
 export function GuaranteeTermsText({ booking }: { booking: GuestReservation }) {
@@ -105,6 +76,7 @@ function CardForm({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
+  const [loadFailed, setLoadFailed] = useState(false)
 
   async function submit(e: FormEvent) {
     e.preventDefault()
@@ -131,10 +103,18 @@ function CardForm({
 
   return (
     <form onSubmit={submit} className="guarantee-form" aria-busy={busy || undefined}>
+      {!ready && !loadFailed && <PaymentPrinting label="Skriver ut kortformuläret" />}
+      {loadFailed && (
+        <p className="notice error" role="alert">
+          Kortformuläret kunde inte laddas. Ladda om sidan, eller ring restaurangen för att boka.
+        </p>
+      )}
+      <div className={`pay-element${ready ? ' is-ready' : ''}`}>
       <PaymentElement
         onReady={() => setReady(true)}
+        onLoadError={() => setLoadFailed(true)}
         options={{
-          layout: 'tabs',
+          layout: { type: 'tabs' },
           wallets: { link: 'never' },
           defaultValues: guest
             ? {
@@ -147,6 +127,7 @@ function CardForm({
             : undefined,
         }}
       />
+      </div>
       {error && <p className="notice error" role="alert">{error}</p>}
       {busy && (
         <p className="notice is-ok" role="status">
@@ -186,6 +167,10 @@ export function GuaranteeStep({
     return () => window.clearInterval(id)
   }, [])
   const left = minutesLeft(setup.expiresAt, now)
+  // Formuläret byter färger med ljust/mörkt läge (Stripe läser inte sajtens CSS).
+  const { theme } = useTheme()
+  const fonts = useMemo(() => paymentFonts(), [])
+  const appearance = useMemo(() => paymentAppearance(theme), [theme])
 
   return (
     <section className="booking-confirmation guarantee-step step-enter" aria-live="polite">
@@ -205,17 +190,21 @@ export function GuaranteeStep({
           Tiden gick ut och bordet släpptes. Gör en ny bokning.
         </p>
       ) : (
+        // key: ritas om när ljust/mörkt byts (Stripe uppdaterar inte ett öppet formulär).
         <Elements
+          key={theme}
           stripe={stripePromise}
           options={{
             clientSecret: setup.clientSecret,
-            appearance: stripeAppearance(),
+            appearance,
+            fonts,
+            loader: 'never',
           }}
         >
           <CardForm booking={booking} guest={guest} locationId={locationId} returnUrl={returnUrl} onConfirmed={onConfirmed} />
         </Elements>
       )}
-      <p className="cell-muted">Kortuppgifterna går direkt till Stripe och sparas aldrig hos oss.</p>
+      <SecureNote>Kortuppgifterna går direkt till Stripe och sparas aldrig hos oss.</SecureNote>
     </section>
   )
 }

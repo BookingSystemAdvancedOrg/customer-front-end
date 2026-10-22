@@ -7,6 +7,7 @@ import CateringRequestPage, { SIGN_POLL_MS } from './CateringRequestPage'
 import { estimate, firstDate, tokenFor } from './cateringApi'
 import type { CateringSettings, GuestRequest, Tier } from './cateringApi'
 import { WithSite } from '../../test/siteFixture'
+import { SiteContext } from '../../shared/SiteContext'
 import { siteConfig } from '../../test/siteData'
 
 const api = vi.hoisted(() => ({
@@ -28,6 +29,16 @@ vi.mock('../../shared/api', async (orig) => ({
   isApiConfigured: () => true,
 }))
 vi.mock('qrcode', () => ({ default: { toDataURL: (d: string) => Promise.resolve(`data:qr,${d}`) } }))
+const confirm = vi.hoisted(() => vi.fn())
+vi.mock('@stripe/stripe-js', () => ({ loadStripe: vi.fn(async () => ({})) }))
+vi.mock('@stripe/react-stripe-js/checkout', () => ({
+  CheckoutElementsProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  PaymentElement: ({ onReady }: { onReady?: () => void }) => {
+    queueMicrotask(() => onReady?.())
+    return <div>Stripes betalformulär</div>
+  },
+  useCheckoutElements: () => ({ type: 'success', checkout: { confirm } }),
+}))
 
 const SETTINGS: CateringSettings = {
   enabled: true, minPortions: 10, maxPortions: 300, advanceDays: 5, pickup: true, delivery: false,
@@ -49,11 +60,15 @@ function guest(extra: Partial<GuestRequest> = {}): GuestRequest {
 }
 
 function renderGuest(hash = '#t=tok-1') {
+  const config = siteConfig()
+  config.stripe = { publishableKey: 'pk_test_1', accountId: 'acct_1' }
   return render(
     <MemoryRouter initialEntries={[`/catering/loc-1/req-1${hash}`]}>
-      <Routes>
-        <Route path="catering/:locationId/:requestId" element={<CateringRequestPage />} />
-      </Routes>
+      <SiteContext.Provider value={{ config, location: config.locations[0], setLocationId: () => {} }}>
+        <Routes>
+          <Route path="catering/:locationId/:requestId" element={<CateringRequestPage />} />
+        </Routes>
+      </SiteContext.Provider>
     </MemoryRouter>,
   )
 }
@@ -161,14 +176,19 @@ describe('CateringRequestPage', () => {
     expect(screen.getByText(/Signerad med BankID av Anna Andersson/)).toBeInTheDocument()
   })
 
-  it('a private guest pays after signing (Stripe Checkout)', async () => {
+  it('a private guest pays after signing, on the page', async () => {
     const user = userEvent.setup()
     api.getRequest.mockResolvedValue(guest({ status: 'signed', canSign: false, canPay: true }))
-    api.startCheckout.mockResolvedValue({ checkoutUrl: 'https://checkout.stripe.com/c' })
+    api.startCheckout.mockResolvedValue({ clientSecret: 'cs_cat_secret', stripeAccount: 'acct_1' })
+    confirm.mockResolvedValue({ type: 'success', session: {} })
     renderGuest()
-    const pay = await screen.findByRole('button', { name: /Betala/ })
-    await user.click(pay)
-    expect(assign).toHaveBeenCalledWith('https://checkout.stripe.com/c')
+    await user.click(await screen.findByRole('button', { name: /^Betala 1\s350 kr$/ }))
+    expect(api.startCheckout).toHaveBeenCalledWith('loc-1', 'req-1', 'tok-1')
+    expect(assign).not.toHaveBeenCalled()
+    expect(await screen.findByRole('heading', { name: 'Betala cateringen' })).toBeInTheDocument()
+    await user.click(await screen.findByRole('button', { name: /^Betala 1\s350 kr$/ }))
+    expect(confirm).toHaveBeenCalledWith({ redirect: 'if_required' })
+    expect(await screen.findByText(/Vi bekräftar betalningen/, {}, { timeout: 3000 })).toBeInTheDocument()
   })
 
   it('asks for changes', async () => {
