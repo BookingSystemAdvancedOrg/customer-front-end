@@ -30,6 +30,7 @@ import { FlowSteps } from '../../shared/FlowSteps'
 import { GuestDataNotice } from '../../shared/GuestDataNotice'
 import { MarketingConsent, NO_CONSENT, consentFields } from '../../shared/MarketingConsent'
 import type { ConsentChoice } from '../../shared/MarketingConsent'
+import { DateInput, TimeInput } from '../../shared/DateInput'
 
 const STEPS = [{ label: 'Meny' }, { label: 'När & var' }, { label: 'Uppgifter' }, { label: 'Skicka' }]
 /** Väntetid efter senaste ändringen innan priset hämtas på nytt. */
@@ -399,12 +400,12 @@ export default function CateringPage() {
             <div className="booking-grid">
               <label className="booking-field">
                 Datum
-                <input type="date" min={quote?.earliestDate ?? firstDate(settings.advanceDays)} value={form.deliveryDate}
+                <DateInput min={quote?.earliestDate ?? firstDate(settings.advanceDays)} value={form.deliveryDate}
                   onChange={(e) => set('deliveryDate', e.target.value)} />
               </label>
               <label className="booking-field">
                 Tid
-                <input type="time" step={900} value={form.deliveryTime} onChange={(e) => set('deliveryTime', e.target.value)} />
+                <TimeInput value={form.deliveryTime} onChange={(e) => set('deliveryTime', e.target.value)} />
               </label>
             </div>
             {quote && (
