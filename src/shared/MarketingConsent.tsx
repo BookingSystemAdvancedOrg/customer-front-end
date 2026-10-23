@@ -1,4 +1,5 @@
 import { useId } from 'react'
+import { Link } from 'react-router-dom'
 import { useSite } from './SiteContext'
 import type { ConsentChannel, SitePrivacy } from './site'
 import './privacy.css'
@@ -43,7 +44,8 @@ export function consentFields(
  * Frivillig ruta för erbjudanden, aldrig förkryssad och aldrig ett krav för
  * bokningen eller beställningen. Visas bara när restaurangen har
  * marknadsföring påslaget. Ordalydelsen kommer från servern, så det gästen
- * ser är exakt det som sparas i samtyckesloggen.
+ * ser är exakt det som sparas i samtyckesloggen. Bara de kanaler servern
+ * erbjuder visas (i dag bara e-post); med en enda kanal finns inget val.
  */
 export function MarketingConsent({ value, onChange }: { value: ConsentChoice; onChange: (v: ConsentChoice) => void }) {
   const { config } = useSite()
@@ -55,6 +57,8 @@ export function MarketingConsent({ value, onChange }: { value: ConsentChoice; on
   const labels: Record<ConsentChannel, string> = { email: 'E-post', sms: 'SMS' }
   for (const c of mc?.channels ?? []) labels[c.value] = c.label
   const current = choiceOf(value.channels)
+  const offered = mc ? mc.channels.map((c) => c.value) : (['email'] as ConsentChannel[])
+  const choices = CHOICES.filter((c) => c.channels.every((ch) => offered.includes(ch)))
   return (
     <div className="consent-box">
       <label className="booking-check">
@@ -66,11 +70,17 @@ export function MarketingConsent({ value, onChange }: { value: ConsentChoice; on
         />
         <span>{label}</span>
       </label>
-      {mc && value.checked && (
+      <p className="consent-more">
+        {choices.length === 1 && `Via ${labels[choices[0].channels[0]].toLowerCase()}. `}
+        <Link to="/integritetspolicy" target="_blank" rel="noopener">
+          Läs mer i integritetspolicyn
+        </Link>
+      </p>
+      {mc && value.checked && choices.length > 1 && (
         <fieldset className="consent-channels" id={`${id}-channels`}>
           <legend>{mc.channelQuestion}</legend>
           <div className="consent-options">
-            {CHOICES.map((c) => (
+            {choices.map((c) => (
               <label key={c.value} className={`consent-option${current === c.value ? ' is-on' : ''}`}>
                 <input
                   type="radio"

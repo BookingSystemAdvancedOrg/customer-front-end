@@ -22,6 +22,18 @@
   gap: 10px;
 }
 
+.consent-more {
+  margin: -4px 0 0 30px;
+  color: var(--muted);
+  font-size: 13.5px;
+}
+
+.consent-more a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .consent-channels {
   margin: 0 0 0 30px;
   padding: 0;

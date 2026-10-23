@@ -55,6 +55,17 @@ describe('MarketingConsent', () => {
     expect(last).toEqual({ checked: true, channels: ['sms'] })
   })
 
+  it('offers e-mail only without a choice when the server offers one channel, and links the policy', async () => {
+    const user = userEvent.setup()
+    const emailOnly = { ...PRIVACY, marketingConsent: { ...PRIVACY.marketingConsent!, channels: [{ value: 'email' as const, label: 'E-post' }] } }
+    render(<WithSite config={config(emailOnly)}><Harness /></WithSite>)
+    expect(screen.getByText(/Via e-post\./)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Läs mer i integritetspolicyn' })).toHaveAttribute('href', '/integritetspolicy')
+    await user.click(screen.getByRole('checkbox'))
+    expect(screen.queryByRole('radio')).not.toBeInTheDocument()
+    expect(last).toEqual({ checked: true, channels: ['email'] })
+  })
+
   it('is hidden when the restaurant has no marketing', () => {
     render(<WithSite config={config({ ...PRIVACY, marketingConsent: null }, false)}><Harness /></WithSite>)
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
