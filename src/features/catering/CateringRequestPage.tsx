@@ -209,7 +209,8 @@ export default function CateringRequestPage() {
   async function openDocument(docId: 'offer' | 'signed') {
     setError(null)
     try {
-      window.open((await documentLink(locationId, requestId, token, docId)).url, '_blank', 'noopener')
+      // Same tab: a window opened after an await is blocked by iOS Safari. The link lives 5 minutes.
+      window.location.assign((await documentLink(locationId, requestId, token, docId)).url)
     } catch (err) {
       setError(errorMessage(err))
     }

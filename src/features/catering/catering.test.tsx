@@ -309,8 +309,6 @@ describe('CateringRequestPage', () => {
 
   it('a company accepts without BankID and downloads the signed copy', async () => {
     const user = userEvent.setup()
-    const open = vi.fn()
-    vi.stubGlobal('open', open)
     api.getRequest.mockResolvedValue(guest({ customerType: 'company', companyName: 'Acme AB', canAccept: true,
       documents: ['offer'] }))
     api.acceptOffer.mockResolvedValue(guest({ status: 'signed', canSign: false, canAccept: false, customerType: 'company',
@@ -331,7 +329,7 @@ describe('CateringRequestPage', () => {
     expect(await screen.findByText(/Godkänd av Karl Ek/)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Signerad offert (PDF)' }))
     expect(api.documentLink).toHaveBeenCalledWith('loc-1', 'req-1', 'tok-1', 'signed')
-    expect(open).toHaveBeenCalledWith('https://s3.example/signed.pdf', '_blank', 'noopener')
+    expect(assign).toHaveBeenCalledWith('https://s3.example/signed.pdf')
   })
 
   it('without a token it explains the link is incomplete', async () => {
