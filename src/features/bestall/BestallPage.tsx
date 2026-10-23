@@ -32,6 +32,7 @@ import type { Cart, OrderCreated, OrderMode, OrderingState } from './orderApi'
 import { checkCode, codeErrorMessage, discounted, normalizeCode } from '../erbjudande/offerApi'
 import type { CodeTerms } from '../erbjudande/offerApi'
 import { FlowSteps } from '../../shared/FlowSteps'
+import { useStickyCart } from '../../shared/useStickyCart'
 import { PaymentTicket } from '../../shared/payment/PaymentTicket'
 import { GuestDataNotice } from '../../shared/GuestDataNotice'
 import { MarketingConsent, NO_CONSENT, consentFields } from '../../shared/MarketingConsent'
@@ -154,6 +155,7 @@ export default function BestallPage() {
   }
 
   const trayRef = useRef<HTMLSpanElement>(null)
+  const cartRef = useStickyCart<HTMLElement>()
   const barRef = useRef<HTMLAnchorElement>(null)
 
   /** Lägg till och låt tallriken glida till beställningen (brickan). */
@@ -303,7 +305,7 @@ export default function BestallPage() {
               <ul className="cart-list">
                 {lines.map(({ dish, quantity }) => (
                   <li key={dish.menuItemId}>
-                    <span className="cart-item-name">{quantity} × {dish.name}</span>
+                    <span className="cart-item-name">{quantity}&nbsp;×&nbsp;{dish.name}</span>
                     <span />
                     <span className="cart-item-price">{kronor(ore(dish.price) * quantity)}</span>
                   </li>
@@ -425,7 +427,7 @@ export default function BestallPage() {
           ))}
         </div>
 
-        <aside className="order-cart" id="order-cart" aria-label="Din beställning">
+        <aside className="order-cart" id="order-cart" ref={cartRef} aria-label="Din beställning">
           <div className="tray-head">
             <h2>Din beställning</h2>
             <span className="tray-plates" aria-hidden="true" ref={trayRef}>
@@ -440,7 +442,7 @@ export default function BestallPage() {
             <ul className="cart-list">
               {lines.map(({ dish, quantity }) => (
                 <li key={dish.menuItemId}>
-                  <span className="cart-item-name" key={quantity}>{quantity} × {dish.name}</span>
+                  <span className="cart-item-name" key={quantity}>{quantity}&nbsp;×&nbsp;{dish.name}</span>
                   <span className="cart-qty">
                     <button type="button" aria-label={`En ${dish.name} mindre`}
                       onClick={() => change(dish.menuItemId, -1)}>−</button>
@@ -500,24 +502,24 @@ export default function BestallPage() {
           <form className="order-form" onSubmit={submit} noValidate aria-busy={busy || undefined}>
             <fieldset className="order-fields" disabled={busy}>
             <label className="booking-field">
-              Namn
+              <span>Namn</span>
               <input autoComplete="name" value={guest.name}
                 onChange={(e) => setGuest({ ...guest, name: e.target.value })} />
             </label>
             <label className="booking-field">
-              Mobilnummer
+              <span>Mobilnummer</span>
               <span className="field-hint">
                 {mode === 'pickup' ? 'Vi sms:ar när maten lagas och när den är klar.' : 'Vi sms:ar när maten lagas.'}
               </span>
               <PhoneInput value={guest.phone} onChange={(phone) => setGuest({ ...guest, phone })} />
             </label>
             <label className="booking-field">
-              E-post (kvitto)
+              <span>E-post (kvitto)</span>
               <input type="email" autoComplete="email" value={guest.email}
                 onChange={(e) => setGuest({ ...guest, email: e.target.value })} />
             </label>
             <label className="booking-field">
-              Allergier eller önskemål (valfritt)
+              <span>Allergier eller önskemål (valfritt)</span>
               <textarea rows={2} maxLength={NOTES_MAX} value={guest.notes}
                 onChange={(e) => setGuest({ ...guest, notes: e.target.value })} />
             </label>

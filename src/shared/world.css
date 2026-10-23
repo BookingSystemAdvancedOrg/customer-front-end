@@ -766,7 +766,7 @@ svg {
 
 .order-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 380px);
+  grid-template-columns: minmax(0, 1fr) clamp(320px, 36%, 420px);
   gap: clamp(24px, 4vw, 48px);
   align-items: start;
 }
@@ -883,10 +883,9 @@ svg {
   white-space: nowrap;
 }
 
-/* Brickan (varukorgen). */
+/* Brickan (varukorgen). Ingen egen rullning: den följer sidan (se
+   .order-cart längre ner och shared/useStickyCart.ts). */
 .order-cart {
-  position: sticky;
-  top: calc(var(--header-h) + 20px);
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -895,9 +894,6 @@ svg {
   background: var(--surface);
   box-shadow: var(--shadow-lg);
   border: 0;
-  max-height: calc(100svh - var(--header-h) - 40px);
-  overflow-y: auto;
-  overscroll-behavior: contain;
 }
 
 .order-cart h2,
@@ -1024,17 +1020,11 @@ svg {
 }
 
 @media (max-width: 1000px) {
-  .order-cart {
-    max-height: none;
-    overflow: visible;
-  }
-
   .order-layout {
     grid-template-columns: minmax(0, 1fr);
   }
 
   .order-cart {
-    position: static;
     scroll-margin-top: calc(var(--header-h) + 16px);
   }
 
@@ -1930,6 +1920,7 @@ h1, h2, h3, h4 {
 
 .menu::after,
 .order-menu::after,
+.order-cart::after,
 .booking-step::after,
 .booking-confirmation::after,
 .catering-details::after,
@@ -1945,17 +1936,15 @@ h1, h2, h3, h4 {
   pointer-events: none;
 }
 
-/* Brickan rullar inuti (max-height på skrivbord): kanten följer med sist i innehållet. */
-.order-cart::after {
-  content: '';
-  display: block;
-  position: sticky;
-  left: 0;
-  flex: none;
-  height: var(--tooth-h);
-  margin: 0 -22px calc(var(--tooth-h) * -1 - 22px);
-  background: conic-gradient(from -45deg at 50% 100%, var(--table) 0deg, transparent 1deg 89deg, var(--table) 90deg) 0 100% / var(--tooth) var(--tooth-h) repeat-x;
-  pointer-events: none;
+/* Brickan bredvid menyn: stannar överst när den får plats i fönstret. Är
+   den högre (--cart-h, mäts i useStickyCart) rullar den med sidan tills
+   underkanten syns och stannar där, så knappen alltid går att nå. Ingen
+   egen rullning: en rullning per sida. */
+@media (min-width: 1001px) {
+  .order-cart {
+    position: sticky;
+    top: min(calc(var(--header-h) + 20px), calc(100svh - var(--cart-h, 0px) - 20px));
+  }
 }
 
 /* Sidorna trycks fram: ett kort fall från railen, kvittona faller efter.
@@ -2682,7 +2671,6 @@ h1, h2, h3, h4 {
 .order-cart {
   gap: 14px;
   padding: 22px 22px calc(22px + var(--tooth-h));
-  overscroll-behavior: contain;
 }
 
 .tray-head h2,
@@ -2714,6 +2702,9 @@ h1, h2, h3, h4 {
 .cart-item-price {
   font-weight: 600;
   font-size: 0.9rem;
+  /* Samma bredd på varje rad, så att knapparna står i en kolumn. */
+  min-width: 7ch;
+  text-align: right;
 }
 
 .cart-list .cart-qty button,

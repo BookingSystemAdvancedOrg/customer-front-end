@@ -7,6 +7,7 @@ import { PhoneInput } from '../../shared/PhoneInput'
 import { normalizePhone, validEmail } from '../boka/bookingApi'
 import { TurnstileWidget } from '../boka/TurnstileWidget'
 import { CATEGORY_LABEL, getPublicMenu, groupByCategory } from '../meny/menuApi'
+import { useStickyCart } from '../../shared/useStickyCart'
 import type { PublicMenuItem } from '../meny/menuApi'
 import {
   ALLERGEN_LABEL,
@@ -110,6 +111,7 @@ function Tags({ allergens, dietary }: { allergens?: string[]; dietary?: string[]
  * (rätter per portion), som tidigare.
  */
 export default function CateringPage() {
+  const cartRef = useStickyCart<HTMLElement>()
   const { config, location } = useSite()
   const navigate = useNavigate()
   const locationId = location.locationId
@@ -520,7 +522,7 @@ export default function CateringPage() {
           )}
         </div>
 
-        <aside className="order-cart" aria-label="Kalkyl" aria-busy={quoting}>
+        <aside className="order-cart" ref={cartRef} aria-label="Kalkyl" aria-busy={quoting}>
           <h2>Kalkyl{guests > 0 && ` · ${guests} gäster`}</h2>
           {!quote ? (
             <p className="cart-empty" role="status">
