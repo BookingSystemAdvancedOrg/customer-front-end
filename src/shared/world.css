@@ -2740,6 +2740,176 @@ h1, h2, h3, h4 {
   width: 100%;
 }
 
+/* Kassan i brickan: ett steg i taget (Din beställning, Vem är du?, Kvitto
+   och önskemål, Godkänn och betala). En stor knapp framåt, en lugn bakåt. */
+.order-cart .order-form {
+  gap: 18px;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.checkout-step {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  animation: checkout-in 280ms var(--ease) both;
+}
+
+@keyframes checkout-in {
+  from { opacity: 0; transform: translateX(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+.order-cart .checkout-title {
+  font: 800 1.5rem/1.15 var(--font);
+  font-stretch: 112%;
+  letter-spacing: -0.02em;
+  text-transform: none;
+  color: var(--ink);
+  text-wrap: balance;
+}
+
+.order-cart h2:focus {
+  outline: none;
+}
+
+.checkout-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1.5px dashed var(--paper-line);
+}
+
+.checkout-summary .tray-plates {
+  min-height: 0;
+}
+
+.checkout-summary-text {
+  flex: 1;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.checkout-summary-text strong {
+  color: var(--ink);
+  font-family: var(--mono);
+  font-stretch: 87.5%;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.checkout-summary .link-button {
+  min-height: 44px;
+  padding: 0 4px;
+}
+
+.checkout-actions {
+  display: grid;
+  gap: 6px;
+}
+
+.order-cart .checkout-next {
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 56px;
+  font-size: 1.08rem;
+}
+
+.checkout-next svg,
+.checkout-back svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: none;
+}
+
+.checkout-back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 48px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--ink);
+  font: 650 1rem/1 var(--font);
+  cursor: pointer;
+  transition: background-color 160ms var(--ease);
+}
+
+.checkout-back:hover:not(:disabled) {
+  background: var(--fill);
+}
+
+.checkout-back:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.checkout-privacy summary {
+  list-style: none;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.checkout-privacy summary::-webkit-details-marker {
+  display: none;
+}
+
+.checkout-privacy-more {
+  color: var(--accent-ink);
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  white-space: nowrap;
+}
+
+.checkout-privacy[open] .checkout-privacy-more {
+  display: none;
+}
+
+.checkout-privacy .guest-notice {
+  margin-top: 10px;
+}
+
+.order-cart .booking-check {
+  min-height: 44px;
+}
+
+@media (max-width: 1000px) {
+  .order-mobile-bar {
+    transition: opacity 200ms var(--ease), transform 200ms var(--ease);
+  }
+
+  .order-mobile-bar.is-hidden {
+    opacity: 0;
+    transform: translateY(12px);
+    pointer-events: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .order-cart .checkout-title {
+    font-size: 1.35rem;
+  }
+
+  .tray-head .tray-plates {
+    display: none;
+  }
+}
+
 @media (max-width: 1000px) {
   .order-mobile-bar {
     border-radius: 3px;
@@ -3328,6 +3498,7 @@ h1, h2, h3, h4 {
   .menu,
   .order-menu,
   .order-cart,
+  .checkout-step,
   .booking-step,
   .booking-confirmation,
   .catering-details,

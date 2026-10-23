@@ -75,11 +75,21 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-async function fill(user: ReturnType<typeof userEvent.setup>) {
+type User = ReturnType<typeof userEvent.setup>
+
+async function forward(user: User) {
+  await user.click(screen.getByRole('button', { name: 'Fortsätt' }))
+}
+
+/** Kassan steg för steg: brickan, vem är du, kvitto, godkänn. */
+async function fill(user: User) {
+  await forward(user)
   await user.type(screen.getByLabelText('Namn'), 'Anna')
   await user.type(screen.getByLabelText(/Mobilnummer/), '070-123 45 67')
-  await user.type(screen.getByLabelText('E-post (kvitto)'), 'anna@example.se')
-  await user.click(screen.getByRole('checkbox'))
+  await forward(user)
+  await user.type(screen.getByLabelText(/E-post/), 'anna@example.se')
+  await forward(user)
+  await user.click(screen.getByRole('checkbox', { name: /inte kan ändras/ }))
 }
 
 function postedOrder() {
@@ -214,7 +224,10 @@ describe('BestallPage', () => {
     render(<WithSite config={config()} path="/bestall"><BestallPage /></WithSite>)
     expect(screen.getByRole('list', { name: 'Beställning: steg 1 av 4' })).toBeInTheDocument()
     await user.click(await screen.findByRole('button', { name: 'Lägg till Cola' }))
+    expect(screen.getByRole('list', { name: 'Beställning: steg 1 av 4' })).toBeInTheDocument()
+    await forward(user)
     expect(screen.getByRole('list', { name: 'Beställning: steg 2 av 4' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Tillbaka' }))
     await fill(user)
     expect(screen.getByRole('list', { name: 'Beställning: steg 3 av 4' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /Till betalning/ }))
@@ -230,7 +243,7 @@ describe('BestallPage', () => {
       render(<WithSite config={config()} path="/bestall"><BestallPage /></WithSite>)
       await user.click(await screen.findByRole('button', { name: 'Lägg till Porsche' }))
       expect(screen.getByRole('alert')).toHaveTextContent('för stor för att betalas online (högst 50 000 kr)')
-      expect(screen.getByRole('button', { name: /^Till betalning/ })).toBeDisabled()
+      expect(screen.getByRole('button', { name: 'Fortsätt' })).toBeDisabled()
       expect(postedOrder()).toBeNull()
     } finally {
       MENU.items.pop()
@@ -276,9 +289,22 @@ describe('BestallPage', () => {
     const user = userEvent.setup()
     render(<WithSite config={config('site-key')} path="/bestall"><BestallPage /></WithSite>)
     await user.click(await screen.findByRole('button', { name: 'Lägg till Cola' }))
-    await user.click(screen.getByRole('button', { name: /Till betalning/ }))
+    await forward(user)
+    await forward(user)
     expect(screen.getByRole('alert')).toHaveTextContent('Fyll i ditt namn.')
-    await fill(user)
+    expect(screen.queryByLabelText(/E-post/)).not.toBeInTheDocument()
+    await user.type(screen.getByLabelText('Namn'), 'Anna')
+    await forward(user)
+    expect(screen.getByRole('alert')).toHaveTextContent('giltigt mobilnummer')
+    await user.type(screen.getByLabelText(/Mobilnummer/), '070-123 45 67')
+    await forward(user)
+    await forward(user)
+    expect(screen.getByRole('alert')).toHaveTextContent('giltig e-postadress')
+    await user.type(screen.getByLabelText(/E-post/), 'anna@example.se')
+    await forward(user)
+    await user.click(screen.getByRole('button', { name: /Till betalning/ }))
+    expect(screen.getByRole('alert')).toHaveTextContent('Godkänn villkoren')
+    await user.click(screen.getByRole('checkbox', { name: /inte kan ändras/ }))
     await user.click(screen.getByRole('button', { name: /Till betalning/ }))
     expect(screen.getByRole('alert')).toHaveTextContent('säkerhetskontrollen')
     await user.click(screen.getByRole('button', { name: 'Jag är inte en robot' }))
@@ -295,6 +321,43 @@ describe('BestallPage', () => {
     await user.click(screen.getByRole('button', { name: /Till betalning/ }))
     expect(await screen.findByRole('alert')).toHaveTextContent('Köket har pausat')
     expect(assign).not.toHaveBeenCalled()
+  })
+
+  it('shows one step at a time and keeps what the guest typed when going back', async () => {
+    const user = userEvent.setup()
+    render(<WithSite config={config()} path="/bestall"><BestallPage /></WithSite>)
+    await user.click(await screen.findByRole('button', { name: 'Lägg till Cola' }))
+    expect(screen.queryByLabelText('Namn')).not.toBeInTheDocument()
+    await forward(user)
+    const who = screen.getByRole('heading', { name: 'Vem är du?' })
+    expect(who).toHaveFocus()
+    // Totalen syns hela vägen.
+    const cart = screen.getByRole('complementary', { name: 'Din beställning' })
+    expect(within(cart).getByText('35,50 kr')).toBeInTheDocument()
+    expect(within(cart).getByText(/1 rätt/)).toBeInTheDocument()
+    await user.type(screen.getByLabelText('Namn'), 'Anna')
+    await user.type(screen.getByLabelText(/Mobilnummer/), '070-123 45 67')
+    await forward(user)
+    expect(screen.getByRole('heading', { name: 'Kvitto och önskemål' })).toHaveFocus()
+    expect(screen.queryByLabelText('Namn')).not.toBeInTheDocument()
+    await user.type(screen.getByLabelText(/E-post/), 'anna@example.se')
+    await user.click(screen.getByRole('button', { name: 'Tillbaka' }))
+    expect(screen.getByLabelText('Namn')).toHaveValue('Anna')
+    await user.clear(screen.getByLabelText('Namn'))
+    await user.type(screen.getByLabelText('Namn'), 'Anna B')
+    await forward(user)
+    expect(screen.getByLabelText(/E-post/)).toHaveValue('anna@example.se')
+    await forward(user)
+    // Villkor och samtycke är två olika rutor; ingen är ikryssad.
+    expect(screen.getByRole('checkbox', { name: /inte kan ändras/ })).not.toBeChecked()
+    expect(screen.getByText('Läs mer')).toBeInTheDocument()
+    expect(screen.getByText(/personuppgiftsansvarig/)).toBeInTheDocument()
+    // Inget av gästens uppgifter sparas innan beställningen skickas.
+    expect(JSON.stringify({ ...sessionStorage })).not.toContain('Anna')
+    expect(postedOrder()).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Ändra' }))
+    expect(screen.getByRole('heading', { name: 'Din beställning' })).toHaveFocus()
+    expect(within(cart).getByText('1 × Cola')).toBeInTheDocument()
   })
 
   it('keeps the cart after a cancelled payment', async () => {
@@ -327,10 +390,8 @@ describe('BestallPage discount code', () => {
     const cart = screen.getByRole('complementary', { name: 'Din beställning' })
     expect(await within(cart).findByText('Rabatt 10 % (ABCD-EFGH)')).toBeInTheDocument()
     expect(within(cart).getByText('-12,50 kr')).toBeInTheDocument()
-    await user.type(screen.getByLabelText('Namn'), 'Anna')
-    await user.type(screen.getByLabelText(/Mobilnummer/), '070-123 45 67')
-    await user.type(screen.getByLabelText('E-post (kvitto)'), 'anna@example.se')
-    await user.click(screen.getByRole('checkbox', { name: /inte kan ändras/ }))
+    await fill(user)
+    expect(screen.getByRole('checkbox', { name: /Skicka mig erbjudanden/ })).not.toBeChecked()
     await user.click(screen.getByRole('checkbox', { name: /Skicka mig erbjudanden/ }))
     await user.click(screen.getByRole('button', { name: 'Till betalning · 112,50 kr' }))
     expect(postedOrder()).toMatchObject({ discountCode: 'ABCD-EFGH', marketingOptIn: true })

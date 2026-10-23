@@ -51,13 +51,35 @@ interface Guest {
 
 const EMPTY_GUEST: Guest = { name: '', phone: '', email: '', notes: '', accept: false, consent: NO_CONSENT }
 
-function guestError(g: Guest): string | null {
-  if (!g.name.trim()) return 'Fyll i ditt namn.'
-  if (!normalizePhone(g.phone)) return 'Fyll i ett giltigt mobilnummer, t.ex. 070-123 45 67.'
-  if (!validEmail(g.email)) return 'Fyll i en giltig e-postadress - kvittot skickas dit.'
-  if (g.notes.length > NOTES_MAX) return `Meddelandet får vara högst ${NOTES_MAX} tecken.`
-  if (!g.accept) return 'Godkänn villkoren för att gå vidare till betalning.'
+/** Kassan i brickan: en fråga i taget, så att ingen ser allt på en gång. */
+type Step = 'cart' | 'who' | 'receipt' | 'confirm'
+
+const STEP_ORDER: Step[] = ['cart', 'who', 'receipt', 'confirm']
+
+const STEP_TITLE: Record<Step, string> = {
+  cart: 'Din beställning',
+  who: 'Vem är du?',
+  receipt: 'Kvitto och önskemål',
+  confirm: 'Godkänn och betala',
+}
+
+/** Det som saknas i ett steg (null när steget är klart). */
+function stepError(step: Step, g: Guest): string | null {
+  if (step === 'who') {
+    if (!g.name.trim()) return 'Fyll i ditt namn.'
+    if (!normalizePhone(g.phone)) return 'Fyll i ett giltigt mobilnummer, t.ex. 070-123 45 67.'
+  }
+  if (step === 'receipt') {
+    if (!validEmail(g.email)) return 'Fyll i en giltig e-postadress - kvittot skickas dit.'
+    if (g.notes.length > NOTES_MAX) return `Meddelandet får vara högst ${NOTES_MAX} tecken.`
+  }
+  if (step === 'confirm' && !g.accept) return 'Godkänn villkoren för att gå vidare till betalning.'
   return null
+}
+
+/** Första steget med något som saknas. */
+function firstGap(g: Guest): Step | null {
+  return STEP_ORDER.find((step) => stepError(step, g)) ?? null
 }
 
 /** Pris i öre från menyns kronor (servern räknar likadant). */
@@ -92,6 +114,9 @@ export default function BestallPage() {
   const [busy, setBusy] = useState(false)
   // Beställningen är registrerad: betalningskvittot visas (steg 3).
   const [payment, setPayment] = useState<OrderCreated | null>(null)
+  const [checkout, setCheckout] = useState<Step>('cart')
+  const titleRef = useRef<HTMLHeadingElement>(null)
+  const stepMoved = useRef(false)
   const headRef = useRef<HTMLElement>(null)
   const turnstileSiteKey = config.turnstile?.siteKey ?? null
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
@@ -138,9 +163,34 @@ export default function BestallPage() {
   const open = Boolean(ordering?.open && ordering[mode])
   const tableLabel = ordering?.forTable?.label
   const count = lines.reduce((n, l) => n + l.quantity, 0)
-  // Stegraden: rätter -> uppgifter -> betala. Uppgifterna är klara när
-  // samma kontroll som vid Betala går igenom.
-  const stepAt = payment ? 3 : lines.length === 0 ? 1 : guestError(guest) ? 2 : 3
+  // Utan rätter finns bara brickan.
+  const step: Step = lines.length ? checkout : 'cart'
+  // Stegraden: rätter -> uppgifter -> betala. Betala när sista steget är ifyllt.
+  const stepAt = payment ? 3 : step === 'cart' ? 1 : step === 'confirm' && !firstGap(guest) ? 3 : 2
+
+  /** Till ett annat steg i kassan: fokus på rubriken, och sidan står still. */
+  function go(next: Step) {
+    setError(null)
+    stepMoved.current = true
+    setCheckout(next)
+  }
+
+  useEffect(() => {
+    if (!stepMoved.current) return
+    stepMoved.current = false
+    const title = titleRef.current
+    if (!title) return
+    title.focus({ preventScroll: true })
+    // Hamnar brickans överkant utanför fönstret (mobil: korta steg gör sidan
+    // kortare) glider den in under sidhuvudet; annars rör sig inget.
+    const cart = title.closest('.order-cart')
+    if (!cart) return
+    const header = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--header-h')) || 0
+    const top = cart.getBoundingClientRect().top
+    if (top >= header && top <= window.innerHeight - 160) return
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    window.scrollBy?.({ top: top - header - 16, behavior: reduce ? 'auto' : 'smooth' })
+  }, [step, payment])
 
   function change(id: string, delta: number) {
     setError(null)
@@ -155,6 +205,15 @@ export default function BestallPage() {
   }
 
   const trayRef = useRef<HTMLSpanElement>(null)
+  // Mobil: knappen "Visa beställning" behövs bara när brickan inte syns.
+  const [cartInView, setCartInView] = useState(false)
+  useEffect(() => {
+    const el = document.getElementById('order-cart')
+    if (!el || typeof IntersectionObserver === 'undefined') return
+    const observer = new IntersectionObserver(([entry]) => setCartInView(entry.isIntersecting), { threshold: 0.15 })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [payment])
   const cartRef = useStickyCart<HTMLElement>()
   const barRef = useRef<HTMLAnchorElement>(null)
 
@@ -213,12 +272,29 @@ export default function BestallPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [marketing])
 
-  async function submit(e: FormEvent) {
+  /** Knappen i varje steg: kolla steget och gå vidare, i sista steget skicka. */
+  function next(e: FormEvent) {
     e.preventDefault()
+    if (step === 'confirm') return void submit()
+    if (!lines.length || tooLarge || !open) return
+    const problem = stepError(step, guest)
+    if (problem) return setError(problem)
+    go(STEP_ORDER[STEP_ORDER.indexOf(step) + 1])
+  }
+
+  function previous() {
+    go(STEP_ORDER[Math.max(0, STEP_ORDER.indexOf(step) - 1)])
+  }
+
+  async function submit() {
     setError(null)
     if (!lines.length) return setError('Lägg till något från menyn först.')
-    const problem = guestError(guest)
-    if (problem) return setError(problem)
+    const gap = firstGap(guest)
+    if (gap) {
+      const problem = stepError(gap, guest)
+      if (gap !== step) go(gap)
+      return setError(problem)
+    }
     if (turnstileSiteKey && !turnstileToken) return setError('Bekräfta säkerhetskontrollen ovanför knappen.')
     setBusy(true)
     try {
@@ -256,6 +332,8 @@ export default function BestallPage() {
             const ids = new Set(items.map((d) => d.menuItemId))
             if (Object.keys(cart).some((id) => !ids.has(id))) {
               setCart((prev) => Object.fromEntries(Object.entries(prev).filter(([id]) => ids.has(id))))
+              // Tillbaka till brickan, så att gästen ser vad som ändrats.
+              go('cart')
               setError(MENU_ITEM_REMOVED)
             }
           })
@@ -277,6 +355,8 @@ export default function BestallPage() {
 
   /** Tillbaka till varukorgen: beställningen som inte betalades går ut av sig själv. */
   function back() {
+    stepMoved.current = true
+    setCheckout('cart')
     setPayment(null)
     if (turnstileSiteKey) {
       setTurnstileToken(null)
@@ -428,143 +508,205 @@ export default function BestallPage() {
         </div>
 
         <aside className="order-cart" id="order-cart" ref={cartRef} aria-label="Din beställning">
-          <div className="tray-head">
-            <h2>Din beställning</h2>
-            <span className="tray-plates" aria-hidden="true" ref={trayRef}>
-              {lines.slice(0, 5).map(({ dish }) => (
-                <Plate key={dish.menuItemId} src={menuImageUrl(dish.imageKey)} name={dish.name} size="sm" />
-              ))}
-            </span>
-          </div>
+          {step === 'cart' ? (
+            <div className="tray-head">
+              <h2 className="checkout-title" ref={titleRef} tabIndex={-1}>{STEP_TITLE.cart}</h2>
+              <span className="tray-plates" aria-hidden="true" ref={trayRef}>
+                {lines.slice(0, 5).map(({ dish }) => (
+                  <Plate key={dish.menuItemId} src={menuImageUrl(dish.imageKey)} name={dish.name} size="sm" />
+                ))}
+              </span>
+            </div>
+          ) : (
+            <div className="checkout-summary">
+              <span className="tray-plates" aria-hidden="true" ref={trayRef}>
+                {lines.slice(0, 3).map(({ dish }) => (
+                  <Plate key={dish.menuItemId} src={menuImageUrl(dish.imageKey)} name={dish.name} size="sm" />
+                ))}
+              </span>
+              <span className="checkout-summary-text">
+                {count} {count === 1 ? 'rätt' : 'rätter'} · <strong>{kronor(total)}</strong>
+              </span>
+              <button type="button" className="link-button" onClick={() => go('cart')}>
+                Ändra
+              </button>
+            </div>
+          )}
+
           {lines.length === 0 ? (
             <p className="cart-empty">Brickan är tom. Tryck på + vid en rätt, så hamnar den här.</p>
           ) : (
-            <ul className="cart-list">
-              {lines.map(({ dish, quantity }) => (
-                <li key={dish.menuItemId}>
-                  <span className="cart-item-name" key={quantity}>{quantity}&nbsp;×&nbsp;{dish.name}</span>
-                  <span className="cart-qty">
-                    <button type="button" aria-label={`En ${dish.name} mindre`}
-                      onClick={() => change(dish.menuItemId, -1)}>−</button>
-                    <button type="button" aria-label={`En ${dish.name} till`}
-                      disabled={quantity >= MAX_QUANTITY} onClick={() => change(dish.menuItemId, 1)}>+</button>
+          <form className="order-form" onSubmit={next} noValidate aria-busy={busy || undefined}>
+            <div className="checkout-step" key={step}>
+            {step === 'cart' && (
+              <>
+                <ul className="cart-list">
+                  {lines.map(({ dish, quantity }) => (
+                    <li key={dish.menuItemId}>
+                      <span className="cart-item-name" key={quantity}>{quantity}&nbsp;×&nbsp;{dish.name}</span>
+                      <span className="cart-qty">
+                        <button type="button" aria-label={`En ${dish.name} mindre`}
+                          onClick={() => change(dish.menuItemId, -1)}>−</button>
+                        <button type="button" aria-label={`En ${dish.name} till`}
+                          disabled={quantity >= MAX_QUANTITY} onClick={() => change(dish.menuItemId, 1)}>+</button>
+                      </span>
+                      <span className="cart-item-price">{kronor(ore(dish.price) * quantity)}</span>
+                    </li>
+                  ))}
+                </ul>
+                {applied && (
+                  <div className="cart-discount">
+                    <span>Rabatt {applied.percent} % ({applied.code})</span>
+                    <span>-{kronor(subtotal - total)}</span>
+                  </div>
+                )}
+                <div className="cart-total">
+                  <span>Totalt</span>
+                  <span>
+                    {applied && <s className="cart-total-before">{kronor(subtotal)}</s>} {kronor(total)}
                   </span>
-                  <span className="cart-item-price">{kronor(ore(dish.price) * quantity)}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-          {applied && (
-            <div className="cart-discount">
-              <span>Rabatt {applied.percent} % ({applied.code})</span>
-              <span>-{kronor(subtotal - total)}</span>
-            </div>
-          )}
-          <div className="cart-total">
-            <span>Totalt</span>
-            <span>
-              {applied && <s className="cart-total-before">{kronor(subtotal)}</s>} {kronor(total)}
-            </span>
-          </div>
-          {marketing && lines.length > 0 && (
-            <div className="cart-code">
-              {!codeOpen && !code ? (
-                <button type="button" className="link-button" onClick={() => setCodeOpen(true)}>
-                  Har du en rabattkod?
-                </button>
-              ) : code ? (
-                <p className="cart-code-ok" role="status">
-                  {belowMin
-                    ? `Koden gäller från ${kronor(code.minOrderOre)}. Lägg till för ${kronor(code.minOrderOre - subtotal)} till.`
-                    : `Koden ${code.code} ger ${code.percent} % rabatt.`}{' '}
-                  <button type="button" className="link-button" onClick={() => { setCode(null); setCodeInput('') }}>
-                    Ta bort
-                  </button>
-                </p>
-              ) : (
-                <div className="cart-code-row">
-                  <label className="sr-only" htmlFor="order-code">Rabattkod</label>
-                  <input id="order-code" autoComplete="off" autoCapitalize="characters" placeholder="ABCD-EFGH"
-                    value={codeInput} maxLength={12} onChange={(e) => setCodeInput(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void applyCode() } }} />
-                  <button type="button" className="btn-secondary" disabled={codeBusy || !codeInput.trim()}
-                    onClick={() => void applyCode()}>
-                    {codeBusy ? 'Kollar…' : 'Använd'}
-                  </button>
                 </div>
-              )}
-              {codeError && <p className="field-hint error" role="alert">{codeError}</p>}
-            </div>
-          )}
-          <p className="cart-note">Priserna inkluderar moms.</p>
+                <p className="cart-note">Priserna inkluderar moms.</p>
+                {marketing && (
+                  <div className="cart-code">
+                    {!codeOpen && !code ? (
+                      <button type="button" className="link-button" onClick={() => setCodeOpen(true)}>
+                        Har du en rabattkod?
+                      </button>
+                    ) : code ? (
+                      <p className="cart-code-ok" role="status">
+                        {belowMin
+                          ? `Koden gäller från ${kronor(code.minOrderOre)}. Lägg till för ${kronor(code.minOrderOre - subtotal)} till.`
+                          : `Koden ${code.code} ger ${code.percent} % rabatt.`}{' '}
+                        <button type="button" className="link-button" onClick={() => { setCode(null); setCodeInput('') }}>
+                          Ta bort
+                        </button>
+                      </p>
+                    ) : (
+                      <div className="cart-code-row">
+                        <label className="sr-only" htmlFor="order-code">Rabattkod</label>
+                        <input id="order-code" autoComplete="off" autoCapitalize="characters" placeholder="ABCD-EFGH"
+                          value={codeInput} maxLength={12} onChange={(e) => setCodeInput(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void applyCode() } }} />
+                        <button type="button" className="btn-secondary" disabled={codeBusy || !codeInput.trim()}
+                          onClick={() => void applyCode()}>
+                          {codeBusy ? 'Kollar…' : 'Använd'}
+                        </button>
+                      </div>
+                    )}
+                    {codeError && <p className="field-hint error" role="alert">{codeError}</p>}
+                  </div>
+                )}
+                {tooLarge && (
+                  <p className="notice error" role="alert">
+                    Beställningen är för stor för att betalas online (högst {kronor(MAX_ORDER_ORE)}). Minska antalet eller
+                    kontakta restaurangen.
+                  </p>
+                )}
+              </>
+            )}
 
-          {lines.length > 0 && (
-          <form className="order-form" onSubmit={submit} noValidate aria-busy={busy || undefined}>
-            <fieldset className="order-fields" disabled={busy}>
-            <label className="booking-field">
-              <span>Namn</span>
-              <input autoComplete="name" value={guest.name}
-                onChange={(e) => setGuest({ ...guest, name: e.target.value })} />
-            </label>
-            <label className="booking-field">
-              <span>Mobilnummer</span>
-              <span className="field-hint">
-                {mode === 'pickup' ? 'Vi sms:ar när maten lagas och när den är klar.' : 'Vi sms:ar när maten lagas.'}
-              </span>
-              <PhoneInput value={guest.phone} onChange={(phone) => setGuest({ ...guest, phone })} />
-            </label>
-            <label className="booking-field">
-              <span>E-post (kvitto)</span>
-              <input type="email" autoComplete="email" value={guest.email}
-                onChange={(e) => setGuest({ ...guest, email: e.target.value })} />
-            </label>
-            <label className="booking-field">
-              <span>Allergier eller önskemål (valfritt)</span>
-              <textarea rows={2} maxLength={NOTES_MAX} value={guest.notes}
-                onChange={(e) => setGuest({ ...guest, notes: e.target.value })} />
-            </label>
-            <label className="booking-check">
-              <input type="checkbox" checked={guest.accept}
-                onChange={(e) => setGuest({ ...guest, accept: e.target.checked })} />
-              <span>
-                Jag förstår att beställningen inte kan ändras efter betalning. Avbryter restaurangen får
-                jag pengarna tillbaka.
-              </span>
-            </label>
-            <MarketingConsent value={guest.consent} onChange={(consent) => setGuest({ ...guest, consent })} />
-            <GuestDataNotice kind="order" />
-            {turnstileSiteKey && (
-              <TurnstileWidget siteKey={turnstileSiteKey} resetKey={turnstileReset} action="order"
-                onToken={setTurnstileToken} />
+            {step === 'who' && (
+              <>
+                <h2 className="checkout-title" ref={titleRef} tabIndex={-1}>{STEP_TITLE.who}</h2>
+                <label className="booking-field">
+                  <span>Namn</span>
+                  <input autoComplete="name" value={guest.name}
+                    onChange={(e) => setGuest({ ...guest, name: e.target.value })} />
+                </label>
+                <label className="booking-field">
+                  <span>Mobilnummer</span>
+                  <span className="field-hint">
+                    {mode === 'pickup' ? 'Vi sms:ar när maten lagas och när den är klar.' : 'Vi sms:ar när maten lagas.'}
+                  </span>
+                  <PhoneInput value={guest.phone} onChange={(phone) => setGuest({ ...guest, phone })} />
+                </label>
+              </>
             )}
-            {tooLarge && (
-              <p className="notice error" role="alert">
-                Beställningen är för stor för att betalas online (högst {kronor(MAX_ORDER_ORE)}). Minska antalet eller
-                kontakta restaurangen.
-              </p>
+
+            {step === 'receipt' && (
+              <>
+                <h2 className="checkout-title" ref={titleRef} tabIndex={-1}>{STEP_TITLE.receipt}</h2>
+                <label className="booking-field">
+                  <span>E-post</span>
+                  <span className="field-hint">Hit skickar vi kvittot.</span>
+                  <input type="email" autoComplete="email" value={guest.email}
+                    onChange={(e) => setGuest({ ...guest, email: e.target.value })} />
+                </label>
+                <label className="booking-field">
+                  <span>Allergier eller önskemål</span>
+                  <span className="field-hint">Valfritt, till exempel nötallergi.</span>
+                  <textarea rows={3} maxLength={NOTES_MAX} value={guest.notes}
+                    onChange={(e) => setGuest({ ...guest, notes: e.target.value })} />
+                </label>
+              </>
             )}
-            {error && !tooLarge && (
+
+            {step === 'confirm' && (
+              <fieldset className="order-fields" disabled={busy}>
+                <h2 className="checkout-title" ref={titleRef} tabIndex={-1}>{STEP_TITLE.confirm}</h2>
+                <label className="booking-check">
+                  <input type="checkbox" checked={guest.accept}
+                    onChange={(e) => setGuest({ ...guest, accept: e.target.checked })} />
+                  <span>
+                    Jag förstår att beställningen inte kan ändras efter betalning. Avbryter restaurangen får
+                    jag pengarna tillbaka.
+                  </span>
+                </label>
+                <MarketingConsent value={guest.consent} onChange={(consent) => setGuest({ ...guest, consent })} />
+                <details className="checkout-privacy">
+                  <summary>
+                    Vi använder namn, mobil och e-post till beställningen och kvittot.{' '}
+                    <span className="checkout-privacy-more">Läs mer</span>
+                  </summary>
+                  <GuestDataNotice kind="order" />
+                </details>
+                {turnstileSiteKey && (
+                  <TurnstileWidget siteKey={turnstileSiteKey} resetKey={turnstileReset} action="order"
+                    onToken={setTurnstileToken} />
+                )}
+              </fieldset>
+            )}
+
+            {error && (step !== 'cart' || !tooLarge) && (
               <p className="notice error" role="alert">
                 {error}
               </p>
             )}
-            </fieldset>
-            <button
-              type="submit"
-              className={`btn-primary${busy ? ' is-busy' : ''}`}
-              disabled={!open || busy || lines.length === 0 || tooLarge}
-            >
-              {busy
-                ? <><span className="spinner" aria-hidden="true" />Skickar beställningen…</>
-                : `Till betalning · ${kronor(total)}`}
-            </button>
+            </div>
+
+            <div className="checkout-actions">
+              {step === 'confirm' ? (
+                <button
+                  type="submit"
+                  className={`btn-primary checkout-next${busy ? ' is-busy' : ''}`}
+                  disabled={!open || busy || tooLarge}
+                >
+                  {busy
+                    ? <><span className="spinner" aria-hidden="true" />Skickar beställningen…</>
+                    : `Till betalning · ${kronor(total)}`}
+                </button>
+              ) : (
+                <button type="submit" className="btn-primary checkout-next" disabled={!open || tooLarge}>
+                  Fortsätt
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" /></svg>
+                </button>
+              )}
+              {step !== 'cart' && (
+                <button type="button" className="checkout-back" disabled={busy} onClick={previous}>
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
+                  Tillbaka
+                </button>
+              )}
+            </div>
           </form>
           )}
         </aside>
       </div>
 
       {lines.length > 0 && (
-        <a className="order-mobile-bar" href="#order-cart" ref={barRef}>
+        <a className={`order-mobile-bar${cartInView ? ' is-hidden' : ''}`} href="#order-cart" ref={barRef}
+          aria-hidden={cartInView || undefined} tabIndex={cartInView ? -1 : undefined}>
           <span className="order-mobile-bar-count" key={count}>{count}</span>
           <strong>Visa beställning</strong>
           <span className="order-mobile-bar-total">{kronor(total)}</span>
