@@ -163,8 +163,15 @@ export interface GuestRequest {
   changeMessage?: string
   paymentTermsDays?: number
   location?: { name?: string; address?: string; phoneNumber?: string; email?: string }
+  /** Restaurangen har signerat; först då kan gästen signera. */
+  restaurantSignedAt?: string
   canSign: boolean
+  /** Godkänna utan BankID (om restaurangen tillåter det). */
+  canAccept?: boolean
   canPay: boolean
+  signedMethod?: 'bankid' | 'simulator' | 'simple_acceptance' | 'provider'
+  /** Dokument som går att ladda ner: offerten och den signerade kopian. */
+  documents?: ('offer' | 'signed')[]
 }
 
 export interface RequestInput extends QuoteInput {
@@ -194,10 +201,20 @@ export interface RequestInput extends QuoteInput {
 
 export interface SignState {
   status: 'pending' | 'failed' | 'complete' | 'none'
+  /** Start: BankID här på sidan, eller signeringstjänstens egen sida. */
+  kind?: 'bankid' | 'redirect'
+  url?: string
   hintCode?: string
   qrData?: string
   autoStartToken?: string
   request?: GuestRequest
+}
+
+export interface AcceptInput {
+  name: string
+  role?: string
+  confirmAuthority?: true
+  acceptTerms: true
 }
 
 const loc = (locationId: string) => `/locations/${encodeURIComponent(locationId)}/catering`
@@ -240,6 +257,16 @@ export function startSigning(locationId: string, requestId: string, token: strin
 
 export function signingStatus(locationId: string, requestId: string, token: string): Promise<SignState> {
   return apiPost(`${cust(locationId, requestId)}/sign/status`, undefined, auth(token))
+}
+
+export function acceptOffer(locationId: string, requestId: string, token: string, input: AcceptInput): Promise<GuestRequest> {
+  return apiPost(`${cust(locationId, requestId)}/accept`, input, auth(token))
+}
+
+/** En nedladdningslänk (5 minuter) till offerten eller den signerade kopian. */
+export function documentLink(locationId: string, requestId: string, token: string, docId: 'offer' | 'signed'):
+  Promise<{ url: string }> {
+  return apiGet(`${cust(locationId, requestId)}/documents/${docId}`, auth(token))
 }
 
 /** Betalningen på sajtens egen sida: Checkout Sessionens hemlighet för Payment Element. */
@@ -356,6 +383,9 @@ const ERRORS: Record<string, string> = {
   catering_delivery_off: 'Leverans går inte att välja.',
   menu_item_unavailable: 'En rätt finns inte längre på menyn. Ta bort den och försök igen.',
   not_signable: 'Offerten kan inte signeras just nu.',
+  awaiting_restaurant: 'Restaurangen signerar offerten först. Du får ett mejl när du kan signera.',
+  acceptance_not_allowed: 'Restaurangen tar bara emot signering med BankID.',
+  already_signed: 'Offerten är redan signerad.',
   offer_expired: 'Offerten har gått ut. Kontakta restaurangen.',
   offer_changed: 'Restaurangen har skickat en ny version av offerten. Läs den och signera igen.',
   signing_unavailable: 'BankID går inte att nå just nu. Försök igen om en stund.',
@@ -380,6 +410,8 @@ export function errorMessage(err: unknown): string {
     return `${err.message.replace(/ needs at least.*/, '')} kräver minst ${err.message.match(/(\d+) guests$/)![1]} gäster.`
   }
   if (/^guests/.test(err.message)) return 'Fyll i antal gäster.'
+  if (/^confirmAuthority/.test(err.message)) return 'Bekräfta att du får teckna avtal för företaget.'
+  if (/^role/.test(err.message)) return 'Fyll i din roll i företaget.'
   if (/^signatory/.test(err.message)) return 'Fyll i vem som signerar för företaget och bekräfta behörigheten.'
   if (/^choose at least one/.test(err.message)) return 'Välj minst ett paket eller en rätt.'
   if (/^at least (\d+) portions/.test(err.message)) return `Minst ${err.message.match(/\d+/)![0]} portioner.`
