@@ -121,6 +121,9 @@ describe('BokaBordPage', () => {
     expect(JSON.parse(post[1].body)).not.toHaveProperty('marketingOptIn')
     expect((post[1].headers as Record<string, string>)['X-Manage-Token']).toBe('tok123')
     expect(screen.getByRole('link', { name: /\/bokning\/loc-1\/r1#tok123$/ })).toBeInTheDocument()
+    const ics = decodeURIComponent(screen.getByRole('link', { name: 'Lägg till i kalendern' }).getAttribute('href')!.split(',')[1])
+    expect(ics).toContain('UID:r1@booqy.se')
+    expect(ics.replace(/\r\n /g, '')).toContain('/bokning/loc-1/r1#tok123')
   })
 
   it('shows the booking length and extendability before and after confirming', async () => {

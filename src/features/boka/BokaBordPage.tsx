@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom'
 import { useSite } from '../../shared/SiteContext'
 import { PhoneInput } from '../../shared/PhoneInput'
 import { useLocationInfo } from '../../shared/useLocationInfo'
+import AddToCalendar from '../../shared/AddToCalendar'
+import { bookingEvent, restaurantName } from '../../shared/calendar'
 import { getPublicActiveLayout, groupElementsByFloor, labelTables } from '../../shared/layoutApi'
 import type { FloorGroup, LayoutTableElement } from '../../shared/layoutApi'
 import {
@@ -648,6 +650,13 @@ export default function BokaBordPage() {
           </div>
           {booked.location?.address && <div><dt>Adress</dt><dd>{booked.location.address}</dd></div>}
         </dl>
+        <AddToCalendar
+          event={bookingEvent(booked, {
+            restaurant: restaurantName(config.tenant.name, booked.location?.name ?? location.name),
+            address: booked.location?.address ?? info.address,
+            link,
+          })}
+        />
         {booked.guarantee?.cardOnFile && (
           <p className="booking-sent">Kortgarantin är sparad - inget har dragits från kortet.</p>
         )}

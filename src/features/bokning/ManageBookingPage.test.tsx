@@ -17,6 +17,25 @@ it('shows the booking length', async () => {
   expect(await screen.findByText('2 tim, kan inte förlängas')).toBeInTheDocument()
 })
 
+it('offers the booking for the calendar while it is active', async () => {
+  renderAt('#tok')
+  const add = await screen.findByRole('link', { name: 'Lägg till i kalendern' })
+  const ics = decodeURIComponent(add.getAttribute('href')!.split(',')[1])
+  expect(add).toHaveAttribute('download', 'bokning.ics')
+  expect(ics).toContain('UID:r1@booqy.se')
+  expect(ics).toContain('SUMMARY:Bord hos Testkrogen')
+  expect(ics).toContain('LOCATION:Gatan 1')
+  expect(screen.getByRole('link', { name: 'Google Kalender' })).toHaveAttribute(
+    'href', expect.stringContaining('https://calendar.google.com/calendar/render?action=TEMPLATE'))
+})
+
+it('no calendar button for a cancelled booking', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => json({ ...BOOKING, status: 'cancelled_no_charge', cancellable: false })))
+  renderAt('#tok')
+  expect(await screen.findByText('Avbokad')).toBeInTheDocument()
+  expect(screen.queryByRole('link', { name: 'Lägg till i kalendern' })).not.toBeInTheDocument()
+})
+
 function renderAt(hash: string) {
   window.location.hash = hash
   return render(

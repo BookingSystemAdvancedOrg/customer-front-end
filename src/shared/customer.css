@@ -1381,6 +1381,24 @@
   overflow-wrap: anywhere;
 }
 
+.add-to-calendar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+.add-to-calendar .btn-primary {
+  text-decoration: none;
+}
+
+.add-to-calendar-alt {
+  font-size: 15px;
+  color: var(--accent-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .booking-manage-link a {
   color: var(--gold-bright);
 }
