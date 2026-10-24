@@ -4486,3 +4486,30 @@ a,
   color: var(--muted);
   opacity: 1;
 }
+
+/* Order status: the order number big and green in the top right corner */
+.order-status h1.order-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+.order-code {
+  padding: 0.08em 0.32em 0.04em;
+  border-radius: 6px;
+  background: var(--ok-soft);
+  color: var(--ok-ink);
+  box-shadow: inset 0 0 0 2px var(--ok);
+  font-family: var(--mono);
+  font-stretch: 100%;
+  font-size: 1.15em;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  margin-left: auto;
+}
+@media (max-width: 420px) {
+  .order-status h1.order-head { flex-wrap: nowrap; font-size: 1.5rem; }
+}

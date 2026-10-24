@@ -128,7 +128,10 @@ export default function OrderStatusPage() {
   return (
     <section className={`booking-confirmation order-status${order && CELEBRATE.has(order.status) ? ' is-success' : ''}`}>
       {order && CELEBRATE.has(order.status) && <Celebrate key={order.status} />}
-      <h1>{order?.number ? `Beställning #${order.number}` : 'Din beställning'}</h1>
+      {/* the number is what the guest says at the counter: big and green, top right */}
+      <h1 className="order-head">
+        {order?.number ? <>Beställning <span className="order-code">#{order.number}</span></> : 'Din beställning'}
+      </h1>
       {!order && !error && (
         <div className="printing printing--inline" role="status" aria-label="Hämtar beställningen">
           <span className="printing__label">Hämtar beställningen</span>
