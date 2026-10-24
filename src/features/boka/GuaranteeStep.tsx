@@ -5,7 +5,9 @@ import { useTheme } from '../../shared/theme'
 import { paymentAppearance, paymentFonts } from '../../shared/payment/appearance'
 import { PaymentPrinting, SecureNote } from '../../shared/payment/PaymentTicket'
 import { stripeFor } from '../../shared/payment/stripe'
-import { bookingErrorMessage, confirmGuestReservation, formatFee } from './bookingApi'
+import { feeLines, formatDeadline, fromSnapshot, NOTHING_CHARGED, persons, WAIVER } from '../../shared/bookingTerms'
+import type { GuaranteeTerms } from '../../shared/site'
+import { bookingErrorMessage, confirmGuestReservation } from './bookingApi'
 import type { GuestReservation } from './bookingApi'
 
 /**
@@ -38,23 +40,42 @@ function minutesLeft(expiresAt: string, now: number): number {
   return Math.max(0, Math.ceil((Date.parse(expiresAt) - now) / 60000))
 }
 
+/** Avgifterna och sista tiden för kostnadsfri avbokning från bokningens ögonblicksbild. */
 export function GuaranteeTermsText({ booking }: { booking: GuestReservation }) {
   const g = booking.guarantee
   if (!g) return null
+  const until = g.freeCancelUntil ? formatDeadline(g.freeCancelUntil, booking.timezone) : null
   return (
     <ul className="guarantee-terms">
-      <li>Inget dras från kortet nu.</li>
-      {g.noShowFee > 0 && (
-        <li>Kommer ni inte och inte har avbokat debiteras <strong>{formatFee(g.noShowFee)}</strong>.</li>
-      )}
-      {g.lateCancelFee > 0 && (
-        <li>
-          Avbokar du senare än {g.cancelCutoffHours} timmar före besöket debiteras{' '}
-          <strong>{formatFee(g.lateCancelFee)}</strong>.
-        </li>
-      )}
-      <li>Avbokar du i tid kostar det ingenting.</li>
+      {booking.status === 'pending' && <li>{NOTHING_CHARGED}</li>}
+      {feeLines(fromSnapshot(g, booking.partySize), booking.partySize, until).map((line) => <li key={line}>{line}</li>)}
+      <li>{WAIVER}</li>
     </ul>
+  )
+}
+
+/** Före bokningen: platsens villkor räknade för just det här sällskapet. */
+export function GuaranteeNotice({ terms, partySize }: { terms: GuaranteeTerms; partySize: number }) {
+  return (
+    <div className="guarantee-notice" role="note">
+      <strong>Kortgaranti krävs</strong>
+      {terms.minPartySize > 1 ? ` för sällskap om ${persons(terms.minPartySize)} eller fler` : ''}. {NOTHING_CHARGED}
+      <ul className="guarantee-terms">
+        {feeLines(terms, partySize).map((line) => <li key={line}>{line}</li>)}
+        <li>{WAIVER}</li>
+      </ul>
+    </div>
+  )
+}
+
+/** Bekräftelsen: kortet är sparat, och vad som gäller för bokningen. */
+export function GuaranteeConfirmation({ booking }: { booking: GuestReservation }) {
+  if (!booking.guarantee?.cardOnFile) return null
+  return (
+    <div className="guarantee-confirmation">
+      <p className="booking-sent">Kortgarantin är sparad - inget har dragits från kortet.</p>
+      <GuaranteeTermsText booking={booking} />
+    </div>
   )
 }
 

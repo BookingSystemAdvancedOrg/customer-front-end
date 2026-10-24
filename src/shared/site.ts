@@ -45,6 +45,8 @@ export interface SiteLocation {
   bookingDurationHours: number | null
   maxPartySizeOnline: number | null
   guarantee?: GuaranteeTerms | null
+  /** Hur länge bordet hålls för en sen gäst (null/saknas = inte angivet). */
+  gracePeriodMinutes?: number | null
   specialDays?: SpecialDay[]
   /** Hur man kan beställa här (null/saknas = ingen beställning). */
   ordering?: { pickup: boolean; table: boolean; prepMinutes: number } | null

@@ -34,7 +34,7 @@ import {
   validEmail,
 } from './bookingApi'
 import type { Availability, AvailabilitySlot, GuestReservation, TableHold, TableOption, TableUnavailable } from './bookingApi'
-import { GuaranteeStep } from './GuaranteeStep'
+import { GuaranteeConfirmation, GuaranteeNotice, GuaranteeStep } from './GuaranteeStep'
 import { TurnstileWidget } from './TurnstileWidget'
 import { ApiError } from '../../shared/api'
 import { FloorPlanSvg } from './FloorPlanSvg'
@@ -657,9 +657,7 @@ export default function BokaBordPage() {
             link,
           })}
         />
-        {booked.guarantee?.cardOnFile && (
-          <p className="booking-sent">Kortgarantin är sparad - inget har dragits från kortet.</p>
-        )}
+        <GuaranteeConfirmation booking={booked} />
         <div className="next-up">
           <h2>Vad händer nu</h2>
           <ol>
@@ -952,6 +950,7 @@ export default function BokaBordPage() {
               </label>
             </div>
             <GuestDataNotice kind="booking" />
+            {cardNeeded && terms && <GuaranteeNotice terms={terms} partySize={partySize} />}
             <label className="booking-check">
               <input type="checkbox" checked={guest.acceptTerms} onChange={(e) => setGuest({ ...guest, acceptTerms: e.target.checked })} />
               <span>
@@ -959,15 +958,6 @@ export default function BokaBordPage() {
               </span>
             </label>
             <MarketingConsent value={guest.consent} onChange={(consent) => setGuest({ ...guest, consent })} />
-            {cardNeeded && terms && (
-              <div className="guarantee-notice" role="note">
-                <strong>Kortgaranti krävs</strong> för sällskap om {terms.minPartySize} personer eller fler.
-                Inget dras nu.
-                {terms.noShowFeePerPerson > 0 && ` Uteblir ni debiteras ${terms.noShowFeePerPerson} kr per person.`}
-                {terms.lateCancelFeePerPerson > 0 &&
-                  ` Avbokning senare än ${terms.cancelCutoffHours} timmar före kostar ${terms.lateCancelFeePerPerson} kr per person.`}
-              </div>
-            )}
             {formError && <p className="notice error" role="alert">{formError}</p>}
             <button type="submit" className={`btn-primary${submitting ? ' is-busy' : ''}`} disabled={submitting}>
               {submitting

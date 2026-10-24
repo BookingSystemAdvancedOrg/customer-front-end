@@ -216,6 +216,8 @@ export interface GuestReservation {
     noShowFee: number
     lateCancelFee: number
     cancelCutoffHours: number
+    /** Sista tiden (UTC) för kostnadsfri avbokning; null = ingen avgift för sen avbokning. */
+    freeCancelUntil?: string | null
     currency: string
     cancellationFee: number
   }

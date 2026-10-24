@@ -29,7 +29,8 @@ const LAYOUT = {
 const PENDING = {
   reservationId: 'r1', status: 'pending', date: '2026-09-20', startTime: '18:00', endTime: '20:00',
   partySize: 3, tableIds: ['table-b'], customerName: 'Anna', cancellable: true, manageToken: 'tok',
-  guarantee: { cardOnFile: false, noShowFee: 60000, lateCancelFee: 30000, cancelCutoffHours: 24, currency: 'sek', cancellationFee: 0 },
+  guarantee: { cardOnFile: false, noShowFee: 60000, lateCancelFee: 30000, cancelCutoffHours: 24,
+    freeCancelUntil: '2026-09-19T16:00:00Z', currency: 'sek', cancellationFee: 0 },
   setup: { clientSecret: 'seti_secret', stripeAccount: 'acct_1', expiresAt: new Date(Date.now() + 20 * 60000).toISOString() },
 }
 
@@ -77,6 +78,7 @@ async function bookThree(user: ReturnType<typeof userEvent.setup>) {
   await user.type(await screen.findByLabelText('Namn'), 'Anna')
   await user.type(screen.getByLabelText('E-post'), 'anna@example.se')
   await user.type(screen.getByLabelText('Telefon'), '0701234567')
+  expect(screen.getByRole('checkbox', { name: /bokningsvillkoren/ })).not.toBeChecked()
   await user.click(screen.getByRole('checkbox', { name: /bokningsvillkoren/ }))
 }
 
@@ -86,17 +88,23 @@ describe('card guarantee', () => {
     confirmSetup.mockResolvedValue({ setupIntent: { status: 'succeeded' } })
     await bookThree(user)
 
-    expect(screen.getByRole('note')).toHaveTextContent('Kortgaranti krävs för sällskap om 3 personer')
-    expect(screen.getByRole('note')).toHaveTextContent('200 kr per person')
+    const note = screen.getByRole('note')
+    expect(note).toHaveTextContent('Kortgaranti krävs för sällskap om 3 personer eller fler. Inget dras från kortet nu.')
+    expect(note).toHaveTextContent('Uteblivet besök: 200 kr/person (600 kr för 3 personer).')
+    expect(note).toHaveTextContent('Avbokning senare än 24 timmar före: 100 kr/person (300 kr för 3 personer).')
+    expect(note).toHaveTextContent('Restaurangen kan efterskänka avgiften vid sjukdom eller liknande.')
+    expect(screen.getByRole('checkbox', { name: /bokningsvillkoren/ })).toBeChecked()
     await user.click(screen.getByRole('button', { name: 'Fortsätt till kortgaranti' }))
 
     expect(await screen.findByRole('heading', { name: 'Kortgaranti' })).toBeInTheDocument()
-    expect(screen.getByText(/600 kr/)).toBeInTheDocument()
-    expect(screen.getByText(/300 kr/)).toBeInTheDocument()
+    expect(screen.getByText('Uteblivet besök: 200 kr/person (600 kr för 3 personer).')).toBeInTheDocument()
+    expect(screen.getByText('Kostnadsfri avbokning senast lördag 19 september kl 18:00.')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Spara kortet och boka' }))
 
     expect(await screen.findByRole('heading', { name: 'Ditt bord är bokat' })).toBeInTheDocument()
     expect(screen.getByText(/Kortgarantin är sparad/)).toBeInTheDocument()
+    expect(screen.getByText('Avbokning senare än 24 timmar före: 100 kr/person (300 kr för 3 personer).')).toBeInTheDocument()
+    expect(screen.getByText('Kostnadsfri avbokning senast lördag 19 september kl 18:00.')).toBeInTheDocument()
     expect(confirmSetup).toHaveBeenCalledWith(expect.objectContaining({ redirect: 'if_required' }))
     const confirmCall = fetchMock.mock.calls.find(([url]) => String(url).endsWith('/confirm'))!
     expect((confirmCall[1].headers as Record<string, string>)['X-Manage-Token']).toBe('tok')

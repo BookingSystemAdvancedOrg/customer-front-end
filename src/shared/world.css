@@ -4513,3 +4513,11 @@ a,
 @media (max-width: 420px) {
   .order-status h1.order-head { flex-wrap: nowrap; font-size: 1.5rem; }
 }
+
+/* Kortgarantins avgifter: i notisen före bokningen och i bekräftelsen. */
+.guarantee-notice .guarantee-terms {
+  margin: 8px 0 0;
+}
+.guarantee-confirmation .guarantee-terms {
+  margin: 8px 0 16px;
+}
