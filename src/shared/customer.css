@@ -2169,3 +2169,41 @@
     content: 'Sparas: ';
   }
 }
+
+/* Stolar i 3D: en sits och ett ryggstöd mot utsidan, inskjutna under bordet.
+   Bara bild - pekaren går igenom till bordet. */
+.f3d-chair {
+  position: absolute;
+  transform-style: preserve-3d;
+  pointer-events: none;
+}
+
+.f3d-chair-seat {
+  position: absolute;
+  inset: 0;
+  border-radius: 3px;
+  background: #d9cdb8;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+  transform: translateZ(12px);
+}
+
+.f3d-chair-back {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 26px;
+  border-radius: 3px 3px 0 0;
+  background: #b9ab95;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+  transform-origin: top center;
+  transform: rotateX(90deg);
+}
+
+.f3d-table.is-selected .f3d-chair-seat {
+  background: color-mix(in srgb, var(--success) 35%, #ffffff);
+}
+
+.f3d-table.is-selected .f3d-chair-back {
+  background: color-mix(in srgb, var(--success) 70%, #ffffff);
+}

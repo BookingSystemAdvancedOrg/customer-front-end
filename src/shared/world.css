@@ -4521,3 +4521,16 @@ a,
 .guarantee-confirmation .guarantee-terms {
   margin: 8px 0 16px;
 }
+
+/* 2D-stolarnas ryggstöd och: stolarna är bara bild, inte klickbara. */
+.floor-svg-chairs {
+  pointer-events: none;
+}
+
+.floor-svg-chair-back {
+  fill: color-mix(in srgb, var(--ink) 30%, var(--surface));
+}
+
+.floor-svg-chairs.is-selected .floor-svg-chair-back {
+  fill: var(--success);
+}
