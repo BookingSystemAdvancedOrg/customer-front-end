@@ -2,47 +2,7 @@ import { labelTables, layoutViewBox } from '../../shared/layoutApi'
 import type { FloorGroup, LayoutElement, LayoutTableElement } from '../../shared/layoutApi'
 import type { TableUnavailable } from './bookingApi'
 import { tableChoice } from './tableState'
-
-/** Stolar runt ett bord, sett ovanifrån: längs långsidorna på ett
- * rektangulärt bord (och kortsidorna när det behövs), jämnt runt ett runt. */
-function chairs(el: LayoutTableElement): { x: number; z: number; rot: number }[] {
-  const n = Math.max(0, Math.min(el.seats || 0, 16))
-  const gap = 0.24
-  if (n === 0) return []
-  if (el.shape === 'round') {
-    const r = Math.max(el.width, el.depth) / 2 + gap
-    return Array.from({ length: n }, (_, i) => {
-      const a = (i / n) * Math.PI * 2 - Math.PI / 2
-      return { x: el.x + Math.cos(a) * r, z: el.z + Math.sin(a) * r, rot: (a * 180) / Math.PI + 90 }
-    })
-  }
-  const long = el.width >= el.depth
-  const along = long ? el.width : el.depth
-  const across = long ? el.depth : el.width
-  const perSide = Math.ceil(n / 2)
-  // Får inte stolarna plats på långsidorna sätts en på varje kortsida.
-  const ends = perSide * 0.5 > along && n >= 4 ? 2 : 0
-  const sides = n - ends
-  const top = Math.ceil(sides / 2)
-  const bottom = sides - top
-  const out: { x: number; z: number; rot: number }[] = []
-  const place = (count: number, sign: number) => {
-    for (let i = 0; i < count; i++) {
-      const t = (i + 0.5) / count - 0.5
-      const u = t * along
-      const v = sign * (across / 2 + gap)
-      out.push(long ? { x: el.x + u, z: el.z + v, rot: sign > 0 ? 180 : 0 } : { x: el.x + v, z: el.z + u, rot: sign > 0 ? 90 : 270 })
-    }
-  }
-  place(top, -1)
-  place(bottom, 1)
-  for (let i = 0; i < ends; i++) {
-    const sign = i === 0 ? -1 : 1
-    const u = sign * (along / 2 + gap)
-    out.push(long ? { x: el.x + u, z: el.z, rot: sign > 0 ? 90 : 270 } : { x: el.x, z: el.z + u, rot: sign > 0 ? 180 : 0 })
-  }
-  return out
-}
+import { CHAIR_D, CHAIR_W, chairs } from './chairs'
 
 /**
  * Planritningen i verklig skala (SVG-viewBox i meter, samma enhet som
@@ -158,10 +118,13 @@ export function FloorPlanSvg({
         }
       >
         <title>{title}</title>
-        <g className={`floor-svg-chairs${state}`} transform={el.shape === 'round' ? undefined : transform}>
+        {/* Stolarna är bara bild: inskjutna under bordet, ryggstödet utåt, inte klickbara. */}
+        <g className={`floor-svg-chairs${state}`} transform={el.shape === 'round' ? undefined : transform} aria-hidden="true">
           {seatsAround.map((c, i) => (
-            <rect key={i} className="floor-svg-chair" x={c.x - 0.19} y={c.z - 0.15} width={0.38} height={0.3} rx={0.09}
-              transform={`rotate(${c.rot} ${c.x} ${c.z})`} />
+            <g key={i} transform={`rotate(${c.rot} ${c.x} ${c.z})`}>
+              <rect className="floor-svg-chair" x={c.x - CHAIR_W / 2} y={c.z - CHAIR_D / 2} width={CHAIR_W} height={CHAIR_D} rx={0.07} />
+              <rect className="floor-svg-chair-back" x={c.x - CHAIR_W / 2} y={c.z - CHAIR_D / 2} width={CHAIR_W} height={0.09} rx={0.04} />
+            </g>
           ))}
         </g>
         {shape}

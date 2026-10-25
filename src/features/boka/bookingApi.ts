@@ -46,6 +46,33 @@ export interface AvailabilitySlot {
   options?: TableOption[]
   /** Varför övriga bord inte går att välja (gästvyn). */
   unavailable?: TableUnavailable[]
+  /** Hur länge bordet är ert, om det kan förlängas och specialtidens namn. */
+  durationMinutes?: number
+  extendable?: boolean
+  ruleName?: string | null
+}
+
+/** Bokningens längd som den visas för gästen. */
+export interface BookingLength {
+  durationMinutes?: number
+  extendable?: boolean
+  ruleName?: string | null
+}
+
+function minutesText(minutes: number): string {
+  if (minutes <= 60) return `${minutes} min`
+  const rest = minutes % 60
+  const hours = Math.floor(minutes / 60)
+  return rest ? `${hours} tim ${rest} min` : `${hours} tim`
+}
+
+/** "1 tim 30 min, kan förlängas på plats om bordet är ledigt" /
+ * "60 min (Lunchbuffé), kan inte förlängas" (null utan uppgift). */
+export function lengthText({ durationMinutes, extendable, ruleName }: BookingLength): string | null {
+  if (!durationMinutes) return null
+  const rule = ruleName ? ` (${ruleName})` : ''
+  const ext = extendable ? 'kan förlängas på plats om bordet är ledigt' : 'kan inte förlängas'
+  return `${minutesText(durationMinutes)}${rule}, ${ext}`
 }
 
 function people(n: number): string {
@@ -54,7 +81,7 @@ function people(n: number): string {
 
 function sizeRange(u: TableUnavailable): string {
   const { minParty: min, maxParty: max } = u
-  if (min && max) return min === max ? people(min) : `${min}–${max} personer`
+  if (min && max) return min === max ? people(min) : `${min}-${max} personer`
   return ''
 }
 
@@ -67,7 +94,7 @@ export function tableBadge(u: TableUnavailable): string {
     case 'too_small':
     case 'too_large': {
       const { minParty: min, maxParty: max } = u
-      return min && max ? (min === max ? `${min} pers` : `${min}–${max} pers`) : 'Passar ej'
+      return min && max ? (min === max ? `${min} pers` : `${min}-${max} pers`) : 'Passar ej'
     }
     default: return 'Ej ledigt'
   }
@@ -126,6 +153,8 @@ export interface BookingRequest {
   notes?: string
   language?: 'sv' | 'en'
   marketingOptIn?: boolean
+  /** Frivilligt samtycke till erbjudanden (shared/MarketingConsent.tsx). */
+  marketingConsent?: { channels: ('email' | 'sms')[]; textVersion: string }
   acceptTerms: true
   /** Token från säkerhetskontrollen (Cloudflare Turnstile) när den visas. */
   turnstileToken?: string
@@ -146,6 +175,9 @@ export interface TableHold {
   tableIds: string[]
   partySize: number
   cardRequired: boolean
+  durationMinutes?: number
+  extendable?: boolean
+  ruleName?: string | null
 }
 
 export interface HoldRequest {
@@ -167,6 +199,9 @@ export interface GuestReservation {
   tableIds: string[]
   customerName?: string
   cancellable: boolean
+  durationMinutes?: number
+  extendable?: boolean
+  ruleName?: string | null
   location?: {
     locationId: string
     name: string
@@ -181,6 +216,8 @@ export interface GuestReservation {
     noShowFee: number
     lateCancelFee: number
     cancelCutoffHours: number
+    /** Sista tiden (UTC) för kostnadsfri avbokning; null = ingen avgift för sen avbokning. */
+    freeCancelUntil?: string | null
     currency: string
     cancellationFee: number
   }
@@ -327,7 +364,7 @@ export function dayMessage(day: DayStatus | null | undefined, phone: string): st
   const call = phone ? ` Ring oss på ${phone}.` : ''
   if (day.kind === 'closed') return `Vi har stängt den dagen${note}.`
   if (day.kind === 'no_online') return `Den dagen går det inte att boka online${note}.${call}`
-  const hours = (day.intervals ?? []).map((i) => `${i.opensAt}–${i.closesAt}`).join(', ')
+  const hours = (day.intervals ?? []).map((i) => `${i.opensAt}-${i.closesAt}`).join(', ')
   return `Avvikande öppettider den dagen: ${hours}${note}.`
 }
 

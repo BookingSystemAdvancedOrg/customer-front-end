@@ -44,7 +44,8 @@ afterEach(() => {
 describe('OrderStatusPage', () => {
   it('reads the order with the token from the SMS link', async () => {
     renderAt('#tok-from-sms')
-    expect(await screen.findByText('Beställning #12')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Beställning #12' })).toBeInTheDocument()
+    expect(screen.getByText('#12')).toHaveClass('order-code')
     expect(screen.getByText('Tack! Beställningen är mottagen.')).toBeInTheDocument()
     expect(screen.getByText(/Beräknat klar ca/)).toHaveTextContent('18:40')
     const [, init] = fetchMock.mock.calls[0]
@@ -61,7 +62,7 @@ describe('OrderStatusPage', () => {
       await vi.advanceTimersByTimeAsync(STATUS_POLL_MS)
     })
     expect(await screen.findByText('Klar att hämta!')).toBeInTheDocument()
-    expect(screen.getByText(/Hämta hos City – Gatan 1/)).toBeInTheDocument()
+    expect(screen.getByText(/Hämta hos City - Gatan 1/)).toBeInTheDocument()
   })
 
   it('tells the guest a failed payment cost nothing', async () => {

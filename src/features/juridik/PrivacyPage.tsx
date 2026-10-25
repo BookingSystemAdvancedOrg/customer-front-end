@@ -1,4 +1,5 @@
 import { useSite } from '../../shared/SiteContext'
+import { NoticeText } from './NoticeText'
 import { STORAGE_REGISTRY } from '../../shared/storageRegistry'
 import type { StorageKind } from '../../shared/storageRegistry'
 
@@ -24,6 +25,9 @@ export default function PrivacyPage() {
       <h1>Integritetspolicy</h1>
       <p className="cell-muted">Gäller för bokningar och besök på {tenant.name}s webbplats.</p>
 
+      {/* Restaurangens egen text (redigeras i admin) från en nyare backend;
+          annars standardtexten nedan. Cookietabellen kommer alltid efter. */}
+      {config.privacy ? <NoticeText body={config.privacy.notice.body} /> : (<>
       <h2>Personuppgiftsansvarig</h2>
       <p>
         {legal.legalName}
@@ -77,6 +81,7 @@ export default function PrivacyPage() {
         lämnar en kortgaranti hanteras kortuppgifterna av Stripe; vi ser aldrig ditt kortnummer. Vi säljer
         aldrig dina uppgifter.
       </p>
+      </>)}
 
       <h2 id="cookies">Cookies och lagring</h2>
       <p>
@@ -117,6 +122,8 @@ export default function PrivacyPage() {
         eventuell varukorg; inget annat på sajten påverkas.
       </p>
 
+      {/* Rättigheterna finns redan i restaurangens egen text. */}
+      {!config.privacy && (<>
       <h2>Dina rättigheter</h2>
       <p>
         Du har rätt att få veta vilka uppgifter vi har om dig, få dem rättade eller raderade, begränsa
@@ -124,6 +131,7 @@ export default function PrivacyPage() {
         {contact ? ` på ${contact}` : ''}. Du kan också klaga hos Integritetsskyddsmyndigheten (IMY),
         www.imy.se.
       </p>
+      </>)}
     </article>
   )
 }

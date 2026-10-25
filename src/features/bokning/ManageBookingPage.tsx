@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useContext, useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import {
   bookingErrorMessage,
@@ -7,9 +7,13 @@ import {
   formatDate,
   formatFee,
   getGuestReservation,
+  lengthText,
 } from '../boka/bookingApi'
 import type { GuestReservation } from '../boka/bookingApi'
 import { GuaranteeTermsText } from '../boka/GuaranteeStep'
+import AddToCalendar from '../../shared/AddToCalendar'
+import { bookingEvent, restaurantName } from '../../shared/calendar'
+import { SiteContext } from '../../shared/SiteContext'
 
 const STATUS_TEXT: Record<string, string> = {
   pending: 'Väntar på kortgaranti',
@@ -82,6 +86,7 @@ export default function ManageBookingPage() {
   }
 
   const fee = booking?.guarantee?.cancellationFee ?? 0
+  const tenantName = useContext(SiteContext)?.config.tenant.name
 
   return (
     <section className="booking-confirmation">
@@ -95,10 +100,20 @@ export default function ManageBookingPage() {
             {booking.location?.name && <div><dt>Restaurang</dt><dd>{booking.location.name}</dd></div>}
             <div><dt>Namn</dt><dd>{booking.customerName}</dd></div>
             <div><dt>Datum</dt><dd>{formatDate(booking.date)}</dd></div>
-            <div><dt>Tid</dt><dd>{booking.startTime}–{booking.endTime}</dd></div>
+            <div><dt>Tid</dt><dd>{booking.startTime}-{booking.endTime}</dd></div>
+            {lengthText(booking) && <div><dt>Bokningstid</dt><dd>{lengthText(booking)}</dd></div>}
             <div><dt>Antal</dt><dd>{booking.partySize} personer</dd></div>
             {booking.location?.address && <div><dt>Adress</dt><dd>{booking.location.address}</dd></div>}
           </dl>
+          {booking.status === 'reserved' && booking.cancellable && (
+            <AddToCalendar
+              event={bookingEvent(booking, {
+                restaurant: restaurantName(tenantName, booking.location?.name),
+                address: booking.location?.address,
+                link: window.location.href,
+              })}
+            />
+          )}
           {booking.status === 'pending' && (
             <p className="notice" role="status">
               Bokningen är inte klar: kortgarantin är inte bekräftad. Lägg in kortet där du bokade -

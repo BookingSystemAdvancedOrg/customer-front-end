@@ -1,0 +1,65 @@
+/* Cateringkalkylen (issue 5): gäster, paket, allergener och serverns pris.
+   Egen fil så world.css inte behöver röras; samma tokens i ljust och mörkt läge. */
+.catering-guests {
+  max-width: 220px;
+}
+
+.catering-qty {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  min-width: 0;
+}
+
+.catering-qty .link-button {
+  align-self: flex-end;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.dish-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.dish-tag {
+  padding: 1px 8px;
+  border: 1px solid var(--paper-line);
+  border-radius: 999px;
+  color: var(--ink);
+}
+
+.cart-list.is-stale {
+  opacity: 0.55;
+  transition: opacity 160ms ease-out;
+}
+
+.catering-estimate {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+@media (max-width: 560px) {
+  .catering-dishes .catering-qty {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+}
+
+/* Gästens förfrågan: offerten och den signerade kopian som PDF. */
+.catering-documents {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin: 12px 0 0;
+}
+
+/* Godkänn utan BankID: kryssrutorna behåller sin storlek när texten radbryts. */
+.catering-actions .booking-check input {
+  flex-shrink: 0;
+}

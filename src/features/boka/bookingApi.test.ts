@@ -175,8 +175,20 @@ describe('table rules, special days and the bot check', () => {
     expect(dayMessage({ kind: 'closed', note: 'Julafton' }, '08-1')).toBe('Vi har stängt den dagen (Julafton).')
     expect(dayMessage({ kind: 'no_online' }, '08-1')).toBe('Den dagen går det inte att boka online. Ring oss på 08-1.')
     expect(dayMessage({ kind: 'hours', intervals: [{ opensAt: '17:00', closesAt: '22:00' }] }, '')).toBe(
-      'Avvikande öppettider den dagen: 17:00–22:00.',
+      'Avvikande öppettider den dagen: 17:00-22:00.',
     )
   })
 })
 
+
+describe('lengthText', () => {
+  it('describes the booking length and whether it can be extended', async () => {
+    const { lengthText } = await import('./bookingApi')
+    expect(lengthText({ durationMinutes: 90, extendable: true })).toBe(
+      '1 tim 30 min, kan förlängas på plats om bordet är ledigt')
+    expect(lengthText({ durationMinutes: 60, extendable: false, ruleName: 'Lunchbuffé' })).toBe(
+      '60 min (Lunchbuffé), kan inte förlängas')
+    expect(lengthText({ durationMinutes: 120, extendable: false, ruleName: null })).toBe('2 tim, kan inte förlängas')
+    expect(lengthText({})).toBeNull()
+  })
+})

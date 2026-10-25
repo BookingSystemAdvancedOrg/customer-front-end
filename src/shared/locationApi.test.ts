@@ -68,9 +68,9 @@ describe('businessHoursToRows', () => {
     }
 
     expect(businessHoursToRows(hours)).toEqual([
-      { days: 'Mån–Tor', hours: '11:00–22:00' },
-      { days: 'Fre', hours: '11:00–23:00' },
-      { days: 'Lör', hours: '12:00–23:00' },
+      { days: 'Mån-Tor', hours: '11:00-22:00' },
+      { days: 'Fre', hours: '11:00-23:00' },
+      { days: 'Lör', hours: '12:00-23:00' },
       { days: 'Sön', hours: 'Stängt' },
     ])
   })
@@ -85,8 +85,8 @@ describe('businessHoursToRows', () => {
     }
 
     const rows = businessHoursToRows(hours)
-    expect(rows[0]).toEqual({ days: 'Mån', hours: '11:00–14:00, 17:00–22:00' })
-    expect(rows[1]).toEqual({ days: 'Tis–Sön', hours: 'Stängt' })
+    expect(rows[0]).toEqual({ days: 'Mån', hours: '11:00-14:00, 17:00-22:00' })
+    expect(rows[1]).toEqual({ days: 'Tis-Sön', hours: 'Stängt' })
   })
 })
 
@@ -99,7 +99,7 @@ describe('specialDayRows', () => {
       { date: '2026-10-16', kind: 'no_online' },
     ])
     expect(rows.map((r) => r.text)).toEqual([
-      'Stängt (Julafton)', '17:00–23:59', 'Vanliga tider, ingen onlinebokning',
+      'Stängt (Julafton)', '17:00-23:59', 'Vanliga tider, ingen onlinebokning',
     ])
     // The exact abbreviation depends on the ICU version ("dec" / "dec.").
     expect(rows[0].label).toMatch(/^tors 24 dec/)

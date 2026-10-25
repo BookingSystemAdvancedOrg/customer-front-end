@@ -766,7 +766,7 @@ svg {
 
 .order-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 380px);
+  grid-template-columns: minmax(0, 1fr) clamp(320px, 36%, 420px);
   gap: clamp(24px, 4vw, 48px);
   align-items: start;
 }
@@ -883,10 +883,9 @@ svg {
   white-space: nowrap;
 }
 
-/* Brickan (varukorgen). */
+/* Brickan (varukorgen). Ingen egen rullning: den följer sidan (se
+   .order-cart längre ner och shared/useStickyCart.ts). */
 .order-cart {
-  position: sticky;
-  top: calc(var(--header-h) + 20px);
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -895,9 +894,6 @@ svg {
   background: var(--surface);
   box-shadow: var(--shadow-lg);
   border: 0;
-  max-height: calc(100svh - var(--header-h) - 40px);
-  overflow-y: auto;
-  overscroll-behavior: contain;
 }
 
 .order-cart h2,
@@ -1024,17 +1020,11 @@ svg {
 }
 
 @media (max-width: 1000px) {
-  .order-cart {
-    max-height: none;
-    overflow: visible;
-  }
-
   .order-layout {
     grid-template-columns: minmax(0, 1fr);
   }
 
   .order-cart {
-    position: static;
     scroll-margin-top: calc(var(--header-h) + 16px);
   }
 
@@ -1930,6 +1920,7 @@ h1, h2, h3, h4 {
 
 .menu::after,
 .order-menu::after,
+.order-cart::after,
 .booking-step::after,
 .booking-confirmation::after,
 .catering-details::after,
@@ -1945,17 +1936,15 @@ h1, h2, h3, h4 {
   pointer-events: none;
 }
 
-/* Brickan rullar inuti (max-height på skrivbord): kanten följer med sist i innehållet. */
-.order-cart::after {
-  content: '';
-  display: block;
-  position: sticky;
-  left: 0;
-  flex: none;
-  height: var(--tooth-h);
-  margin: 0 -22px calc(var(--tooth-h) * -1 - 22px);
-  background: conic-gradient(from -45deg at 50% 100%, var(--table) 0deg, transparent 1deg 89deg, var(--table) 90deg) 0 100% / var(--tooth) var(--tooth-h) repeat-x;
-  pointer-events: none;
+/* Brickan bredvid menyn: stannar överst när den får plats i fönstret. Är
+   den högre (--cart-h, mäts i useStickyCart) rullar den med sidan tills
+   underkanten syns och stannar där, så knappen alltid går att nå. Ingen
+   egen rullning: en rullning per sida. */
+@media (min-width: 1001px) {
+  .order-cart {
+    position: sticky;
+    top: min(calc(var(--header-h) + 20px), calc(100svh - var(--cart-h, 0px) - 20px));
+  }
 }
 
 /* Sidorna trycks fram: ett kort fall från railen, kvittona faller efter.
@@ -2682,7 +2671,6 @@ h1, h2, h3, h4 {
 .order-cart {
   gap: 14px;
   padding: 22px 22px calc(22px + var(--tooth-h));
-  overscroll-behavior: contain;
 }
 
 .tray-head h2,
@@ -2714,6 +2702,9 @@ h1, h2, h3, h4 {
 .cart-item-price {
   font-weight: 600;
   font-size: 0.9rem;
+  /* Samma bredd på varje rad, så att knapparna står i en kolumn. */
+  min-width: 7ch;
+  text-align: right;
 }
 
 .cart-list .cart-qty button,
@@ -2747,6 +2738,580 @@ h1, h2, h3, h4 {
 
 .order-cart .order-form .btn-primary {
   width: 100%;
+}
+
+/* Kassan i brickan: ett steg i taget (Din beställning, Vem är du?, Kvitto
+   och önskemål, Godkänn och betala). En stor knapp framåt, en lugn bakåt. */
+.order-cart .order-form {
+  gap: 18px;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.checkout-step {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  animation: checkout-in 280ms var(--ease) both;
+}
+
+@keyframes checkout-in {
+  from { opacity: 0; transform: translateX(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+.order-cart .checkout-title {
+  font: 800 1.5rem/1.15 var(--font);
+  font-stretch: 112%;
+  letter-spacing: -0.02em;
+  text-transform: none;
+  color: var(--ink);
+  text-wrap: balance;
+}
+
+.order-cart h2:focus {
+  outline: none;
+}
+
+.checkout-actions {
+  display: grid;
+  gap: 6px;
+}
+
+.order-cart .checkout-next {
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 56px;
+  font-size: 1.08rem;
+}
+
+.checkout-next svg,
+.checkout-back svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: none;
+}
+
+.checkout-back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 48px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--ink);
+  font: 650 1rem/1 var(--font);
+  cursor: pointer;
+  transition: background-color 160ms var(--ease);
+}
+
+.checkout-back:hover:not(:disabled) {
+  background: var(--fill);
+}
+
+.checkout-back:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.checkout-privacy summary {
+  list-style: none;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.checkout-privacy summary::-webkit-details-marker {
+  display: none;
+}
+
+.checkout-privacy-more {
+  color: var(--accent-ink);
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  white-space: nowrap;
+}
+
+.checkout-privacy[open] .checkout-privacy-more {
+  display: none;
+}
+
+.checkout-privacy .guest-notice {
+  margin-top: 10px;
+}
+
+.order-cart .booking-check {
+  min-height: 44px;
+}
+
+@media (max-width: 1000px) {
+  .order-mobile-bar {
+    transition: opacity 200ms var(--ease), transform 200ms var(--ease);
+  }
+
+  .order-mobile-bar.is-hidden {
+    opacity: 0;
+    transform: translateY(12px);
+    pointer-events: none;
+  }
+}
+
+/* --- Kassan: två spalter som en vanlig webbkassa ------------------------
+   Ett pappersark: överst restaurangens namn och brödsmulorna (Varukorg >
+   Dina uppgifter > Betala > Klart), till vänster ett steg i taget i lugna
+   kort, till höger sammanfattningen med den stora knappen. En tunn linje
+   mellan spalterna, inga skuggor inne i arket. Mobil: en spalt,
+   "Visa beställning" överst och knappen fast längst ner. */
+.checkout {
+  position: relative;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: clamp(18px, 3vw, 36px) clamp(18px, 3.4vw, 44px) calc(clamp(24px, 3vw, 40px) + var(--tooth-h));
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+  scroll-margin-top: calc(var(--header-h) + 12px);
+  /* `backwards`, inte `both`: en kvarliggande transform gör arket till
+     referens för den fasta knappen på mobilen (se .page). */
+  animation: drop 640ms var(--ease) backwards;
+}
+
+.checkout::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--tooth-h);
+  background: conic-gradient(from -45deg at 50% 100%, var(--table) 0deg, transparent 1deg 89deg, var(--table) 90deg) 0 100% / var(--tooth) var(--tooth-h) repeat-x;
+  pointer-events: none;
+}
+
+.checkout-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+  padding-bottom: clamp(16px, 2vw, 22px);
+  margin-bottom: clamp(20px, 3vw, 32px);
+  border-bottom: 1px solid var(--paper-line);
+}
+
+.checkout-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  font: 800 1.08rem/1.2 var(--font);
+  font-stretch: 112%;
+  letter-spacing: -0.01em;
+}
+
+.checkout-brand img {
+  width: 32px;
+  height: 32px;
+  border-radius: 3px;
+  object-fit: cover;
+}
+
+.crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font: 600 0.92rem/1.3 var(--font);
+}
+
+.crumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+}
+
+.crumb.is-done,
+.crumb.is-current {
+  color: var(--ink);
+}
+
+.crumb.is-current {
+  font-weight: 800;
+}
+
+.crumb-link {
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--paper-line);
+  text-underline-offset: 0.25em;
+  cursor: pointer;
+}
+
+.crumb-link:hover {
+  text-decoration-color: currentColor;
+}
+
+.crumb-sep {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* På varukorgssidan står smulorna under rubriken. */
+.page-head .crumbs {
+  margin-top: 10px;
+}
+
+.checkout-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
+  align-items: start;
+}
+
+.checkout-main {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+  padding-right: clamp(24px, 4vw, 48px);
+}
+
+.checkout-side {
+  position: sticky;
+  top: calc(var(--header-h) + 20px);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+  padding-left: clamp(24px, 4vw, 48px);
+  border-left: 1px solid var(--paper-line);
+}
+
+.checkout .checkout-title {
+  font: 820 clamp(1.6rem, 1.2rem + 1.3vw, 2.1rem)/1.1 var(--font);
+  font-stretch: 115%;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+.checkout-title:focus {
+  outline: none;
+}
+
+.checkout-sub {
+  margin-bottom: 10px;
+  font: 750 1.08rem/1.3 var(--font);
+  font-stretch: 108%;
+  letter-spacing: -0.005em;
+  color: var(--ink);
+}
+
+.checkout-side .checkout-sub {
+  margin-bottom: 4px;
+}
+
+.checkout-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.checkout-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: clamp(16px, 2.4vw, 22px);
+  border: 1px solid var(--paper-line);
+  border-radius: 6px;
+  background: var(--fill);
+}
+
+.checkout-card .booking-field input,
+.checkout-card .booking-field textarea {
+  background: var(--surface);
+}
+
+.checkout-card--facts {
+  gap: 4px;
+  color: var(--muted);
+}
+
+.checkout-card--facts p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.checkout-fact-strong {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.checkout-block .pay-form {
+  gap: 12px;
+}
+
+.checkout-block .pay-secure {
+  margin-top: 14px;
+}
+
+.checkout-main .checkout-back {
+  align-self: flex-start;
+  margin-left: -12px;
+}
+
+/* Sammanfattningen: rad, delsumma, moms, totalt. */
+.sum-lines {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sum-lines li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 0;
+}
+
+.sum-lines .plate {
+  --size: 52px;
+  border-radius: 6px;
+  box-shadow: none;
+}
+
+.sum-lines .plate img,
+.sum-lines .plate::before {
+  border-radius: 6px;
+}
+
+.sum-line-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.sum-line-name {
+  font-weight: 650;
+  font-size: 0.95rem;
+  overflow-wrap: anywhere;
+}
+
+.sum-line-qty,
+.sum-line-price,
+.sum-rows dd,
+.sum-total span:last-child,
+.checkout-peek strong {
+  font-family: var(--mono);
+  font-stretch: 87.5%;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.sum-line-qty {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.sum-line-price {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.sum-rows {
+  display: grid;
+  gap: 8px;
+  margin: 6px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--paper-line);
+}
+
+.sum-rows div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sum-rows dt {
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.sum-rows dd {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.sum-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--paper-line);
+  font-weight: 800;
+  font-size: 1.15rem;
+}
+
+.checkout-cta .checkout-next {
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 56px;
+  font-size: 1.08rem;
+}
+
+.checkout-cta .checkout-next svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.checkout-peek {
+  display: none;
+}
+
+@media (max-width: 899px) {
+  .checkout {
+    padding-bottom: calc(110px + var(--tooth-h));
+  }
+
+  .checkout-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .checkout-main {
+    padding-right: 0;
+  }
+
+  .checkout-side {
+    position: static;
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .checkout-side-sum {
+    display: none;
+  }
+
+  .checkout-peek {
+    display: block;
+    margin-bottom: 20px;
+    border: 1px solid var(--paper-line);
+    border-radius: 6px;
+    background: var(--fill);
+  }
+
+  .checkout-peek summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 54px;
+    padding: 0 16px;
+    list-style: none;
+    cursor: pointer;
+    font-weight: 700;
+  }
+
+  .checkout-peek summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .checkout-peek summary span {
+    flex: 1;
+  }
+
+  .checkout-peek summary svg {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: transform 200ms var(--ease);
+  }
+
+  .checkout-peek[open] summary svg {
+    transform: rotate(180deg);
+  }
+
+  .checkout-peek-body {
+    padding: 0 16px 16px;
+  }
+
+  .checkout-cta {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    z-index: 30;
+  }
+
+  .checkout-cta .checkout-next {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.16), 0 18px 34px -14px rgba(0, 0, 0, 0.55);
+  }
+}
+
+@media (max-width: 480px) {
+  .checkout-bar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .crumbs {
+    gap: 2px 4px;
+    font-size: 0.8rem;
+  }
+
+  .crumb {
+    gap: 4px;
+  }
+
+  .crumb-sep {
+    width: 12px;
+    height: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .order-cart .checkout-title {
+    font-size: 1.35rem;
+  }
+
+  .tray-head .tray-plates {
+    display: none;
+  }
 }
 
 @media (max-width: 1000px) {
@@ -3337,6 +3902,8 @@ h1, h2, h3, h4 {
   .menu,
   .order-menu,
   .order-cart,
+  .checkout-step,
+  .checkout,
   .booking-step,
   .booking-confirmation,
   .catering-details,
@@ -4323,4 +4890,52 @@ a,
 ::placeholder {
   color: var(--muted);
   opacity: 1;
+}
+
+/* Order status: the order number big and green in the top right corner */
+.order-status h1.order-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+.order-code {
+  padding: 0.08em 0.32em 0.04em;
+  border-radius: 6px;
+  background: var(--ok-soft);
+  color: var(--ok-ink);
+  box-shadow: inset 0 0 0 2px var(--ok);
+  font-family: var(--mono);
+  font-stretch: 100%;
+  font-size: 1.15em;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  margin-left: auto;
+}
+@media (max-width: 420px) {
+  .order-status h1.order-head { flex-wrap: nowrap; font-size: 1.5rem; }
+}
+
+/* Kortgarantins avgifter: i notisen före bokningen och i bekräftelsen. */
+.guarantee-notice .guarantee-terms {
+  margin: 8px 0 0;
+}
+.guarantee-confirmation .guarantee-terms {
+  margin: 8px 0 16px;
+}
+
+/* 2D-stolarnas ryggstöd och: stolarna är bara bild, inte klickbara. */
+.floor-svg-chairs {
+  pointer-events: none;
+}
+
+.floor-svg-chair-back {
+  fill: color-mix(in srgb, var(--ink) 30%, var(--surface));
+}
+
+.floor-svg-chairs.is-selected .floor-svg-chair-back {
+  fill: var(--success);
 }

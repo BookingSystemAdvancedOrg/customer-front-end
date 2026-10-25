@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { clock, getOrder, kronor, orderErrorMessage, recallToken } from './orderApi'
+import { clearCart, clock, getOrder, kronor, orderErrorMessage, recallToken } from './orderApi'
 import type { GuestOrder } from './orderApi'
 import { FlowSteps } from '../../shared/FlowSteps'
 import { Celebrate } from '../../shared/Celebrate'
@@ -77,8 +77,9 @@ function nextUp(order: GuestOrder): string | null {
 const CELEBRATE = new Set<GuestOrder['status']>(['confirmed', 'ready'])
 
 /**
- * Gästens beställning: /bestallning/<plats>/<id>. Hit skickar Stripe
- * tillbaka gästen efter betalningen, och hit leder länken i kvittomejlet.
+ * Gästens beställning: /bestallning/<plats>/<id>. Hit går gästen när
+ * betalningen på beställningssidan gått igenom (eller kommer tillbaka från
+ * Swish, Klarna eller banken), och hit leder länken i kvittomejlet.
  * Sidan frågar var femte sekund tills beställningen är klar.
  */
 export default function OrderStatusPage() {
@@ -101,6 +102,8 @@ export default function OrderStatusPage() {
         if (cancelled) return
         setOrder(next)
         setError(null)
+        // Betald (även efter Swish/Klarna utanför sidan): varukorgen är förbrukad.
+        if (next.paymentStatus === 'paid') clearCart(locationId)
         const waitingTooLong = next.status === 'pending_payment' && Date.now() - startedAt > PAYMENT_WAIT_MS
         setGaveUp(waitingTooLong)
         if (!FINAL.has(next.status) && !waitingTooLong) timer = window.setTimeout(poll, STATUS_POLL_MS)
@@ -125,7 +128,10 @@ export default function OrderStatusPage() {
   return (
     <section className={`booking-confirmation order-status${order && CELEBRATE.has(order.status) ? ' is-success' : ''}`}>
       {order && CELEBRATE.has(order.status) && <Celebrate key={order.status} />}
-      <h1>{order?.number ? `Beställning #${order.number}` : 'Din beställning'}</h1>
+      {/* the number is what the guest says at the counter: big and green, top right */}
+      <h1 className="order-head">
+        {order?.number ? <>Beställning <span className="order-code">#{order.number}</span></> : 'Din beställning'}
+      </h1>
       {!order && !error && (
         <div className="printing printing--inline" role="status" aria-label="Hämtar beställningen">
           <span className="printing__label">Hämtar beställningen</span>
@@ -148,7 +154,7 @@ export default function OrderStatusPage() {
             </p>
           )}
           {order.status === 'ready' && order.mode === 'pickup' && order.location?.address && (
-            <p className="order-hint">Hämta hos {order.location.name} – {order.location.address}.</p>
+            <p className="order-hint">Hämta hos {order.location.name} - {order.location.address}.</p>
           )}
           {order.status === 'pending_payment' && gaveUp && (
             <p className="notice" role="status">

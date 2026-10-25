@@ -1,0 +1,173 @@
+/* --- Betalningen: ett kvitto med Stripes formulär i sajtens tryck ---------
+   Kvittot faller från railen som de andra, formuläret skrivs ut rad för rad
+   (14 steg, som remsan) när Stripe är klart, och stämpeln slår i när
+   betalningen gått igenom. Färgerna i själva formuläret kommer från
+   appearance.ts (Stripes iframes läser inte sajtens CSS). */
+
+.pay-ticket {
+  position: relative;
+  display: grid;
+  gap: 14px;
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: clamp(20px, 3vw, 28px) clamp(18px, 3vw, 28px) calc(24px + var(--tooth-h));
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+  animation: drop 640ms var(--ease) both;
+}
+
+.pay-ticket::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--tooth-h);
+  background: conic-gradient(from -45deg at 50% 100%, var(--table) 0deg, transparent 1deg 89deg, var(--table) 90deg) 0 100% / var(--tooth) var(--tooth-h) repeat-x;
+  pointer-events: none;
+}
+
+/* Inuti ett kvitto (cateringsidan): en perforerad ruta i stället för ett
+   eget hängande kvitto. */
+.booking-confirmation .pay-ticket {
+  max-width: none;
+  margin: 8px 0 4px;
+  padding: 18px clamp(14px, 3vw, 22px);
+  border: 1.5px dashed var(--paper-line);
+  border-radius: 3px;
+  box-shadow: none;
+  animation: step-in 320ms var(--ease) both;
+}
+
+.booking-confirmation .pay-ticket::after {
+  content: none;
+}
+
+.pay-ticket h2 {
+  margin-top: -8px;
+  font: 820 clamp(1.45rem, 1.1rem + 1.2vw, 1.85rem)/1.08 var(--font);
+  font-stretch: 115%;
+  letter-spacing: -0.02em;
+}
+
+.pay-ticket > .notice {
+  margin-bottom: 0;
+}
+
+/* Det som betalas: raderna mellan två perforeringar. */
+.pay-summary {
+  display: grid;
+  gap: 6px;
+  padding: 12px 0;
+  border-block: 1.5px dashed var(--paper-line);
+}
+
+.pay-summary .cart-list,
+.pay-summary .cart-total,
+.pay-summary .cart-discount {
+  margin: 0;
+}
+
+.pay-form {
+  display: grid;
+  gap: 14px;
+}
+
+.pay-form .notice {
+  margin-bottom: 0;
+}
+
+.pay-printing {
+  width: auto;
+  margin: 0;
+}
+
+/* Stripes iframe mäter sig själv även när den är dold: den ligger kvar i
+   flödet utan höjd tills den är klar, sedan skrivs den ut. */
+.pay-element {
+  height: 0;
+  overflow: hidden;
+  opacity: 0;
+}
+
+.pay-element.is-ready {
+  height: auto;
+  overflow: visible;
+  opacity: 1;
+  animation: pay-print-out 760ms steps(14, end) backwards;
+}
+
+@keyframes pay-print-out {
+  from { clip-path: inset(0 0 100% 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+
+.pay-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+}
+
+.pay-submit {
+  flex: 1 1 240px;
+}
+
+.pay-submit:not(:disabled) {
+  font-variant-numeric: tabular-nums;
+}
+
+.pay-back {
+  font-size: 0.95rem;
+}
+
+.pay-back:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.pay-secure {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1.5px dashed var(--paper-line);
+  font: 500 0.6875rem/1.55 var(--mono);
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.pay-secure svg {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin-top: 1px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+
+/* Klart: stämpeln och pappersregnet inuti kvittot. */
+.pay-done {
+  position: relative;
+  display: grid;
+  justify-items: start;
+  gap: 4px;
+  min-height: 132px;
+  padding: 18px 0 8px;
+}
+
+.pay-stamp {
+  margin: 0 0 6px;
+  padding: 6px 16px 5px;
+  font-size: 1.05rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pay-ticket,
+  .pay-element.is-ready {
+    animation: none;
+  }
+}

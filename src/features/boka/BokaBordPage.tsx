@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom'
 import { useSite } from '../../shared/SiteContext'
 import { PhoneInput } from '../../shared/PhoneInput'
 import { useLocationInfo } from '../../shared/useLocationInfo'
+import AddToCalendar from '../../shared/AddToCalendar'
+import { bookingEvent, restaurantName } from '../../shared/calendar'
 import { getPublicActiveLayout, groupElementsByFloor, labelTables } from '../../shared/layoutApi'
 import type { FloorGroup, LayoutTableElement } from '../../shared/layoutApi'
 import {
@@ -20,6 +22,7 @@ import {
   formatShortDate,
   getAvailability,
   holdTables,
+  lengthText,
   manageLink,
   needsCard,
   normalizePhone,
@@ -31,13 +34,16 @@ import {
   validEmail,
 } from './bookingApi'
 import type { Availability, AvailabilitySlot, GuestReservation, TableHold, TableOption, TableUnavailable } from './bookingApi'
-import { GuaranteeStep } from './GuaranteeStep'
+import { GuaranteeConfirmation, GuaranteeNotice, GuaranteeStep } from './GuaranteeStep'
 import { TurnstileWidget } from './TurnstileWidget'
 import { ApiError } from '../../shared/api'
 import { FloorPlanSvg } from './FloorPlanSvg'
 import { FloorPlan3D } from './FloorPlan3D'
 import { FlowSteps } from '../../shared/FlowSteps'
 import { Celebrate } from '../../shared/Celebrate'
+import { GuestDataNotice } from '../../shared/GuestDataNotice'
+import { MarketingConsent, NO_CONSENT, consentFields } from '../../shared/MarketingConsent'
+import type { ConsentChoice } from '../../shared/MarketingConsent'
 
 const DEFAULT_MAX_PARTY = 12
 /** Hur ofta lediga tider hämtas om medan gästen väljer (tider inom 30
@@ -49,12 +55,12 @@ interface Guest {
   email: string
   phone: string
   notes: string
-  marketingOptIn: boolean
+  consent: ConsentChoice
   acceptTerms: boolean
 }
 
 const EMPTY_GUEST: Guest = {
-  name: '', email: '', phone: '', notes: '', marketingOptIn: false, acceptTerms: false,
+  name: '', email: '', phone: '', notes: '', consent: NO_CONSENT, acceptTerms: false,
 }
 
 function guestError(g: Guest): string | null {
@@ -551,7 +557,7 @@ export default function BokaBordPage() {
           phone: guest.phone.trim(),
           notes: guest.notes.trim() || undefined,
           language: 'sv',
-          marketingOptIn: guest.marketingOptIn,
+          ...consentFields(guest.consent, config.privacy, !!config.tenant.features.marketing),
           acceptTerms: true,
           holdId: hold.holdId,
         },
@@ -635,7 +641,8 @@ export default function BokaBordPage() {
         <dl className="booking-summary">
           <div><dt>Restaurang</dt><dd>{booked.location?.name ?? info.name}</dd></div>
           <div><dt>Datum</dt><dd>{formatDate(booked.date)}</dd></div>
-          <div><dt>Tid</dt><dd>{booked.startTime}–{booked.endTime}</dd></div>
+          <div><dt>Tid</dt><dd>{booked.startTime}-{booked.endTime}</dd></div>
+          {lengthText(booked) && <div><dt>Bokningstid</dt><dd>{lengthText(booked)}</dd></div>}
           <div><dt>Antal</dt><dd>{booked.partySize} personer</dd></div>
           <div>
             <dt>Bord</dt>
@@ -643,9 +650,14 @@ export default function BokaBordPage() {
           </div>
           {booked.location?.address && <div><dt>Adress</dt><dd>{booked.location.address}</dd></div>}
         </dl>
-        {booked.guarantee?.cardOnFile && (
-          <p className="booking-sent">Kortgarantin är sparad - inget har dragits från kortet.</p>
-        )}
+        <AddToCalendar
+          event={bookingEvent(booked, {
+            restaurant: restaurantName(config.tenant.name, booked.location?.name ?? location.name),
+            address: booked.location?.address ?? info.address,
+            link,
+          })}
+        />
+        <GuaranteeConfirmation booking={booked} />
         <div className="next-up">
           <h2>Vad händer nu</h2>
           <ol>
@@ -869,10 +881,11 @@ export default function BokaBordPage() {
                 <p className="booking-summary-line" aria-live="polite">
                   <span className="summary-kicker">Ditt val</span>
                   <span>
-                    {formatDate(date)} kl {slot.startTime}–{slot.endTime} · {partySize} personer · bord{' '}
+                    {formatDate(date)} kl {slot.startTime}-{slot.endTime} · {partySize} personer · bord{' '}
                     {option.tableIds.map((id) => labels.get(id) ?? id).join(' + ')}
                   </span>
                 </p>
+                {lengthText(slot) && <p className="cell-muted booking-length">Bokningstid: {lengthText(slot)}.</p>}
                 {option.tableIds.length > 1 && (
                   <p className="cell-muted">
                     Borden {option.tableIds.map((id) => labels.get(id) ?? id).join(' och ')} ställs ihop för ert sällskap.
@@ -913,10 +926,11 @@ export default function BokaBordPage() {
             <div className="booking-summary-line" aria-live="polite">
               <span className="summary-kicker">Ditt bord</span>
               <span>
-                {formatDate(hold.date)} kl {hold.startTime}–{hold.endTime} · {hold.partySize} personer · bord{' '}
+                {formatDate(hold.date)} kl {hold.startTime}-{hold.endTime} · {hold.partySize} personer · bord{' '}
                 {heldTables}
               </span>
             </div>
+            {lengthText(hold) && <p className="cell-muted booking-length">Bokningstid: {lengthText(hold)}.</p>}
             <div className="booking-grid">
               <label className="booking-field">
                 <span>Namn</span>
@@ -935,26 +949,15 @@ export default function BokaBordPage() {
                 <textarea maxLength={NOTES_MAX} rows={3} placeholder="Allergier, barnstol, firande…" value={guest.notes} onChange={(e) => setGuest({ ...guest, notes: e.target.value })} />
               </label>
             </div>
-            <label className="booking-check">
-              <input type="checkbox" checked={guest.marketingOptIn} onChange={(e) => setGuest({ ...guest, marketingOptIn: e.target.checked })} />
-              <span>Ja, {config.tenant.name} får skicka mig erbjudanden och nyheter (valfritt).</span>
-            </label>
+            <GuestDataNotice kind="booking" />
+            {cardNeeded && terms && <GuaranteeNotice terms={terms} partySize={partySize} />}
             <label className="booking-check">
               <input type="checkbox" checked={guest.acceptTerms} onChange={(e) => setGuest({ ...guest, acceptTerms: e.target.checked })} />
               <span>
-                Jag godkänner <Link to="/bokningsvillkor" target="_blank">bokningsvillkoren</Link> och har läst{' '}
-                <Link to="/integritetspolicy" target="_blank">integritetspolicyn</Link>.
+                Jag godkänner <Link to="/bokningsvillkor" target="_blank">bokningsvillkoren</Link>.
               </span>
             </label>
-            {cardNeeded && terms && (
-              <div className="guarantee-notice" role="note">
-                <strong>Kortgaranti krävs</strong> för sällskap om {terms.minPartySize} personer eller fler.
-                Inget dras nu.
-                {terms.noShowFeePerPerson > 0 && ` Uteblir ni debiteras ${terms.noShowFeePerPerson} kr per person.`}
-                {terms.lateCancelFeePerPerson > 0 &&
-                  ` Avbokning senare än ${terms.cancelCutoffHours} timmar före kostar ${terms.lateCancelFeePerPerson} kr per person.`}
-              </div>
-            )}
+            <MarketingConsent value={guest.consent} onChange={(consent) => setGuest({ ...guest, consent })} />
             {formError && <p className="notice error" role="alert">{formError}</p>}
             <button type="submit" className={`btn-primary${submitting ? ' is-busy' : ''}`} disabled={submitting}>
               {submitting

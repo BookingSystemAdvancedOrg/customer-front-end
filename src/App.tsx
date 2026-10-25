@@ -12,6 +12,7 @@ import KontaktPage from './features/kontakt/KontaktPage'
 import OmOssPage from './features/om/OmOssPage'
 import PrivacyPage from './features/juridik/PrivacyPage'
 import TermsPage from './features/juridik/TermsPage'
+import CookiesPage from './features/juridik/CookiesPage'
 
 /**
  * Restaurangens publika webbplats - samma sajt för alla restauranger, med
@@ -43,6 +44,7 @@ function App() {
         <Route path="om-oss" element={<OmOssPage />} />
         <Route path="kontakt" element={<KontaktPage />} />
         <Route path="integritetspolicy" element={<PrivacyPage />} />
+        <Route path="cookies" element={<CookiesPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

@@ -6,8 +6,10 @@ import { CATERING_TOKEN_PREFIX } from '../../shared/storageRegistry'
  * Catering för gäster (backend: catering-settings, catering-discount-tiers,
  * catering-requests, catering-customer - infrastructure docs/CATERING-FLOW.md).
  *
- *   1. Kalkylen: gästen väljer rätter och portioner, datum, avhämtning eller
- *      leverans och skickar en förfrågan. Servern räknar om priset.
+ *   1. Kalkylen: gästen anger antal gäster, väljer paket och rätter, datum,
+ *      avhämtning eller leverans. Priset kommer alltid från servern
+ *      (POST .../catering/quote); sidan visar bara svaret, som ett uppskattat
+ *      pris tills offerten är signerad.
  *   2. Restaurangen skickar en offert (eller tackar nej). Gästen får länken
  *      /catering/<plats>/<id>#t=<token> i mejl och sms.
  *   3. Gästen signerar offerten med BankID, ber om ändringar eller avböjer.
@@ -28,9 +30,62 @@ export interface CateringSettings {
   priceWithinLimit: number
   priceBeyondLimit: number
   allowOutsideArea: boolean
+  /** Kronor inkl. moms när utrustningen lämnas tillbaka ej rengjord (saknas hos äldre API). */
+  cleaningFee?: number
   terms: string
   offerValidDays: number
   paymentTermsDays: number
+  /** Saknas hos äldre API. */
+  minGuests?: number
+  allowSimpleAcceptance?: boolean
+}
+
+export interface CateringDish {
+  dishId: string
+  name: string
+  description?: string
+  pricePerPortion: number
+  allergens?: string[]
+  dietary?: string[]
+}
+
+export interface CateringPackage {
+  packageId: string
+  name: string
+  description?: string
+  pricePerGuest: number
+  dishIds: string[]
+  minGuests?: number
+}
+
+export interface CateringMenu {
+  dishes: CateringDish[]
+  packages: CateringPackage[]
+}
+
+export interface QuoteInput {
+  guests: number
+  packages?: { packageId: string; quantity: number }[]
+  dishes?: { dishId: string; quantity: number }[]
+  /** Rätter från den vanliga menyn, tills restaurangen har en egen cateringmeny. */
+  items?: { menuItemId: string; quantity: number }[]
+  fulfilment: 'pickup' | 'delivery'
+  deliveryAddress?: { street: string; postalCode: string; city: string }
+  equipmentReturn?: EquipmentReturn
+  deliveryDate?: string
+}
+
+export interface Quote extends Totals {
+  lines: Line[]
+  guests: number
+  portions: number
+  tierName: string | null
+  vatRate: number
+  serviceIncluded: boolean
+  distanceKm: number | null
+  /** Adressen gick inte att hitta: restaurangen sätter leveranspriset i offerten. */
+  deliveryFeeManual: boolean
+  earliestDate: string
 }
 
 export interface Tier {
@@ -44,6 +99,10 @@ export interface Tier {
 
 export interface Line {
   menuItemId?: string
+  dishId?: string
+  packageId?: string
+  kind?: 'package' | 'dish' | 'menu'
+  vatRate?: number
   name: string
   unitPrice: number
   quantity: number
@@ -54,9 +113,16 @@ export interface Totals {
   discountPercent: number
   discount: number
   deliveryFee: number
+  /** Saknas på offerter från innan valet fanns. */
+  cleaningFee?: number
   total: number
   vat: number
+  /** Saknas på offerter från innan momsen per rad. */
+  vatRate?: number
 }
+
+/** Hur fat och utrustning kommer tillbaka till restaurangen. */
+export type EquipmentReturn = 'cleaned' | 'not_cleaned'
 
 export type Status =
   | 'requested'
@@ -84,7 +150,8 @@ export interface GuestRequest {
   deliveryAddress?: { street: string; postalCode: string; city: string }
   request: { lines: Line[]; portions: number; tierName?: string | null } & Totals
   offer?: { version: number; lines: Line[]; totals: Totals; validUntil: string; message?: string;
-    terms?: string; documentHash?: string }
+    terms?: string; documentHash?: string; equipmentReturn?: EquipmentReturn }
+  equipmentReturn?: EquipmentReturn
   validUntil?: string
   signedAt?: string
   signedBy?: string
@@ -96,12 +163,18 @@ export interface GuestRequest {
   changeMessage?: string
   paymentTermsDays?: number
   location?: { name?: string; address?: string; phoneNumber?: string; email?: string }
+  /** Restaurangen har signerat; först då kan gästen signera. */
+  restaurantSignedAt?: string
   canSign: boolean
+  /** Godkänna utan BankID (om restaurangen tillåter det). */
+  canAccept?: boolean
   canPay: boolean
+  signedMethod?: 'bankid' | 'simulator' | 'simple_acceptance' | 'provider'
+  /** Dokument som går att ladda ner: offerten och den signerade kopian. */
+  documents?: ('offer' | 'signed')[]
 }
 
-export interface RequestInput {
-  items: { menuItemId: string; quantity: number }[]
+export interface RequestInput extends QuoteInput {
   customerType: 'private' | 'company'
   name: string
   email: string
@@ -109,26 +182,39 @@ export interface RequestInput {
   companyName?: string
   orgNumber?: string
   invoiceReference?: string
+  /** Företag: vem som signerar och att hen får göra det. */
+  signatoryName?: string
+  signatoryRole?: string
+  signatoryAuthority?: true
   deliveryDate: string
   deliveryTime: string
-  fulfilment: 'pickup' | 'delivery'
-  deliveryZone?: 'within' | 'beyond'
-  deliveryAddress?: { street: string; postalCode: string; city: string }
-  guests?: number
+  equipmentReturn: EquipmentReturn
   notes?: string
   acceptTerms: true
   language: 'sv'
   turnstileToken?: string
-  /** Gästen kryssade i "skicka mig erbjudanden". */
+  /** Gästen kryssade i "skicka mig erbjudanden" (äldre backend). */
   marketingOptIn?: boolean
+  /** Frivilligt samtycke till erbjudanden (shared/MarketingConsent.tsx). */
+  marketingConsent?: { channels: ('email' | 'sms')[]; textVersion: string }
 }
 
 export interface SignState {
   status: 'pending' | 'failed' | 'complete' | 'none'
+  /** Start: BankID här på sidan, eller signeringstjänstens egen sida. */
+  kind?: 'bankid' | 'redirect'
+  url?: string
   hintCode?: string
   qrData?: string
   autoStartToken?: string
   request?: GuestRequest
+}
+
+export interface AcceptInput {
+  name: string
+  role?: string
+  confirmAuthority?: true
+  acceptTerms: true
 }
 
 const loc = (locationId: string) => `/locations/${encodeURIComponent(locationId)}/catering`
@@ -138,6 +224,16 @@ const auth = (token: string) => ({ 'X-Order-Token': token })
 
 export function getSettings(locationId: string): Promise<CateringSettings> {
   return apiGet(`${loc(locationId)}/settings`)
+}
+
+/** Restaurangens egen cateringmeny (paket och rätter); tom innan den är upplagd. */
+export function getCateringMenu(locationId: string): Promise<CateringMenu> {
+  return apiGet(`${loc(locationId)}/menu`)
+}
+
+/** Priset för valet, räknat av servern (den enda källan till priser). */
+export function getQuote(locationId: string, input: QuoteInput): Promise<Quote> {
+  return apiPost(`${loc(locationId)}/quote`, input)
 }
 
 export async function getTiers(locationId: string): Promise<Tier[]> {
@@ -163,8 +259,24 @@ export function signingStatus(locationId: string, requestId: string, token: stri
   return apiPost(`${cust(locationId, requestId)}/sign/status`, undefined, auth(token))
 }
 
-export function startCheckout(locationId: string, requestId: string, token: string): Promise<{ checkoutUrl: string }> {
-  return apiPost(`${cust(locationId, requestId)}/checkout`, undefined, auth(token))
+export function acceptOffer(locationId: string, requestId: string, token: string, input: AcceptInput): Promise<GuestRequest> {
+  return apiPost(`${cust(locationId, requestId)}/accept`, input, auth(token))
+}
+
+/** En nedladdningslänk (5 minuter) till offerten eller den signerade kopian. */
+export function documentLink(locationId: string, requestId: string, token: string, docId: 'offer' | 'signed'):
+  Promise<{ url: string }> {
+  return apiGet(`${cust(locationId, requestId)}/documents/${docId}`, auth(token))
+}
+
+/** Betalningen på sajtens egen sida: Checkout Sessionens hemlighet för Payment Element. */
+export interface CateringPayment {
+  clientSecret: string
+  stripeAccount: string
+}
+
+export function startCheckout(locationId: string, requestId: string, token: string): Promise<CateringPayment> {
+  return apiPost(`${cust(locationId, requestId)}/checkout`, { embedded: true }, auth(token))
 }
 
 export function requestChange(locationId: string, requestId: string, token: string, message: string): Promise<GuestRequest> {
@@ -200,36 +312,22 @@ export function tokenFor(requestId: string, hash: string): string {
   }
 }
 
-// --- räkning (samma regler som servern, shared/catering.py) -----------------------------
+// --- rabatt-tips (bara text; priset räknas alltid av servern) --------------------------
 
-export function tierFor(tiers: Tier[], portions: number): Tier | null {
-  let best: Tier | null = null
-  for (const t of tiers) {
-    if (!t.active || portions < t.fromPortions) continue
-    if (t.toPortions !== null && portions > t.toPortions) continue
-    if (!best || t.discountPercent > best.discountPercent) best = t
-  }
-  return best
-}
-
-export function nextTier(tiers: Tier[], portions: number): Tier | null {
-  return [...tiers].filter((t) => t.active && t.fromPortions > portions)
+/** Nästa rabattnivå för fler gäster (nivåernas from/till är antal gäster). */
+export function nextTier(tiers: Tier[], guests: number): Tier | null {
+  return [...tiers].filter((t) => t.active && t.fromPortions > guests)
     .sort((a, b) => a.fromPortions - b.fromPortions)[0] ?? null
 }
 
-export function estimate(
-  lines: { price: number; quantity: number }[],
-  tiers: Tier[],
-  deliveryFeeKr: number,
-): Totals & { portions: number; tier: Tier | null } {
-  const portions = lines.reduce((n, l) => n + l.quantity, 0)
-  const subtotal = lines.reduce((sum, l) => sum + Math.round(l.price * 100) * l.quantity, 0)
-  const tier = tierFor(tiers, portions)
-  const discountPercent = tier?.discountPercent ?? 0
-  const discount = Math.round((subtotal * discountPercent) / 100)
-  const deliveryFee = Math.round(deliveryFeeKr * 100)
-  const total = subtotal - discount + deliveryFee
-  return { portions, tier, subtotal, discountPercent, discount, deliveryFee, total, vat: Math.round((total * 12) / 112) }
+/** Allergener (EU 1169/2011) och kost, koder från servern. */
+export const ALLERGEN_LABEL: Record<string, string> = {
+  gluten: 'gluten', crustaceans: 'kräftdjur', eggs: 'ägg', fish: 'fisk', peanuts: 'jordnötter', soy: 'soja',
+  milk: 'mjölk', nuts: 'nötter', celery: 'selleri', mustard: 'senap', sesame: 'sesam', sulphites: 'sulfiter',
+  lupin: 'lupin', molluscs: 'blötdjur',
+}
+export const DIETARY_LABEL: Record<string, string> = {
+  vegetarian: 'Vegetarisk', vegan: 'Vegansk', gluten_free: 'Glutenfri', lactose_free: 'Laktosfri',
 }
 
 export function kronor(ore: number | undefined | null): string {
@@ -279,11 +377,15 @@ const ERRORS: Record<string, string> = {
   catering_too_soon: 'Datumet är för nära - välj ett senare datum.',
   catering_closed_day: 'Restaurangen har stängt den dagen. Välj ett annat datum.',
   catering_day_full: 'Restaurangen är fullbokad för catering den dagen. Välj ett annat datum eller färre portioner.',
-  catering_outside_area: 'Restaurangen levererar inte utanför sitt område. Välj avhämtning.',
+  catering_outside_area: 'Adressen ligger utanför restaurangens leveransområde. Välj avhämtning.',
+  catering_item_unavailable: 'Ett paket eller en rätt finns inte längre. Ta bort det och försök igen.',
   catering_pickup_off: 'Avhämtning går inte att välja.',
   catering_delivery_off: 'Leverans går inte att välja.',
   menu_item_unavailable: 'En rätt finns inte längre på menyn. Ta bort den och försök igen.',
   not_signable: 'Offerten kan inte signeras just nu.',
+  awaiting_restaurant: 'Restaurangen signerar offerten först. Du får ett mejl när du kan signera.',
+  acceptance_not_allowed: 'Restaurangen tar bara emot signering med BankID.',
+  already_signed: 'Offerten är redan signerad.',
   offer_expired: 'Offerten har gått ut. Kontakta restaurangen.',
   offer_changed: 'Restaurangen har skickat en ny version av offerten. Läs den och signera igen.',
   signing_unavailable: 'BankID går inte att nå just nu. Försök igen om en stund.',
@@ -291,6 +393,7 @@ const ERRORS: Record<string, string> = {
   not_payable: 'Beställningen kan inte betalas just nu.',
   payment_unavailable: 'Betalningen är inte tillgänglig just nu. Försök igen om en stund.',
   payment_provider_rejected: 'Betalningen kunde inte startas. Försök igen eller kontakta restaurangen.',
+  payment_in_progress: 'Betalningen behandlas redan. Ladda om sidan om en liten stund.',
   not_changeable: 'Offerten kan inte ändras just nu.',
   not_rejectable: 'Förfrågan kan inte avböjas just nu.',
   verification_unavailable: 'Säkerhetskontrollen svarar inte just nu. Försök igen om en stund.',
@@ -302,6 +405,15 @@ export function errorMessage(err: unknown): string {
   if (err instanceof DOMException && err.name === 'TimeoutError') return 'Det tog för lång tid. Försök igen.'
   if (!(err instanceof ApiError)) return 'Något gick fel. Försök igen.'
   if (ERRORS[err.message]) return ERRORS[err.message]
+  if (/^at least (\d+) guests/.test(err.message)) return `Minst ${err.message.match(/\d+/)![0]} gäster.`
+  if (/needs at least (\d+) guests$/.test(err.message)) {
+    return `${err.message.replace(/ needs at least.*/, '')} kräver minst ${err.message.match(/(\d+) guests$/)![1]} gäster.`
+  }
+  if (/^guests/.test(err.message)) return 'Fyll i antal gäster.'
+  if (/^confirmAuthority/.test(err.message)) return 'Bekräfta att du får teckna avtal för företaget.'
+  if (/^role/.test(err.message)) return 'Fyll i din roll i företaget.'
+  if (/^signatory/.test(err.message)) return 'Fyll i vem som signerar för företaget och bekräfta behörigheten.'
+  if (/^choose at least one/.test(err.message)) return 'Välj minst ett paket eller en rätt.'
   if (/^at least (\d+) portions/.test(err.message)) return `Minst ${err.message.match(/\d+/)![0]} portioner.`
   if (/^at most (\d+) portions/.test(err.message)) return `Högst ${err.message.match(/\d+/)![0]} portioner.`
   if (/^orgNumber/.test(err.message)) return 'Fyll i ett giltigt organisationsnummer (NNNNNN-NNNN).'

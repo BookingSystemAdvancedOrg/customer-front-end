@@ -45,6 +45,8 @@ export interface SiteLocation {
   bookingDurationHours: number | null
   maxPartySizeOnline: number | null
   guarantee?: GuaranteeTerms | null
+  /** Hur länge bordet hålls för en sen gäst (null/saknas = inte angivet). */
+  gracePeriodMinutes?: number | null
   specialDays?: SpecialDay[]
   /** Hur man kan beställa här (null/saknas = ingen beställning). */
   ordering?: { pickup: boolean; table: boolean; prepMinutes: number } | null
@@ -82,7 +84,24 @@ export interface SiteConfig {
   locations: SiteLocation[]
   stripe: { publishableKey: string | null; accountId: string | null }
   turnstile: { siteKey: string | null }
+  /** Saknas från äldre backend: sidorna faller då tillbaka på standardtexterna. */
+  privacy?: SitePrivacy
 }
+
+/** Restaurangens integritetstext, lagringstider och ordalydelsen för samtycke till erbjudanden. */
+export interface SitePrivacy {
+  notice: { body: string; version: number; updatedAt: string | null; custom: boolean }
+  retention: { bookingDays: number; bookingMonths: number; guestMonths: number; cancelledMonths: number; accountingYears: number }
+  /** null när restaurangen inte har marknadsföring påslaget: då visas ingen ruta. */
+  marketingConsent: {
+    version: string
+    label: string
+    channelQuestion: string
+    channels: { value: ConsentChannel; label: string }[]
+  } | null
+}
+
+export type ConsentChannel = 'email' | 'sms'
 
 const SLUG_PARAM = 'restaurang'
 const SLUG_STORAGE_KEY = SLUG_KEY

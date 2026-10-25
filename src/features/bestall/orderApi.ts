@@ -6,7 +6,8 @@ import { CART_KEY_PREFIX, ORDER_TOKEN_PREFIX, TABLE_KEY } from '../../shared/sto
  * Matbeställning (backend payment-intent / get-order, docs/ORDERS.md).
  *
  *   GET  /locations/{id}/ordering[?table=<kod>]  öppet nu? (och QR-kodens bord)
- *   POST /order                                  beställningen -> Stripe Checkout
+ *   POST /order                                  beställningen -> betalningen (Checkout
+ *                                                Session som sajten visar själv, embedded)
  *   GET  /locations/{id}/order-status/{orderId}  gästens beställning (X-Order-Token)
  *
  * Priserna räknas alltid om av servern från menyn - sajten skickar bara
@@ -49,14 +50,21 @@ export interface OrderRequest {
   turnstileToken?: string
   /** Välkomsterbjudandets kod (ABCD-EFGH). */
   discountCode?: string
-  /** Gästen kryssade i "skicka mig erbjudanden". */
+  /** Gästen kryssade i "skicka mig erbjudanden" (äldre backend). */
   marketingOptIn?: boolean
+  /** Frivilligt samtycke till erbjudanden (shared/MarketingConsent.tsx). */
+  marketingConsent?: { channels: ('email' | 'sms')[]; textVersion: string }
+  /** Betalningen visas på sajtens egen sida (Payment Element), inte hos Stripe. */
+  embedded: true
 }
 
 export interface OrderCreated {
   orderId: string
   locationId: string
-  checkoutUrl: string
+  /** Checkout Sessionens hemlighet för Payment Element. */
+  clientSecret: string
+  /** Restaurangens Stripe-konto (acct_...). */
+  stripeAccount: string
   statusToken: string
   totalAmount: number
 }
@@ -183,6 +191,31 @@ export function forgetTableCode(): void {
 // --- text ------------------------------------------------------------------------
 
 /** 28550 (öre) -> "285,50 kr". */
+/** Dagens datum i Sverige (YYYY-MM-DD), det datum servern sätter moms efter. */
+export function stockholmDate(now = new Date()): string {
+  return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Stockholm' }).format(now)
+}
+
+/**
+ * Momssatsen för en rad, samma regel som servern (shared/orders.py):
+ * alkohol 25 %, vid bordet 12 %, avhämtning 6 % under den tillfälliga
+ * matmomsen 2026-04-01 till 2027-12-31 och annars 12 %.
+ */
+export function vatRate(alcohol: boolean, mode: OrderMode, today = stockholmDate()): number {
+  if (alcohol) return 25
+  if (mode === 'table') return 12
+  return today >= '2026-04-01' && today <= '2027-12-31' ? 6 : 12
+}
+
+/** Momsen per sats i öre; priserna är inklusive moms (moms = brutto * sats / (100 + sats)). */
+export function vatBreakdown(lines: { rate: number; total: number }[]): { rate: number; vat: number }[] {
+  const byRate = new Map<number, number>()
+  for (const l of lines) byRate.set(l.rate, (byRate.get(l.rate) ?? 0) + l.total)
+  return [...byRate.entries()]
+    .sort(([a], [b]) => a - b)
+    .map(([rate, gross]) => ({ rate, vat: Math.round((gross * rate) / (100 + rate)) }))
+}
+
 export function kronor(ore: number): string {
   const [whole, decimals] = (ore / 100).toFixed(2).split('.')
   // Svensk tusengruppering med hårt mellanslag: 3 500 000 kr.
@@ -207,6 +240,10 @@ export function closedMessage(state: OrderingState, phone: string): string {
       return `Det går inte att beställa online just nu.${phone ? ` Ring oss på ${phone}.` : ''}`
   }
 }
+
+/** När menyn hämtats om och rätten faktiskt plockats ur varukorgen. */
+export const MENU_ITEM_REMOVED =
+  'En rätt i varukorgen finns inte längre på menyn och har tagits bort. Kontrollera beställningen och försök igen.'
 
 const ORDER_ERRORS: Record<string, string> = {
   ordering_closed: 'Vi har precis slutat ta emot beställningar för idag.',

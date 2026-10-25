@@ -2,7 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import QRCode from 'qrcode'
 import {
+  acceptOffer,
   bankIdMessage,
+  documentLink,
   errorMessage,
   getRequest,
   kronor,
@@ -13,7 +15,10 @@ import {
   startSigning,
   tokenFor,
 } from './cateringApi'
-import type { GuestRequest, Line, Totals } from './cateringApi'
+import type { CateringPayment, GuestRequest, Line, Totals } from './cateringApi'
+import { useSite } from '../../shared/SiteContext'
+import { PaidStamp, PaymentTicket } from '../../shared/payment/PaymentTicket'
+import './calculator.css'
 
 /** BankID: frågan om status en gång i sekunden (QR-koden byts varje sekund). */
 export const SIGN_POLL_MS = 1_000
@@ -54,8 +59,11 @@ function LinesTable({ lines, totals }: { lines: Line[]; totals: Totals }) {
       {totals.deliveryFee > 0 && (
         <div className="cart-total"><span>Leverans</span><span>{kronor(totals.deliveryFee)}</span></div>
       )}
+      {(totals.cleaningFee ?? 0) > 0 && (
+        <div className="cart-total"><span>Rengöringsavgift</span><span>{kronor(totals.cleaningFee)}</span></div>
+      )}
       <div className="cart-total"><span>Totalt inkl. moms</span><span>{kronor(totals.total)}</span></div>
-      <p className="cart-note">varav moms 12 %: {kronor(totals.vat)}</p>
+      <p className="cart-note">varav moms {totals.vatRate ?? 12} %: {kronor(totals.vat)}</p>
     </>
   )
 }
@@ -74,10 +82,20 @@ export default function CateringRequestPage() {
   const [error, setError] = useState<string | null>(token ? null : 'Länken är ofullständig. Använd länken i ditt mejl eller sms.')
   const [busy, setBusy] = useState(false)
   const [signing, setSigning] = useState<{ hint?: string; qr?: string; autoStartToken?: string } | null>(null)
-  const [mode, setMode] = useState<'change' | 'reject' | null>(null)
+  const [mode, setMode] = useState<'change' | 'reject' | 'accept' | null>(null)
+  const [acceptForm, setAcceptForm] = useState({ name: '', role: '', authority: false, terms: false })
   const [message, setMessage] = useState('')
   const timer = useRef<number | undefined>(undefined)
   const params = new URLSearchParams(search)
+  const { config } = useSite()
+  const [payment, setPayment] = useState<CateringPayment | null>(null)
+  // Betald här på sidan (eller tillbaka från Swish/Klarna): Stripes webhook bekräftar strax.
+  const [justPaid, setJustPaid] = useState(false)
+  const awaitingConfirm = (justPaid || params.get('betalning') === 'klar') && request?.status === 'signed'
+  const paid = useCallback(() => {
+    setPayment(null)
+    setJustPaid(true)
+  }, [])
 
   const load = useCallback(async () => {
     try {
@@ -100,12 +118,26 @@ export default function CateringRequestPage() {
     }
   }, [locationId, requestId, token])
 
+  // Tillbaka från signeringstjänstens sida: fråga en gång hur det gick.
+  const returnedFromSigning = params.get('signering') === 'klar'
+  useEffect(() => {
+    if (!returnedFromSigning || request?.status !== 'offer_sent' || !token) return
+    let active = true
+    signingStatus(locationId, requestId, token).then(
+      (state) => active && state.request && setRequest(state.request),
+      () => {},
+    )
+    return () => {
+      active = false
+    }
+  }, [returnedFromSigning, request?.status, locationId, requestId, token])
+
   // Tillbaka från betalningen: Stripe bekräftar via webhook - fråga några gånger.
   useEffect(() => {
-    if (params.get('betalning') !== 'klar' || !request || request.status !== 'signed') return
+    if (!awaitingConfirm) return
     const t = window.setTimeout(() => void load(), 3000)
     return () => window.clearTimeout(t)
-  }, [request, load, search]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [request, load, awaitingConfirm])
 
   async function showQr(data: string | undefined) {
     if (!data) return undefined
@@ -146,6 +178,10 @@ export default function CateringRequestPage() {
     setBusy(true)
     try {
       const start = await startSigning(locationId, requestId, token)
+      if (start.kind === 'redirect' && start.url) {
+        window.location.assign(start.url)
+        return
+      }
       setSigning({ hint: 'outstandingTransaction', qr: await showQr(start.qrData), autoStartToken: start.autoStartToken })
       if (isMobile() && start.autoStartToken) {
         window.location.href = `https://app.bankid.com/?autostarttoken=${start.autoStartToken}&redirect=null`
@@ -162,21 +198,43 @@ export default function CateringRequestPage() {
     setError(null)
     setBusy(true)
     try {
-      const { checkoutUrl } = await startCheckout(locationId, requestId, token)
-      window.location.assign(checkoutUrl)
+      setPayment(await startCheckout(locationId, requestId, token))
     } catch (err) {
       setError(errorMessage(err))
+    } finally {
       setBusy(false)
+    }
+  }
+
+  async function openDocument(docId: 'offer' | 'signed') {
+    setError(null)
+    try {
+      // Same tab: a window opened after an await is blocked by iOS Safari. The link lives 5 minutes.
+      window.location.assign((await documentLink(locationId, requestId, token, docId)).url)
+    } catch (err) {
+      setError(errorMessage(err))
     }
   }
 
   async function send() {
     setError(null)
+    const company = request?.customerType === 'company'
+    if (mode === 'accept') {
+      if (!acceptForm.name.trim()) return setError('Fyll i ditt namn.')
+      if (company && !acceptForm.role.trim()) return setError('Fyll i din roll i företaget.')
+      if (company && !acceptForm.authority) return setError('Bekräfta att du får teckna avtal för företaget.')
+      if (!acceptForm.terms) return setError('Kryssa i att du godkänner offerten och villkoren.')
+    }
     setBusy(true)
     try {
-      setRequest(mode === 'change'
-        ? await requestChange(locationId, requestId, token, message.trim())
-        : await rejectOffer(locationId, requestId, token, message.trim()))
+      setRequest(mode === 'accept'
+        ? await acceptOffer(locationId, requestId, token, {
+          name: acceptForm.name.trim(), acceptTerms: true,
+          ...(company ? { role: acceptForm.role.trim(), confirmAuthority: true as const } : {}),
+        })
+        : mode === 'change'
+          ? await requestChange(locationId, requestId, token, message.trim())
+          : await rejectOffer(locationId, requestId, token, message.trim()))
       setMode(null)
       setMessage('')
     } catch (err) {
@@ -231,8 +289,19 @@ export default function CateringRequestPage() {
                   <p>{request.offer.terms}</p>
                 </details>
               )}
-              {request.offer.documentHash && (
-                <p className="cart-note">Dokument-ID: <code>{request.offer.documentHash.slice(0, 32)}</code></p>
+              {request.documents && request.documents.length > 0 && (
+                <p className="catering-documents">
+                  {request.documents.includes('offer') && (
+                    <button type="button" className="link-button" onClick={() => void openDocument('offer')}>
+                      Offerten som PDF
+                    </button>
+                  )}
+                  {request.documents.includes('signed') && (
+                    <button type="button" className="link-button" onClick={() => void openDocument('signed')}>
+                      Signerad offert (PDF)
+                    </button>
+                  )}
+                </p>
               )}
             </div>
           ) : (
@@ -244,12 +313,25 @@ export default function CateringRequestPage() {
             )
           )}
 
+          {request.status === 'offer_sent' && !request.canSign && (
+            <p className="order-hint" role="status">
+              Restaurangen signerar offerten först. Du får ett mejl och sms när du kan signera.
+            </p>
+          )}
           {request.canSign && !signing && !mode && (
             <div className="catering-actions">
-              <p>Genom att signera godkänner du offerten och villkoren. Beställningen kan sedan bara avbokas av restaurangen.</p>
-              <button type="button" className="btn-primary" disabled={busy} onClick={() => void sign()}>
+              <p>
+                Restaurangen har signerat. Genom att signera godkänner du offerten och villkoren och avtalet blir
+                bindande. Beställningen kan sedan bara avbokas av restaurangen.
+              </p>
+              <button type="button" className={`btn-primary${busy ? ' is-busy' : ''}`} disabled={busy} onClick={() => void sign()}>
                 Signera med BankID
               </button>
+              {request.canAccept && (
+                <button type="button" className="btn-secondary" disabled={busy} onClick={() => setMode('accept')}>
+                  Godkänn utan BankID
+                </button>
+              )}
               <button type="button" className="btn-secondary" disabled={busy} onClick={() => setMode('change')}>
                 Be om ändringar
               </button>
@@ -274,7 +356,44 @@ export default function CateringRequestPage() {
             </div>
           )}
 
-          {mode && (
+          {mode === 'accept' && (
+            <div className="catering-actions" role="group" aria-label="Godkänn utan BankID">
+              <p>
+                Har du inte svenskt BankID kan du godkänna offerten här. Vi sparar ditt namn, tidpunkten och vilken
+                version du godkände.
+              </p>
+              <label className="booking-field booking-field--wide">
+                Ditt namn
+                <input autoComplete="name" value={acceptForm.name}
+                  onChange={(e) => setAcceptForm({ ...acceptForm, name: e.target.value })} />
+              </label>
+              {request.customerType === 'company' && (
+                <>
+                  <label className="booking-field booking-field--wide">
+                    Din roll i företaget
+                    <input autoComplete="organization-title" value={acceptForm.role}
+                      onChange={(e) => setAcceptForm({ ...acceptForm, role: e.target.value })} />
+                  </label>
+                  <label className="booking-check">
+                    <input type="checkbox" checked={acceptForm.authority}
+                      onChange={(e) => setAcceptForm({ ...acceptForm, authority: e.target.checked })} />
+                    <span>Jag har rätt att teckna avtal för {request.companyName ?? 'företaget'}.</span>
+                  </label>
+                </>
+              )}
+              <label className="booking-check">
+                <input type="checkbox" checked={acceptForm.terms}
+                  onChange={(e) => setAcceptForm({ ...acceptForm, terms: e.target.checked })} />
+                <span>Jag godkänner offerten och villkoren. Avtalet blir bindande.</span>
+              </label>
+              <button type="button" className={`btn-primary${busy ? ' is-busy' : ''}`} disabled={busy} onClick={() => void send()}>
+                Godkänn offerten
+              </button>
+              <button type="button" className="btn-secondary" onClick={() => setMode(null)}>Tillbaka</button>
+            </div>
+          )}
+
+          {(mode === 'change' || mode === 'reject') && (
             <div className="catering-actions" role="group" aria-label={mode === 'change' ? 'Be om ändringar' : 'Avböj offerten'}>
               <label className="booking-field booking-field--wide">
                 {mode === 'change' ? 'Vad vill du ändra?' : 'Varför avböjer du? (valfritt)'}
@@ -292,15 +411,41 @@ export default function CateringRequestPage() {
             <p className="order-hint">Du skrev: ”{request.changeMessage}”. Du får en ny offert via mejl och sms.</p>
           )}
           {request.signedBy && (
-            <p className="order-hint">Signerad med BankID av {request.signedBy}{request.signedAt ? ` ${request.signedAt.slice(0, 10)}` : ''}.</p>
+            <p className="order-hint">
+              {request.signedMethod === 'simple_acceptance' ? 'Godkänd' : 'Signerad med BankID'} av {request.signedBy}
+              {request.signedAt ? ` ${request.signedAt.slice(0, 10)}` : ''}.
+            </p>
           )}
-          {request.canPay && (
+          {awaitingConfirm && (
+            <PaidStamp text="Betalt" next="Tack! Vi bekräftar betalningen hos restaurangen - sidan uppdateras av sig själv." />
+          )}
+          {request.canPay && !awaitingConfirm && payment && (
+            <PaymentTicket
+              publishableKey={config.stripe.publishableKey}
+              stripeAccount={payment.stripeAccount}
+              clientSecret={payment.clientSecret}
+              title="Betala cateringen"
+              summary={
+                <div className="cart-total">
+                  <span>Totalt inkl. moms</span>
+                  <span>{request.offer ? kronor(request.offer.totals.total) : ''}</span>
+                </div>
+              }
+              payLabel={`Betala ${request.offer ? kronor(request.offer.totals.total) : ''}`.trim()}
+              onPaid={paid}
+              onBack={() => setPayment(null)}
+              backLabel="Inte nu"
+            />
+          )}
+          {request.canPay && !awaitingConfirm && !payment && (
             <div className="catering-actions">
               {params.get('betalning') === 'avbruten' && (
                 <p className="notice" role="status">Betalningen avbröts - inget har dragits. Signaturen gäller fortfarande.</p>
               )}
-              <button type="button" className="btn-primary" disabled={busy} onClick={() => void pay()}>
-                Betala {request.offer ? kronor(request.offer.totals.total) : ''}
+              <button type="button" className={`btn-primary${busy ? ' is-busy' : ''}`} disabled={busy} onClick={() => void pay()}>
+                {busy
+                  ? <><span className="spinner" aria-hidden="true" />Förbereder betalningen…</>
+                  : `Betala ${request.offer ? kronor(request.offer.totals.total) : ''}`.trim()}
               </button>
             </div>
           )}

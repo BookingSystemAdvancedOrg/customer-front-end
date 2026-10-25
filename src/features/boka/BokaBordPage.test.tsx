@@ -114,10 +114,44 @@ describe('BokaBordPage', () => {
     const [post] = posts('/reservations')
     expect(JSON.parse(post[1].body)).toMatchObject({
       startTime: '18:00', tableIds: ['table-b'], partySize: 3, name: 'Anna', holdId: 'h'.repeat(32),
-      email: 'anna@example.se', phone: '+46701234567', acceptTerms: true, marketingOptIn: false,
+      email: 'anna@example.se', phone: '+46701234567', acceptTerms: true,
     })
+    // Inget samtycke utan kryss: fälten skickas inte alls.
+    expect(JSON.parse(post[1].body)).not.toHaveProperty('marketingConsent')
+    expect(JSON.parse(post[1].body)).not.toHaveProperty('marketingOptIn')
     expect((post[1].headers as Record<string, string>)['X-Manage-Token']).toBe('tok123')
     expect(screen.getByRole('link', { name: /\/bokning\/loc-1\/r1#tok123$/ })).toBeInTheDocument()
+    const ics = decodeURIComponent(screen.getByRole('link', { name: 'Lägg till i kalendern' }).getAttribute('href')!.split(',')[1])
+    expect(ics).toContain('UID:r1@booqy.se')
+    expect(ics.replace(/\r\n /g, '')).toContain('/bokning/loc-1/r1#tok123')
+  })
+
+  it('shows the booking length and extendability before and after confirming', async () => {
+    const user = userEvent.setup()
+    availabilityBody.slots[0] = { ...availabilityBody.slots[0], endTime: '19:30', durationMinutes: 90, extendable: true, ruleName: null } as typeof availabilityBody.slots[0]
+    holdResponse = () =>
+      json({
+        holdId: 'h'.repeat(32), manageToken: 'tok123', expiresAt: '2026-09-08T12:15:00Z', holdMinutes: 15,
+        date: '2026-09-20', startTime: '18:00', endTime: '19:30', tableIds: ['table-b'], partySize: 3,
+        cardRequired: false, durationMinutes: 90, extendable: true, ruleName: null,
+      }, 201)
+    bookingResponse = () =>
+      json({
+        reservationId: 'r1', status: 'reserved', date: '2026-09-20', startTime: '12:00', endTime: '13:00',
+        partySize: 3, tableIds: ['table-b'], customerName: 'Anna', cancellable: true, manageToken: 'tok123',
+        durationMinutes: 60, extendable: false, ruleName: 'Lunchbuffé',
+      }, 201)
+    render(<WithSite><BokaBordPage /></WithSite>)
+    await chooseTable(user)
+    expect(screen.getByText('Bokningstid: 1 tim 30 min, kan förlängas på plats om bordet är ledigt.')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Bekräfta bord' }))
+    expect(await screen.findByText(/Bokningstid: 1 tim 30 min/)).toBeInTheDocument()
+    await user.type(await screen.findByLabelText('Namn'), 'Anna')
+    await user.type(screen.getByLabelText('E-post'), 'anna@example.se')
+    await user.type(screen.getByLabelText('Telefon'), '0701234567')
+    await user.click(screen.getByRole('checkbox', { name: /bokningsvillkoren/ }))
+    await user.click(screen.getByRole('button', { name: 'Boka bordet' }))
+    expect(await screen.findByText('60 min (Lunchbuffé), kan inte förlängas')).toBeInTheDocument()
   })
 
   it('hides times that cannot seat the party', async () => {
@@ -499,11 +533,11 @@ describe('BokaBordPage - why a table cannot be chosen', () => {
     await user.click(await screen.findByRole('button', { name: '18:00' }))
 
     // The 2-seat table is shown, marked and tappable - but not selectable.
-    const small = screen.getByRole('button', { name: /^Bord 1, 2 platser, går inte att välja: 1–2 pers$/ })
+    const small = screen.getByRole('button', { name: /^Bord 1, 2 platser, går inte att välja: 1-2 pers$/ })
     expect(small).not.toHaveAttribute('aria-pressed')
     await user.click(small)
     expect(screen.getByRole('status')).toHaveTextContent(
-      'Bord 1 tar 1–2 personer - ni är 3 personer. Välj ett större bord.')
+      'Bord 1 tar 1-2 personer - ni är 3 personer. Välj ett större bord.')
     expect(screen.queryByRole('button', { name: 'Bekräfta bord' })).toBeNull()
 
     // The legend and the full list of reasons are there too.

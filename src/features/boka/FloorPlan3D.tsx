@@ -4,6 +4,7 @@ import { labelTables, layoutViewBox } from '../../shared/layoutApi'
 import type { FloorGroup, LayoutElement, LayoutTableElement } from '../../shared/layoutApi'
 import type { TableUnavailable } from './bookingApi'
 import { tableChoice } from './tableState'
+import { CHAIR_D, CHAIR_W, chairs } from './chairs'
 
 /**
  * 3D-vy av planritningen (Figma-förlaga: admin-front-ends layout-editor,
@@ -285,6 +286,24 @@ export function FloorPlan3D({
                   }}
                   title={c.title}
                 >
+                  {/* Stolarna: inskjutna under bordet, ryggstödet utåt, bara bild (inte klickbara). */}
+                  {chairs(t).map((ch, i) => (
+                    <div
+                      key={i}
+                      className="f3d-chair"
+                      aria-hidden="true"
+                      style={{
+                        left: (ch.x - t.x) * SCALE + w / 2 - (CHAIR_W * SCALE) / 2,
+                        top: (ch.z - t.z) * SCALE + h / 2 - (CHAIR_D * SCALE) / 2,
+                        width: CHAIR_W * SCALE,
+                        height: CHAIR_D * SCALE,
+                        transform: `rotate(${ch.rot}deg)`,
+                      }}
+                    >
+                      <div className="f3d-chair-seat" />
+                      <div className="f3d-chair-back" />
+                    </div>
+                  ))}
                   <div className="f3d-table-body">
                     {t.shape === 'rect' ? (
                       <>
