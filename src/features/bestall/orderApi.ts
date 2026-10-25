@@ -191,6 +191,31 @@ export function forgetTableCode(): void {
 // --- text ------------------------------------------------------------------------
 
 /** 28550 (öre) -> "285,50 kr". */
+/** Dagens datum i Sverige (YYYY-MM-DD), det datum servern sätter moms efter. */
+export function stockholmDate(now = new Date()): string {
+  return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Stockholm' }).format(now)
+}
+
+/**
+ * Momssatsen för en rad, samma regel som servern (shared/orders.py):
+ * alkohol 25 %, vid bordet 12 %, avhämtning 6 % under den tillfälliga
+ * matmomsen 2026-04-01 till 2027-12-31 och annars 12 %.
+ */
+export function vatRate(alcohol: boolean, mode: OrderMode, today = stockholmDate()): number {
+  if (alcohol) return 25
+  if (mode === 'table') return 12
+  return today >= '2026-04-01' && today <= '2027-12-31' ? 6 : 12
+}
+
+/** Momsen per sats i öre; priserna är inklusive moms (moms = brutto * sats / (100 + sats)). */
+export function vatBreakdown(lines: { rate: number; total: number }[]): { rate: number; vat: number }[] {
+  const byRate = new Map<number, number>()
+  for (const l of lines) byRate.set(l.rate, (byRate.get(l.rate) ?? 0) + l.total)
+  return [...byRate.entries()]
+    .sort(([a], [b]) => a - b)
+    .map(([rate, gross]) => ({ rate, vat: Math.round((gross * rate) / (100 + rate)) }))
+}
+
 export function kronor(ore: number): string {
   const [whole, decimals] = (ore / 100).toFixed(2).split('.')
   // Svensk tusengruppering med hårt mellanslag: 3 500 000 kr.

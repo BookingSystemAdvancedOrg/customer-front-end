@@ -331,10 +331,14 @@ describe('BestallPage', () => {
     await forward(user)
     const who = screen.getByRole('heading', { name: 'Vem är du?' })
     expect(who).toHaveFocus()
-    // Totalen syns hela vägen.
+    // Sammanfattningen syns hela vägen: rad, delsumma, moms och totalt.
     const cart = screen.getByRole('complementary', { name: 'Din beställning' })
-    expect(within(cart).getByText('35,50 kr')).toBeInTheDocument()
-    expect(within(cart).getByText(/1 rätt/)).toBeInTheDocument()
+    expect(within(cart).getByText('35,50 kr × 1')).toBeInTheDocument()
+    expect(within(cart).getByText('Delsumma')).toBeInTheDocument()
+    expect(within(cart).getByText(/^Varav moms (6|12) %$/)).toBeInTheDocument()
+    expect(within(cart).getByText('Totalt').nextSibling).toHaveTextContent('35,50 kr')
+    // Mobilens "Visa beställning" har samma summa.
+    expect(screen.getByText('Visa beställning').nextSibling).toHaveTextContent('35,50 kr')
     await user.type(screen.getByLabelText('Namn'), 'Anna')
     await user.type(screen.getByLabelText(/Mobilnummer/), '070-123 45 67')
     await forward(user)
@@ -355,9 +359,11 @@ describe('BestallPage', () => {
     // Inget av gästens uppgifter sparas innan beställningen skickas.
     expect(JSON.stringify({ ...sessionStorage })).not.toContain('Anna')
     expect(postedOrder()).toBeNull()
-    await user.click(screen.getByRole('button', { name: 'Ändra' }))
+    // Brödsmulan Varukorg leder tillbaka till brickan bredvid menyn.
+    await user.click(screen.getByRole('button', { name: 'Varukorg' }))
     expect(screen.getByRole('heading', { name: 'Din beställning' })).toHaveFocus()
-    expect(within(cart).getByText('1 × Cola')).toBeInTheDocument()
+    const tray = screen.getByRole('complementary', { name: 'Din beställning' })
+    expect(within(tray).getByText('1 × Cola')).toBeInTheDocument()
   })
 
   it('keeps the cart after a cancelled payment', async () => {

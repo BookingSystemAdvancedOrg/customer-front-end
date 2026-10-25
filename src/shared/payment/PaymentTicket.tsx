@@ -62,16 +62,28 @@ export function SecureNote({ children }: { children?: ReactNode }) {
   )
 }
 
+/** Läget för en betalknapp som ritas utanför formuläret (PaymentPanel). */
+export interface PayStatus {
+  ready: boolean
+  busy: boolean
+  paid: boolean
+}
+
 function CheckoutForm({
   payLabel,
   onPaid,
   onBack,
   backLabel,
+  formId,
+  onStatus,
 }: {
   payLabel: string
   onPaid: () => void
   onBack?: () => void
   backLabel: string
+  /** Knappen ligger utanför (form={formId}); formuläret ritar ingen egen. */
+  formId?: string
+  onStatus?: (status: PayStatus) => void
 }) {
   const state = useCheckoutElements()
   const [ready, setReady] = useState(false)
@@ -86,6 +98,10 @@ function CheckoutForm({
     const t = window.setTimeout(() => setSlow(true), SLOW_MS)
     return () => window.clearTimeout(t)
   }, [ready])
+
+  useEffect(() => {
+    onStatus?.({ ready: ready && state.type === 'success' && !loadFailed, busy, paid })
+  }, [onStatus, ready, busy, paid, state.type, loadFailed])
 
   useEffect(() => {
     if (!paid) return
@@ -130,7 +146,7 @@ function CheckoutForm({
   if (paid) return <PaidStamp text="Betalt" next="Skickar dig vidare…" />
 
   return (
-    <form className="pay-form" onSubmit={submit} noValidate aria-busy={busy || undefined}>
+    <form className="pay-form" id={formId} onSubmit={submit} noValidate aria-busy={busy || undefined}>
       {!ready && <PaymentPrinting />}
       {!ready && slow && (
         <p className="notice" role="status">
@@ -154,7 +170,7 @@ function CheckoutForm({
           Betalningen bekräftas. Det tar bara en liten stund - stäng inte sidan.
         </p>
       )}
-      <div className="pay-actions">
+      {!formId && <div className="pay-actions">
         <button
           type="submit"
           className={`btn-primary pay-submit${busy ? ' is-busy' : ''}`}
@@ -167,8 +183,64 @@ function CheckoutForm({
             {backLabel}
           </button>
         )}
-      </div>
+      </div>}
     </form>
+  )
+}
+
+function useCheckoutOptions(publishableKey: string | null, stripeAccount: string, clientSecret: string) {
+  const { theme } = useTheme()
+  const stripePromise = useMemo(
+    () => (publishableKey ? stripeFor(publishableKey, stripeAccount) : null),
+    [publishableKey, stripeAccount],
+  )
+  const fonts = useMemo(() => paymentFonts(), [])
+  const options = useMemo(
+    () => ({
+      clientSecret,
+      elementsOptions: { appearance: paymentAppearance(theme), fonts, loader: 'never' as const },
+    }),
+    [clientSecret, theme, fonts],
+  )
+  return { theme, stripePromise, options }
+}
+
+/**
+ * Bara Stripes formulär, utan kvitto och utan egen knapp: kassan på
+ * beställningssidan ritar betalknappen i sammanfattningen (form={formId})
+ * och får formulärets läge via onStatus.
+ */
+export function PaymentPanel({
+  publishableKey,
+  stripeAccount,
+  clientSecret,
+  formId,
+  onStatus,
+  onPaid,
+  onBack,
+  backLabel = 'Tillbaka',
+}: {
+  publishableKey: string | null
+  stripeAccount: string
+  clientSecret: string
+  formId: string
+  onStatus: (status: PayStatus) => void
+  onPaid: () => void
+  onBack?: () => void
+  backLabel?: string
+}) {
+  const { theme, stripePromise, options } = useCheckoutOptions(publishableKey, stripeAccount, clientSecret)
+  if (!stripePromise) {
+    return (
+      <p className="notice error" role="alert">
+        Betalningen är inte tillgänglig just nu. Ring restaurangen.
+      </p>
+    )
+  }
+  return (
+    <CheckoutElementsProvider key={theme} stripe={stripePromise} options={options}>
+      <CheckoutForm payLabel="" onPaid={onPaid} onBack={onBack} backLabel={backLabel} formId={formId} onStatus={onStatus} />
+    </CheckoutElementsProvider>
   )
 }
 
@@ -197,19 +269,7 @@ export function PaymentTicket({
   onBack?: () => void
   backLabel?: string
 }) {
-  const { theme } = useTheme()
-  const stripePromise = useMemo(
-    () => (publishableKey ? stripeFor(publishableKey, stripeAccount) : null),
-    [publishableKey, stripeAccount],
-  )
-  const fonts = useMemo(() => paymentFonts(), [])
-  const options = useMemo(
-    () => ({
-      clientSecret,
-      elementsOptions: { appearance: paymentAppearance(theme), fonts, loader: 'never' as const },
-    }),
-    [clientSecret, theme, fonts],
-  )
+  const { theme, stripePromise, options } = useCheckoutOptions(publishableKey, stripeAccount, clientSecret)
 
   return (
     <section className="pay-ticket" aria-labelledby="pay-title">

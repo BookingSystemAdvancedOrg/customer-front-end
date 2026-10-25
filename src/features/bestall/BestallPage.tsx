@@ -27,18 +27,20 @@ import {
   saveCart,
   stepQuantity,
   tableCodeFrom,
+  vatBreakdown,
+  vatRate,
 } from './orderApi'
 import type { Cart, OrderCreated, OrderMode, OrderingState } from './orderApi'
 import { checkCode, codeErrorMessage, discounted, normalizeCode } from '../erbjudande/offerApi'
 import type { CodeTerms } from '../erbjudande/offerApi'
-import { FlowSteps } from '../../shared/FlowSteps'
 import { useStickyCart } from '../../shared/useStickyCart'
-import { PaymentTicket } from '../../shared/payment/PaymentTicket'
+import { PaymentPanel, SecureNote } from '../../shared/payment/PaymentTicket'
+import type { PayStatus } from '../../shared/payment/PaymentTicket'
 import { GuestDataNotice } from '../../shared/GuestDataNotice'
 import { MarketingConsent, NO_CONSENT, consentFields } from '../../shared/MarketingConsent'
 import type { ConsentChoice } from '../../shared/MarketingConsent'
 
-const STEPS = [{ label: 'Välj rätter' }, { label: 'Dina uppgifter' }, { label: 'Betala' }, { label: 'Klart' }]
+const STEPS = [{ label: 'Varukorg' }, { label: 'Dina uppgifter' }, { label: 'Betala' }, { label: 'Klart' }]
 
 interface Guest {
   name: string
@@ -114,10 +116,11 @@ export default function BestallPage() {
   const [busy, setBusy] = useState(false)
   // Beställningen är registrerad: betalningskvittot visas (steg 3).
   const [payment, setPayment] = useState<OrderCreated | null>(null)
+  const [payStatus, setPayStatus] = useState<PayStatus>({ ready: false, busy: false, paid: false })
   const [checkout, setCheckout] = useState<Step>('cart')
   const titleRef = useRef<HTMLHeadingElement>(null)
   const stepMoved = useRef(false)
-  const headRef = useRef<HTMLElement>(null)
+  const headRef = useRef<HTMLDivElement>(null)
   const turnstileSiteKey = config.turnstile?.siteKey ?? null
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
   const [turnstileReset, setTurnstileReset] = useState(0)
@@ -183,7 +186,7 @@ export default function BestallPage() {
     title.focus({ preventScroll: true })
     // Hamnar brickans överkant utanför fönstret (mobil: korta steg gör sidan
     // kortare) glider den in under sidhuvudet; annars rör sig inget.
-    const cart = title.closest('.order-cart')
+    const cart = title.closest('.checkout, .order-cart')
     if (!cart) return
     const header = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--header-h')) || 0
     const top = cart.getBoundingClientRect().top
@@ -213,7 +216,7 @@ export default function BestallPage() {
     const observer = new IntersectionObserver(([entry]) => setCartInView(entry.isIntersecting), { threshold: 0.15 })
     observer.observe(el)
     return () => observer.disconnect()
-  }, [payment])
+  }, [payment, step])
   const cartRef = useStickyCart<HTMLElement>()
   const barRef = useRef<HTMLAnchorElement>(null)
 
@@ -315,9 +318,10 @@ export default function BestallPage() {
         embedded: true,
       })
       rememberToken(created.orderId, created.statusToken)
+      stepMoved.current = true
+      setPayStatus({ ready: false, busy: false, paid: false })
       setPayment(created)
       setBusy(false)
-      window.requestAnimationFrame(() => headRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' }))
     } catch (err) {
       setError(orderErrorMessage(err))
       if (err instanceof Error && /^discount_/.test(err.message)) setCode(null)
@@ -364,50 +368,225 @@ export default function BestallPage() {
     }
   }
 
-  if (payment) {
+  // Summan som betalas: serverns belopp när beställningen finns, annars sidans.
+  const payTotal = payment ? payment.totalAmount : total
+  const vat = vatBreakdown(lines.map((l) => ({
+    rate: vatRate(Boolean(l.dish.alcohol), mode),
+    total: (applied ? discounted(ore(l.dish.price), applied.percent) : ore(l.dish.price)) * l.quantity,
+  })))
+  const place = mode === 'table'
+    ? (tableLabel ? (/^bord/i.test(tableLabel) ? tableLabel : `Bord ${tableLabel}`) : 'Ditt bord')
+    : `Hämtas hos ${config.tenant.name}${location.name ? `, ${location.name}` : ''}`
+
+  /** Sammanfattningen till höger (och i "Visa beställning" på mobilen). */
+  const summary = (
+    <>
+      <ul className="sum-lines">
+        {lines.map(({ dish, quantity }) => (
+          <li key={dish.menuItemId}>
+            <Plate src={menuImageUrl(dish.imageKey)} name={dish.name} size="sm" />
+            <span className="sum-line-text">
+              <span className="sum-line-name">{dish.name}</span>
+              <span className="sum-line-qty">{kronor(ore(dish.price))} × {quantity}</span>
+            </span>
+            <span className="sum-line-price">{kronor(ore(dish.price) * quantity)}</span>
+          </li>
+        ))}
+      </ul>
+      <dl className="sum-rows">
+        <div><dt>Delsumma</dt><dd>{kronor(subtotal)}</dd></div>
+        {applied && <div><dt>Rabatt {applied.percent} % ({applied.code})</dt><dd>-{kronor(subtotal - total)}</dd></div>}
+        {vat.map((v) => <div key={v.rate}><dt>Varav moms {v.rate} %</dt><dd>{kronor(v.vat)}</dd></div>)}
+      </dl>
+      <div className="sum-total"><span>Totalt</span><span>{kronor(payTotal)}</span></div>
+    </>
+  )
+
+  const crumbs = (
+    <ol className="crumbs" aria-label={`Beställning: steg ${stepAt} av ${STEPS.length}`}>
+      {STEPS.map((s, i) => {
+        const n = i + 1
+        const state = n < stepAt ? 'done' : n === stepAt ? 'current' : 'next'
+        return (
+          <li key={s.label} className={`crumb is-${state}`} aria-current={state === 'current' ? 'step' : undefined}>
+            {n === 1 && state === 'done' && !payment ? (
+              <button type="button" className="crumb-link" onClick={() => go('cart')}>{s.label}</button>
+            ) : (
+              <span>{state === 'done' && <span className="sr-only">Klart: </span>}{s.label}</span>
+            )}
+            {n < STEPS.length && (
+              <svg className="crumb-sep" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5" /></svg>
+            )}
+          </li>
+        )
+      })}
+    </ol>
+  )
+
+  if (payment || step !== 'cart') {
+    const formId = payment ? 'order-pay' : 'order-checkout'
+    const title = payment ? 'Betala' : STEP_TITLE[step]
+    const ctaDisabled = payment ? !payStatus.ready || payStatus.busy : !open || busy || tooLarge
+    const cta = payment
+      ? payStatus.busy ? <><span className="spinner" aria-hidden="true" />Betalar…</> : `Betala ${kronor(payTotal)}`
+      : step === 'confirm'
+        ? busy ? <><span className="spinner" aria-hidden="true" />Skickar beställningen…</> : `Till betalning · ${kronor(total)}`
+        : <>Fortsätt<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" /></svg></>
     return (
-      <>
-        <section className="page-head" ref={headRef}>
-          <h1>Betala</h1>
-          <p className="page-lede">
-            {mode === 'table' ? 'Betala här, så går beställningen direkt till köket.' : `Betala här och hämta hos ${config.tenant.name}.`}
-          </p>
-          <FlowSteps steps={STEPS} current={3} label="Beställning" />
-        </section>
-        <PaymentTicket
-          publishableKey={config.stripe.publishableKey}
-          stripeAccount={payment.stripeAccount}
-          clientSecret={payment.clientSecret}
-          title={mode === 'table' ? 'Din beställning till bordet' : 'Din beställning'}
-          payLabel={`Betala ${kronor(payment.totalAmount)}`}
-          summary={
-            <>
-              <ul className="cart-list">
-                {lines.map(({ dish, quantity }) => (
-                  <li key={dish.menuItemId}>
-                    <span className="cart-item-name">{quantity}&nbsp;×&nbsp;{dish.name}</span>
-                    <span />
-                    <span className="cart-item-price">{kronor(ore(dish.price) * quantity)}</span>
-                  </li>
-                ))}
-              </ul>
-              {applied && (
-                <div className="cart-discount">
-                  <span>Rabatt {applied.percent} % ({applied.code})</span>
-                  <span>-{kronor(subtotal - total)}</span>
+      <div className="checkout" ref={headRef}>
+        <header className="checkout-bar">
+          <span className="checkout-brand">
+            {config.tenant.branding.logoUrl && <img src={config.tenant.branding.logoUrl} alt="" width={32} height={32} />}
+            <span>{config.tenant.name}</span>
+          </span>
+          {crumbs}
+        </header>
+
+        <details className="checkout-peek">
+          <summary>
+            <span>Visa beställning</span>
+            <strong>{kronor(payTotal)}</strong>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+          </summary>
+          <div className="checkout-peek-body">{summary}</div>
+        </details>
+
+        <div className="checkout-grid">
+          <div className="checkout-main">
+            <h1 className="checkout-title" ref={titleRef} tabIndex={-1}>{title}</h1>
+
+            {payment ? (
+              <>
+                <section className="checkout-block" aria-labelledby="checkout-who">
+                  <h2 id="checkout-who" className="checkout-sub">Dina uppgifter</h2>
+                  <div className="checkout-card checkout-card--facts">
+                    <p className="checkout-fact-strong">{guest.name}</p>
+                    <p>{guest.phone} · {guest.email}</p>
+                    <p>{place}</p>
+                  </div>
+                </section>
+                <section className="checkout-block" aria-labelledby="checkout-pay">
+                  <h2 id="checkout-pay" className="checkout-sub">Betala med</h2>
+                  <PaymentPanel
+                    publishableKey={config.stripe.publishableKey}
+                    stripeAccount={payment.stripeAccount}
+                    clientSecret={payment.clientSecret}
+                    formId={formId}
+                    onStatus={setPayStatus}
+                    onPaid={paid}
+                    onBack={back}
+                    backLabel="Ändra beställningen"
+                  />
+                  <SecureNote>
+                    Betalningen sker hos Stripe. Kortuppgifterna går direkt dit och sparas aldrig hos oss. Med Swish
+                    eller Klarna kan du skickas vidare en kort stund för att godkänna.
+                  </SecureNote>
+                </section>
+                <button type="button" className="checkout-back" disabled={payStatus.busy || payStatus.paid} onClick={back}>
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
+                  Ändra beställningen
+                </button>
+              </>
+            ) : (
+              <form id={formId} className="checkout-form" onSubmit={next} noValidate aria-busy={busy || undefined}>
+                <div className="checkout-card checkout-step" key={step}>
+                  {step === 'who' && (
+                    <>
+                      <label className="booking-field">
+                        <span>Namn</span>
+                        <input autoComplete="name" value={guest.name}
+                          onChange={(e) => setGuest({ ...guest, name: e.target.value })} />
+                      </label>
+                      <label className="booking-field">
+                        <span>Mobilnummer</span>
+                        <span className="field-hint">
+                          {mode === 'pickup' ? 'Vi sms:ar när maten lagas och när den är klar.' : 'Vi sms:ar när maten lagas.'}
+                        </span>
+                        <PhoneInput value={guest.phone} onChange={(phone) => setGuest({ ...guest, phone })} />
+                      </label>
+                    </>
+                  )}
+
+                  {step === 'receipt' && (
+                    <>
+                      <label className="booking-field">
+                        <span>E-post</span>
+                        <span className="field-hint">Hit skickar vi kvittot.</span>
+                        <input type="email" autoComplete="email" value={guest.email}
+                          onChange={(e) => setGuest({ ...guest, email: e.target.value })} />
+                      </label>
+                      <label className="booking-field">
+                        <span>Allergier eller önskemål</span>
+                        <span className="field-hint">Valfritt, till exempel nötallergi.</span>
+                        <textarea rows={3} maxLength={NOTES_MAX} value={guest.notes}
+                          onChange={(e) => setGuest({ ...guest, notes: e.target.value })} />
+                      </label>
+                    </>
+                  )}
+
+                  {step === 'confirm' && (
+                    <fieldset className="order-fields" disabled={busy}>
+                      <legend className="sr-only">{STEP_TITLE.confirm}</legend>
+                      <label className="booking-check">
+                        <input type="checkbox" checked={guest.accept}
+                          onChange={(e) => setGuest({ ...guest, accept: e.target.checked })} />
+                        <span>
+                          Jag förstår att beställningen inte kan ändras efter betalning. Avbryter restaurangen får
+                          jag pengarna tillbaka.
+                        </span>
+                      </label>
+                      <MarketingConsent value={guest.consent} onChange={(consent) => setGuest({ ...guest, consent })} />
+                      <details className="checkout-privacy">
+                        <summary>
+                          Vi använder namn, mobil och e-post till beställningen och kvittot.{' '}
+                          <span className="checkout-privacy-more">Läs mer</span>
+                        </summary>
+                        <GuestDataNotice kind="order" />
+                      </details>
+                      {turnstileSiteKey && (
+                        <TurnstileWidget siteKey={turnstileSiteKey} resetKey={turnstileReset} action="order"
+                          onToken={setTurnstileToken} />
+                      )}
+                    </fieldset>
+                  )}
                 </div>
-              )}
-              <div className="cart-total">
-                <span>Totalt</span>
-                <span>{kronor(payment.totalAmount)}</span>
+
+                {tooLarge && (
+                  <p className="notice error" role="alert">
+                    Beställningen är för stor för att betalas online (högst {kronor(MAX_ORDER_ORE)}). Minska antalet eller
+                    kontakta restaurangen.
+                  </p>
+                )}
+                {error && !tooLarge && (
+                  <p className="notice error" role="alert">
+                    {error}
+                  </p>
+                )}
+
+                <button type="button" className="checkout-back" disabled={busy} onClick={previous}>
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
+                  Tillbaka
+                </button>
+              </form>
+            )}
+          </div>
+
+          <aside className="checkout-side" aria-label="Din beställning">
+            <div className="checkout-side-sum">
+              <h2 className="checkout-sub">Din beställning</h2>
+              {summary}
+            </div>
+            {!payStatus.paid && (
+              <div className="checkout-cta">
+                <button type="submit" form={formId} disabled={ctaDisabled}
+                  className={`btn-primary checkout-next${busy || payStatus.busy ? ' is-busy' : ''}`}>
+                  {cta}
+                </button>
               </div>
-            </>
-          }
-          onPaid={paid}
-          onBack={back}
-          backLabel="Ändra beställningen"
-        />
-      </>
+            )}
+          </aside>
+        </div>
+      </div>
     )
   }
 
@@ -420,7 +599,7 @@ export default function BestallPage() {
             ? `Välj, betala i mobilen - vi serverar vid ${tableLabel ? (/^bord/i.test(tableLabel) ? tableLabel : `bord ${tableLabel}`) : 'ditt bord'}.`
             : `Välj, betala här och hämta hos ${config.tenant.name}. Du får ett sms när maten är klar.`}
         </p>
-        <FlowSteps steps={STEPS} current={stepAt} label="Beställning" />
+        {crumbs}
       </section>
 
       {cancelledOrder && (
@@ -508,38 +687,20 @@ export default function BestallPage() {
         </div>
 
         <aside className="order-cart" id="order-cart" ref={cartRef} aria-label="Din beställning">
-          {step === 'cart' ? (
-            <div className="tray-head">
-              <h2 className="checkout-title" ref={titleRef} tabIndex={-1}>{STEP_TITLE.cart}</h2>
-              <span className="tray-plates" aria-hidden="true" ref={trayRef}>
-                {lines.slice(0, 5).map(({ dish }) => (
-                  <Plate key={dish.menuItemId} src={menuImageUrl(dish.imageKey)} name={dish.name} size="sm" />
-                ))}
-              </span>
-            </div>
-          ) : (
-            <div className="checkout-summary">
-              <span className="tray-plates" aria-hidden="true" ref={trayRef}>
-                {lines.slice(0, 3).map(({ dish }) => (
-                  <Plate key={dish.menuItemId} src={menuImageUrl(dish.imageKey)} name={dish.name} size="sm" />
-                ))}
-              </span>
-              <span className="checkout-summary-text">
-                {count} {count === 1 ? 'rätt' : 'rätter'} · <strong>{kronor(total)}</strong>
-              </span>
-              <button type="button" className="link-button" onClick={() => go('cart')}>
-                Ändra
-              </button>
-            </div>
-          )}
+          <div className="tray-head">
+            <h2 className="checkout-title" ref={titleRef} tabIndex={-1}>{STEP_TITLE.cart}</h2>
+            <span className="tray-plates" aria-hidden="true" ref={trayRef}>
+              {lines.slice(0, 5).map(({ dish }) => (
+                <Plate key={dish.menuItemId} src={menuImageUrl(dish.imageKey)} name={dish.name} size="sm" />
+              ))}
+            </span>
+          </div>
 
           {lines.length === 0 ? (
             <p className="cart-empty">Brickan är tom. Tryck på + vid en rätt, så hamnar den här.</p>
           ) : (
-          <form className="order-form" onSubmit={next} noValidate aria-busy={busy || undefined}>
-            <div className="checkout-step" key={step}>
-            {step === 'cart' && (
-              <>
+          <form className="order-form" onSubmit={next} noValidate>
+            <div className="checkout-step">
                 <ul className="cart-list">
                   {lines.map(({ dish, quantity }) => (
                     <li key={dish.menuItemId}>
@@ -603,101 +764,17 @@ export default function BestallPage() {
                     kontakta restaurangen.
                   </p>
                 )}
-              </>
-            )}
-
-            {step === 'who' && (
-              <>
-                <h2 className="checkout-title" ref={titleRef} tabIndex={-1}>{STEP_TITLE.who}</h2>
-                <label className="booking-field">
-                  <span>Namn</span>
-                  <input autoComplete="name" value={guest.name}
-                    onChange={(e) => setGuest({ ...guest, name: e.target.value })} />
-                </label>
-                <label className="booking-field">
-                  <span>Mobilnummer</span>
-                  <span className="field-hint">
-                    {mode === 'pickup' ? 'Vi sms:ar när maten lagas och när den är klar.' : 'Vi sms:ar när maten lagas.'}
-                  </span>
-                  <PhoneInput value={guest.phone} onChange={(phone) => setGuest({ ...guest, phone })} />
-                </label>
-              </>
-            )}
-
-            {step === 'receipt' && (
-              <>
-                <h2 className="checkout-title" ref={titleRef} tabIndex={-1}>{STEP_TITLE.receipt}</h2>
-                <label className="booking-field">
-                  <span>E-post</span>
-                  <span className="field-hint">Hit skickar vi kvittot.</span>
-                  <input type="email" autoComplete="email" value={guest.email}
-                    onChange={(e) => setGuest({ ...guest, email: e.target.value })} />
-                </label>
-                <label className="booking-field">
-                  <span>Allergier eller önskemål</span>
-                  <span className="field-hint">Valfritt, till exempel nötallergi.</span>
-                  <textarea rows={3} maxLength={NOTES_MAX} value={guest.notes}
-                    onChange={(e) => setGuest({ ...guest, notes: e.target.value })} />
-                </label>
-              </>
-            )}
-
-            {step === 'confirm' && (
-              <fieldset className="order-fields" disabled={busy}>
-                <h2 className="checkout-title" ref={titleRef} tabIndex={-1}>{STEP_TITLE.confirm}</h2>
-                <label className="booking-check">
-                  <input type="checkbox" checked={guest.accept}
-                    onChange={(e) => setGuest({ ...guest, accept: e.target.checked })} />
-                  <span>
-                    Jag förstår att beställningen inte kan ändras efter betalning. Avbryter restaurangen får
-                    jag pengarna tillbaka.
-                  </span>
-                </label>
-                <MarketingConsent value={guest.consent} onChange={(consent) => setGuest({ ...guest, consent })} />
-                <details className="checkout-privacy">
-                  <summary>
-                    Vi använder namn, mobil och e-post till beställningen och kvittot.{' '}
-                    <span className="checkout-privacy-more">Läs mer</span>
-                  </summary>
-                  <GuestDataNotice kind="order" />
-                </details>
-                {turnstileSiteKey && (
-                  <TurnstileWidget siteKey={turnstileSiteKey} resetKey={turnstileReset} action="order"
-                    onToken={setTurnstileToken} />
-                )}
-              </fieldset>
-            )}
-
-            {error && (step !== 'cart' || !tooLarge) && (
+            {error && !tooLarge && (
               <p className="notice error" role="alert">
                 {error}
               </p>
             )}
             </div>
-
             <div className="checkout-actions">
-              {step === 'confirm' ? (
-                <button
-                  type="submit"
-                  className={`btn-primary checkout-next${busy ? ' is-busy' : ''}`}
-                  disabled={!open || busy || tooLarge}
-                >
-                  {busy
-                    ? <><span className="spinner" aria-hidden="true" />Skickar beställningen…</>
-                    : `Till betalning · ${kronor(total)}`}
-                </button>
-              ) : (
-                <button type="submit" className="btn-primary checkout-next" disabled={!open || tooLarge}>
-                  Fortsätt
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" /></svg>
-                </button>
-              )}
-              {step !== 'cart' && (
-                <button type="button" className="checkout-back" disabled={busy} onClick={previous}>
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
-                  Tillbaka
-                </button>
-              )}
+              <button type="submit" className="btn-primary checkout-next" disabled={!open || tooLarge}>
+                Fortsätt
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" /></svg>
+              </button>
             </div>
           </form>
           )}

@@ -136,7 +136,7 @@ export function paymentAppearance(theme: Theme): Appearance {
       '.Error': { fontFamily: MONO, fontSize: '12px', color: danger },
       '.Tab': {
         backgroundColor: surface,
-        border: `1.5px dashed ${line}`,
+        border: `1.5px solid ${line}`,
         boxShadow: 'none',
         color: muted,
       },
