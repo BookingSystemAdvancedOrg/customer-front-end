@@ -1,5 +1,5 @@
 /// <reference types="vitest/config" />
-import { defineConfig, loadEnv } from 'vite'
+import { defaultClientConditions, defaultServerConditions, defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 
 // https://vite.dev/config/
@@ -45,12 +45,19 @@ export default defineConfig(({ mode }) => {
         },
       },
     ],
+    // @booqy/site-kit är en npm-workspace i packages/site-kit: sajten läser
+    // dess källkod direkt (villkoret @booqy/source i paketets exports), så
+    // dev-servern, testerna och bygget ser ändringar i paketet utan att det
+    // byggs först. Ett publicerat paket läses från dist/ som vanligt.
+    resolve: { conditions: ['@booqy/source', ...defaultClientConditions] },
+    ssr: { resolve: { conditions: ['@booqy/source', ...defaultServerConditions] } },
     cacheDir: mode === 'test' ? 'node_modules/.vitest' : 'node_modules/.vite',
     define: useDevProxy
       ? { 'import.meta.env.VITE_API_BASE_URL': JSON.stringify('/api') }
       : {},
     test: {
       environment: 'jsdom',
+      include: ['src/**/*.test.{ts,tsx}'],
       setupFiles: './src/test/setup.ts',
       globals: true,
       env: { VITE_API_BASE_URL: 'https://api.test' },

@@ -1,4 +1,4 @@
-import { useSite } from '../../shared/SiteContext'
+import { useSite } from '@booqy/site-kit'
 
 /** Om oss: restaurangens egen text (varumärkesinställningen "about"). */
 export default function OmOssPage() {

@@ -1,0 +1,2107 @@
+/* Flödenas grund (öppettider, varukorg, knappar, planritning, bokning,
+   beställ, catering, textsidor). Designsystem: Booqys bongrail (tokens i
+   theme.css) - papper på ett skrivbord, restaurangens egen färg som enda
+   accent. world.css laddas efter den här filen och skriver över. Sajtens
+   skal (header, hero, footer) ligger i sajten, inte här. */
+/* --- Öppettider (modal) --------------------------------------------------- */
+
+.opening-hours-modal-root {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(0.75rem, 3vw, 1.5rem);
+  box-sizing: border-box;
+}
+
+.opening-hours-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: var(--scrim);
+  cursor: pointer;
+}
+
+.opening-hours-modal-panel {
+  position: relative;
+  z-index: 1;
+  width: min(24rem, 100%);
+  max-height: min(88vh, 40rem);
+  overflow-y: auto;
+  padding: 1rem 1.15rem 1.2rem;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  border: 1px solid color-mix(in srgb, var(--accent) 38%, transparent);
+  box-shadow: var(--shadow-lg);
+}
+
+.opening-hours-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.65rem;
+  padding-bottom: 0.55rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
+}
+
+.opening-hours-modal-heading {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: clamp(1.05rem, 2.2vw, 1.35rem);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--accent-ink);
+}
+
+.opening-hours-modal-close {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  font-family: var(--sans);
+  font-size: 1.45rem;
+  font-weight: 300;
+  line-height: 1;
+  color: color-mix(in srgb, var(--ink) 85%, transparent);
+  background: var(--fill);
+  border: 1px solid color-mix(in srgb, var(--ink) 15%, transparent);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.opening-hours-modal-close:hover {
+  color: var(--ink);
+  background: var(--fill);
+}
+
+.opening-hours-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--sans);
+  font-size: 0.85rem;
+}
+
+.opening-hours-table th,
+.opening-hours-table td {
+  padding: 0.4rem 0.5rem;
+  text-align: left;
+  font-weight: 400;
+  border-top: 1px solid color-mix(in srgb, var(--ink) 8%, transparent);
+}
+
+.opening-hours-table th {
+  color: var(--muted);
+  font-weight: 500;
+  width: 45%;
+}
+
+.opening-hours-table td {
+  color: color-mix(in srgb, var(--ink) 92%, transparent);
+}
+
+/* --- Varukorg (bara på Beställ mat, se FloatingCart.tsx) ------------------- */
+
+.floating-cart {
+  position: fixed;
+  top: clamp(80px, 11vw, 116px);
+  right: clamp(16px, 4vw, 48px);
+  z-index: 25;
+}
+
+.cart-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+  color: color-mix(in srgb, var(--ink) 90%, transparent);
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.cart-button:hover {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border-color: var(--gold);
+}
+
+.cart-badge {
+  display: grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--r-pill);
+  background: var(--gold);
+  color: var(--on-accent);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.cart-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: min(340px, calc(100vw - 32px));
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow);
+  padding: 18px;
+  z-index: 40;
+}
+
+.cart-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.cart-head h2 {
+  font: 600 18px/1.2 var(--serif);
+  color: var(--accent-ink);
+}
+
+.cart-close {
+  border: none;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.cart-empty {
+  color: var(--muted);
+  font-size: 14.5px;
+}
+
+.cart-list {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.cart-list li {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 10px;
+  align-items: center;
+  font-size: 14.5px;
+}
+
+.cart-item-name {
+  font-weight: 500;
+}
+
+.cart-qty {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cart-qty button {
+  width: 36px;
+  height: 36px;
+  font-size: 18px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  line-height: 1;
+}
+
+.cart-item-price {
+  font-weight: 600;
+  color: var(--accent-ink);
+}
+
+.cart-total {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 600;
+  border-top: 1px solid var(--border);
+  margin-top: 12px;
+  padding-top: 10px;
+}
+
+/* Rabattkoden i varukorgen. */
+.cart-discount {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+  font-size: 15px;
+  color: var(--success);
+}
+
+.cart-total-before {
+  margin-right: 4px;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.cart-code {
+  margin-top: 10px;
+}
+
+.cart-code-row {
+  display: flex;
+  gap: 8px;
+}
+
+.cart-code-row input {
+  flex: 1;
+  min-width: 0;
+  min-height: 42px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--fill);
+  font: inherit;
+  font-size: 15px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.cart-code-row input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--focus);
+}
+
+.cart-code-ok {
+  margin: 0;
+  font-size: 14px;
+  color: var(--success);
+}
+
+.link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent-ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.link-button:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.field-hint.error {
+  margin: 6px 0 0;
+  color: var(--danger-ink);
+}
+
+.cart-note {
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+.link-clear {
+  border: none;
+  background: none;
+  color: var(--danger);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+  margin-top: 10px;
+}
+
+.page-hero {
+  text-align: center;
+  margin-bottom: clamp(20px, 4vw, 36px);
+}
+
+.hero-kicker {
+  color: var(--accent-ink);
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 0.78rem;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.page-hero h1 {
+  font: 600 clamp(32px, 5vw, 46px) / 1.1 var(--serif);
+  color: var(--ink);
+  margin: 10px 0 12px;
+  letter-spacing: 0.02em;
+}
+
+.hero-sub {
+  color: var(--muted);
+  max-width: 56ch;
+  margin: 0 auto;
+}
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 22px;
+}
+
+.filter-pill {
+  min-height: 36px;
+  padding: 0 16px;
+  border-radius: var(--r-pill);
+  border: 1px solid transparent;
+  background: var(--fill);
+  color: var(--ink);
+  font: 500 15px/1 var(--font);
+  cursor: pointer;
+  transition: background 200ms var(--ease), color 200ms var(--ease), transform 200ms var(--ease);
+}
+
+.filter-pill:hover {
+  filter: brightness(0.97);
+}
+
+.filter-pill:active {
+  transform: scale(0.98);
+}
+
+.filter-pill.active {
+  background: var(--accent);
+  border-color: var(--gold);
+  color: var(--on-accent);
+  font-weight: 600;
+}
+
+/* --- Knappar ------------------------------------------------------------------ */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 20px;
+  border-radius: var(--r-md);
+  border: 0;
+  font: 500 17px/1 var(--font);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 200ms var(--ease), transform 200ms var(--ease), filter 200ms var(--ease);
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.btn.primary {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.btn.primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.btn.primary:disabled {
+  background: var(--surface-soft);
+  color: var(--muted);
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.btn.ghost {
+  color: var(--accent-ink);
+  background: var(--fill);
+}
+
+.btn.ghost:hover:not(:disabled) {
+  filter: brightness(0.97);
+}
+
+.btn.small {
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: var(--r-sm);
+  font-size: 15px;
+  background: var(--tint-accent);
+  color: var(--accent-ink);
+}
+
+.btn.small:hover:not(:disabled) {
+  filter: brightness(0.97);
+}
+
+.btn.wide {
+  width: 100%;
+  text-align: center;
+}
+
+/* --- Planritning (Boka bord - förhandsvisning, se BokaBordPage.tsx) --------------- */
+
+.floor-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 16px;
+}
+
+.floor-svg-frame {
+  position: relative;
+  width: 100%;
+  max-height: 65vh;
+  border-radius: var(--r-md);
+  overflow: hidden;
+  background: var(--fill);
+}
+
+.floor-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Elementens x/z-koordinater är i meter (API:t), så stroke/font-storlekar
+   är satta i samma skala i stället för pixlar. */
+.floor-svg-wall {
+  fill: color-mix(in srgb, var(--ink) 72%, transparent);
+  stroke: none;
+}
+
+.floor-svg-door {
+  fill: var(--surface);
+  stroke: var(--accent);
+  stroke-width: 0.03;
+  stroke-dasharray: 0.08 0.06;
+}
+
+.floor-svg-window {
+  fill: rgba(140, 190, 220, 0.28);
+  stroke: rgba(140, 190, 220, 0.6);
+  stroke-width: 0.02;
+}
+
+.floor-svg-table {
+  fill: var(--surface);
+  stroke: color-mix(in srgb, var(--ink) 25%, transparent);
+  stroke-width: 0.03;
+}
+
+.floor-svg-table-label {
+  fill: var(--ink);
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: 0.32px;
+  dominant-baseline: middle;
+}
+
+.floor-svg-table-seats {
+  fill: var(--muted);
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 0.22px;
+  dominant-baseline: middle;
+}
+
+/* --- 3D-vy (Figma-förlaga: admin-front-ends layout-editor, samma
+   "utfälld låda"-teknik i CSS: väggar/bord byggs av roterade sidoytor +
+   ett tak, i en scen med perspective + rotateX(tilt) rotateZ(spin)).
+   Bara läsning här - ingen redigering, bara dra för att rotera vyn. ------- */
+
+.floor-view-toggle {
+  display: inline-flex;
+  align-self: flex-start;
+  gap: 2px;
+  padding: 2px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--fill);
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.floor-view-toggle button {
+  min-width: 64px;
+  padding: 6px 16px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  font: 500 13px/1.3 var(--font);
+  color: var(--ink);
+  cursor: pointer;
+  transition: background 0.2s var(--ease), box-shadow 0.2s var(--ease);
+}
+.floor-view-toggle button.active {
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 1px rgba(0, 0, 0, 0.04);
+}
+
+.f3d-scene {
+  position: relative;
+  width: 100%;
+  /* Höjden begränsar hur mycket auto-fiten (--zoom) kan zooma in - ett
+     långsmalt rum (bredd ≫ djup) blir "höjd-styrt" (se projectedDepth i
+     FloorPlan3D.tsx), så en snålare höjd tvingade fram ett mindre zoom-värde
+     än nödvändigt och krympte allt, inklusive bordstexten, mer än behövt. */
+  height: clamp(320px, 56vw, 560px);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  background: var(--fill);
+  perspective: 1600px;
+  cursor: grab;
+  touch-action: none;
+}
+
+.f3d-scene--dragging {
+  cursor: grabbing;
+}
+
+.f3d-hint {
+  position: absolute;
+  left: 12px;
+  bottom: 10px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  color: color-mix(in srgb, var(--ink) 55%, transparent);
+  pointer-events: none;
+}
+
+.f3d-hint-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+  border: 1px solid var(--border);
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.f3d-world {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform-style: preserve-3d;
+  transform: translate(-50%, -50%) scale(var(--zoom, 1)) rotateX(var(--tilt, 0deg))
+    rotateZ(var(--spin, 0deg));
+  transition: transform 320ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.f3d-world--dragging {
+  transition: none;
+}
+
+.f3d-plane {
+  position: relative;
+  transform-style: preserve-3d;
+}
+
+.f3d-wall {
+  position: absolute;
+  transform-style: preserve-3d;
+}
+
+.f3d-face {
+  position: absolute;
+  backface-visibility: visible;
+  transition: height 320ms cubic-bezier(0.4, 0, 0.2, 1), width 320ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.f3d-face.h-n {
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: var(--wh, 90px);
+  transform-origin: top center;
+  transform: rotateX(90deg);
+  background: linear-gradient(color-mix(in srgb, var(--accent) 32%, transparent), color-mix(in srgb, var(--accent) 14%, transparent));
+}
+
+.f3d-face.h-s {
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: var(--wh, 90px);
+  transform-origin: bottom center;
+  transform: rotateX(-90deg);
+  background: linear-gradient(color-mix(in srgb, var(--accent) 32%, transparent), color-mix(in srgb, var(--accent) 14%, transparent));
+}
+
+.f3d-face.v-w {
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: var(--wh, 90px);
+  transform-origin: center left;
+  transform: rotateY(-90deg);
+  background: linear-gradient(color-mix(in srgb, var(--accent) 28%, transparent), color-mix(in srgb, var(--accent) 12%, transparent));
+}
+
+.f3d-face.v-e {
+  right: 0;
+  top: 0;
+  height: 100%;
+  width: var(--wh, 90px);
+  transform-origin: center right;
+  transform: rotateY(90deg);
+  background: linear-gradient(color-mix(in srgb, var(--accent) 28%, transparent), color-mix(in srgb, var(--accent) 12%, transparent));
+}
+
+.f3d-cap {
+  position: absolute;
+  inset: 0;
+  transform: translateZ(var(--wh, 90px));
+  transition: transform 320ms cubic-bezier(0.4, 0, 0.2, 1);
+  background: color-mix(in srgb, var(--accent) 42%, transparent);
+}
+
+.f3d-window .f3d-face {
+  background: linear-gradient(rgba(214, 235, 243, 0.55), rgba(150, 196, 214, 0.4));
+}
+
+.f3d-window .f3d-cap {
+  background: rgba(159, 196, 210, 0.55);
+}
+
+.f3d-door .f3d-face {
+  background: linear-gradient(color-mix(in srgb, var(--accent) 30%, transparent), color-mix(in srgb, var(--accent) 16%, transparent));
+}
+
+.f3d-table {
+  position: absolute;
+  transform-style: preserve-3d;
+}
+
+.f3d-table-body {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+}
+
+.f3d-table-face {
+  position: absolute;
+  background: #d8d8dc;
+}
+
+.f3d-table-face.front {
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: var(--th, 26px);
+  transform-origin: bottom center;
+  transform: rotateX(-90deg);
+}
+
+.f3d-table-face.back {
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: var(--th, 26px);
+  transform-origin: top center;
+  transform: rotateX(90deg);
+}
+
+.f3d-table-face.left {
+  left: 0;
+  top: 0;
+  width: var(--th, 26px);
+  height: 100%;
+  transform-origin: center left;
+  transform: rotateY(-90deg);
+}
+
+.f3d-table-face.right {
+  right: 0;
+  top: 0;
+  width: var(--th, 26px);
+  height: 100%;
+  transform-origin: center right;
+  transform: rotateY(90deg);
+}
+
+.f3d-table-face.ring {
+  inset: 0;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 60%, transparent);
+  transform: translateZ(calc(var(--th, 26px) / 2));
+}
+
+.f3d-table--round .f3d-table-top,
+.f3d-table--round .f3d-table-face.ring {
+  border-radius: 50%;
+}
+
+.f3d-table-top {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
+  transform: translateZ(var(--th, 26px));
+  transform-style: preserve-3d;
+}
+
+/* Etiketten vrids tillbaka mot kameran så texten alltid är läsbar,
+   oavsett hur mycket scenen roterats (samma knep som admins .table-labels). */
+.f3d-table-label-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  /* Ingen motskalning mot --zoom här (testat och backat): den kan förstora
+     texten långt utanför bordets egen yta på en liten, utzoomad karta, och
+     då hamnar platsantalet under den synliga scenens nedre kant (klippt av
+     .f3d-scenes overflow: hidden) i stället för att bara se litet ut - samma
+     fasta storlek som admin använder (11/10px) utan kompensation.
+
+     transform-origin: bottom center är INTE kosmetiskt. Med standardorigo
+     (mitten) roterar HELA raden kring sin egen mittpunkt - det skjuter allt
+     UNDER axeln (platsantalet, andra raden) bakom bordsskivans egen
+     ogenomskinliga yta i stället för framför den, och den raden försvinner
+     helt (upptäckt genom att byta plats på raderna och se att det alltid var
+     den FÖRSTA som syntes, oavsett färg/storlek på den andra). Med
+     underkanten som origo reser sig hela skylten uppåt FRÅN bordet i stället
+     för att växa åt båda hållen kring mitten. translateZ(1px) knuffar sedan
+     hela den upprättstående skylten en aning framför skivans egen yta så den
+     inte kan z-fighta mot den heller. Exakt samma lösning (och kommentar) i
+     admins .table-labels - missades när tekniken portades hit första
+     gången. */
+  transform-origin: bottom center;
+  transform: translateZ(1px) rotateZ(calc(-1 * var(--spin, 0deg)))
+    rotateX(calc(-1 * var(--tilt, 0deg)));
+  transition: transform 320ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.f3d-table-label {
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: 13px;
+  color: #1d1d1f;
+  line-height: 1.15;
+}
+
+.f3d-table-seats {
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: 11px;
+  line-height: 1.2;
+  color: #1d1d1f;
+  white-space: nowrap;
+}
+
+/* --- Statusmeddelanden ------------------------------------------------------------------- */
+
+.notice {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--gold);
+  border-radius: var(--r-md);
+  padding: 16px 18px;
+  color: var(--muted);
+  margin-bottom: 16px;
+}
+
+.notice.error {
+  border-left-color: var(--danger);
+}
+
+/* --- Glaspaneler (Historia/Parkering/Kontakt-innehåll) ----------------------------------- */
+
+.glass-panel {
+  margin-bottom: clamp(18px, 3.5vw, 26px);
+  padding: clamp(18px, 3.2vw, 26px);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+
+.glass-panel h2 {
+  margin: 0 0 0.75rem;
+  font-family: var(--serif);
+  font-size: clamp(1.35rem, 3.5vw, 1.65rem);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--accent-ink);
+}
+
+.glass-panel p {
+  margin: 0 0 0.85rem;
+  font-size: clamp(0.9rem, 2.1vw, 1rem);
+  line-height: 1.65;
+  color: color-mix(in srgb, var(--ink) 86%, transparent);
+}
+
+.glass-panel p:last-child {
+  margin-bottom: 0;
+}
+
+.glass-quote {
+  margin: 0 0 clamp(18px, 3.5vw, 26px);
+  padding: clamp(1.1rem, 2.8vw, 1.4rem);
+  border-left: 3px solid var(--gold);
+  border-radius: 0 10px 10px 0;
+  background: var(--fill);
+}
+
+.glass-quote p {
+  margin: 0 0 0.65rem;
+  font-family: var(--serif);
+  font-size: clamp(1.05rem, 2.6vw, 1.22rem);
+  font-style: italic;
+  font-weight: 500;
+  line-height: 1.55;
+  color: color-mix(in srgb, var(--ink) 92%, transparent);
+}
+
+.glass-quote footer {
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--accent-ink);
+}
+
+.glass-figure {
+  margin: 0 0 clamp(1rem, 2.5vw, 1.35rem);
+}
+
+.glass-figure-frame {
+  border-radius: var(--r-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  line-height: 0;
+}
+
+.glass-figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+}
+
+.glass-figure figcaption {
+  margin-top: 0.55rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-align: center;
+  color: var(--muted);
+}
+
+.glass-link {
+  color: var(--gold-bright);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.glass-link:hover {
+  color: var(--accent-ink);
+}
+
+/* --- Parkering ------------------------------------------------------------------------------ */
+
+.parking-map-frame {
+  position: relative;
+  width: 100%;
+  border-radius: var(--r-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  aspect-ratio: 16 / 10;
+  max-height: min(56vh, 24rem);
+  isolation: isolate;
+}
+
+.parking-leaflet {
+  height: 100%;
+  width: 100%;
+  min-height: 220px;
+  border-radius: var(--r-md);
+}
+
+.parking-map-attrib {
+  margin: 0.65rem 0 0;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.parking-map-attrib a {
+  color: var(--accent-ink);
+}
+
+.parking-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.85rem, 2.5vw, 1.1rem);
+}
+
+.parking-card {
+  margin: 0;
+  padding: clamp(0.95rem, 2.5vw, 1.15rem);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.parking-card-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+.parking-distance {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--gold-bright);
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.parking-spaces {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--ink) 88%, transparent);
+}
+
+.parking-card h3 {
+  margin: 0 0 0.35rem;
+  font-family: var(--serif);
+  font-size: clamp(1.12rem, 2.8vw, 1.28rem);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.parking-card p {
+  margin: 0 0 0.65rem;
+  font-size: 0.86rem;
+  color: var(--muted);
+}
+
+.parking-card a {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--gold-bright);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.parking-card a:hover {
+  color: var(--accent-ink);
+}
+
+/* --- Restaurangmall: start, varumärke, platsval ------------------------- */
+
+.site-boot {
+  display: grid;
+  place-content: center;
+  gap: 12px;
+  min-height: 100svh;
+  padding: 24px;
+  text-align: center;
+  font-family: var(--sans);
+  color: var(--ink);
+  background: var(--bg);
+}
+
+.site-boot h1 {
+  font: 600 clamp(28px, 5vw, 40px) / 1.1 var(--serif);
+}
+
+/* --- Bokning ------------------------------------------------------------ */
+
+.booking {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: min(960px, 100%);
+  margin: 0 auto;
+  padding: 0 16px 48px;
+  font-family: var(--sans);
+}
+
+.booking-step {
+  /* fieldset defaults to min-width: min-content - would let the date row
+     stretch the whole form instead of scrolling. */
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 24px;
+  border: 0;
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+/* float + full width keeps the legend inside the card as a heading instead
+   of cutting through the top edge (fieldset default). */
+.booking-step legend {
+  float: left;
+  width: 100%;
+  margin: 0 0 4px;
+  padding: 0;
+  font: 600 21px/1.2 var(--font);
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.booking-dates,
+.booking-times,
+.booking-table-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.booking-dates {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scroll-snap-type: x proximity;
+  /* Tonar ut i högerkanten: visar att raden går att svepa. */
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent);
+  padding-right: 32px;
+}
+
+.booking-dates .filter-pill {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+  text-transform: capitalize;
+}
+
+.booking-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.booking-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.booking-field--wide {
+  grid-column: 1 / -1;
+}
+
+.booking-field input,
+.booking-field select,
+.booking-field textarea {
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: var(--r-md);
+  background: var(--fill);
+  color: var(--ink);
+  font: 17px/1.4 var(--font);
+  transition: box-shadow 200ms var(--ease);
+}
+
+.booking-field input:focus,
+.booking-field select:focus,
+.booking-field textarea:focus {
+  outline: none;
+  box-shadow: 0 0 0 4px var(--focus);
+}
+
+.booking-field select {
+  max-width: 240px;
+}
+
+.booking-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.booking-check input {
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  accent-color: var(--gold);
+}
+
+.booking-check a {
+  color: var(--gold-bright);
+}
+
+.booking-summary-line {
+  padding: 12px 16px;
+  border-radius: var(--r-md);
+  background: var(--fill);
+  text-transform: none;
+}
+
+.btn-primary,
+.btn-secondary {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 20px;
+  border-radius: var(--r-md);
+  font: 500 17px/1 var(--font);
+  cursor: pointer;
+  transition: background 200ms var(--ease), transform 200ms var(--ease), filter 200ms var(--ease);
+}
+
+.btn-primary:active:not(:disabled),
+.btn-secondary:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.btn-primary {
+  border: 0;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.btn-secondary {
+  border: 0;
+  background: var(--fill);
+  color: var(--accent-ink);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  filter: brightness(0.97);
+}
+
+.booking-confirmation {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: min(720px, 100%);
+  margin: 0 auto;
+  padding: 24px 16px 56px;
+  font-family: var(--sans);
+}
+
+.booking-confirmation h1 {
+  font: 600 clamp(32px, 5vw, 46px) / 1.1 var(--serif);
+}
+
+.booking-summary {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+
+.booking-summary > div {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 12px;
+}
+
+.booking-summary dt {
+  color: var(--muted);
+}
+
+.booking-summary dd {
+  margin: 0;
+  text-transform: none;
+}
+
+.booking-summary dd::first-letter {
+  text-transform: none;
+}
+
+.booking-sent {
+  margin: 20px 0 0;
+  line-height: 1.5;
+}
+
+.booking-manage-link {
+  overflow-wrap: anywhere;
+}
+
+.add-to-calendar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+.add-to-calendar .btn-primary {
+  text-decoration: none;
+}
+
+.add-to-calendar-alt {
+  font-size: 15px;
+  color: var(--accent-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.booking-manage-link a {
+  color: var(--gold-bright);
+}
+
+.booking-status {
+  font: 600 20px/1.2 var(--serif);
+  color: var(--gold-bright);
+}
+
+.booking-confirm-cancel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.booking-confirm-cancel p {
+  flex-basis: 100%;
+}
+
+.cell-muted {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* Bordsval på planritningen */
+.floor-svg-pick {
+  cursor: pointer;
+  outline: none;
+}
+
+.floor-svg-table.is-free {
+  fill: color-mix(in srgb, var(--gold) 35%, transparent);
+  stroke: var(--gold);
+}
+
+.floor-svg-table.is-selected {
+  fill: var(--gold);
+  stroke: var(--gold-bright);
+}
+
+.floor-svg-table.is-taken {
+  opacity: 0.25;
+}
+
+/* Bord som inte går att välja - tryck förklarar varför. */
+.floor-svg-explain {
+  cursor: help;
+  outline: none;
+}
+
+.floor-svg-table.is-booked {
+  fill: color-mix(in srgb, var(--muted) 30%, transparent);
+  stroke: color-mix(in srgb, var(--muted) 60%, transparent);
+}
+
+.floor-svg-table.is-blocked {
+  fill: color-mix(in srgb, var(--danger) 22%, transparent);
+  stroke: var(--danger);
+  stroke-dasharray: 0.08 0.06;
+}
+
+.floor-svg-table.is-unfit {
+  fill: color-mix(in srgb, var(--ink) 12%, transparent);
+  stroke: color-mix(in srgb, var(--accent) 45%, transparent);
+  stroke-dasharray: 0.04 0.06;
+}
+
+.floor-svg-explain:focus-visible .floor-svg-table {
+  stroke: var(--accent);
+  stroke-width: 0.08;
+}
+
+.floor-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.floor-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.floor-legend-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid transparent;
+}
+
+.floor-legend-swatch.is-free {
+  background: color-mix(in srgb, var(--gold) 35%, transparent);
+  border-color: var(--gold);
+}
+
+.floor-legend-swatch.is-selected {
+  background: var(--gold);
+  border-color: var(--gold-bright);
+}
+
+.floor-legend-swatch.is-booked {
+  background: color-mix(in srgb, var(--muted) 30%, transparent);
+  border-color: color-mix(in srgb, var(--muted) 60%, transparent);
+}
+
+.floor-legend-swatch.is-blocked {
+  background: color-mix(in srgb, var(--danger) 22%, transparent);
+  border: 1px dashed var(--danger);
+}
+
+.floor-legend-swatch.is-unfit {
+  background: color-mix(in srgb, var(--ink) 12%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.table-reasons {
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.table-reasons summary {
+  cursor: pointer;
+  color: var(--gold-bright);
+}
+
+.table-reasons ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+
+.table-reasons li + li {
+  margin-top: 4px;
+}
+
+.floor-svg-pick:focus-visible .floor-svg-table {
+  stroke: var(--accent);
+  stroke-width: 0.08;
+}
+
+/* Bordsval i 3D: samma färger som 2D-planen ovan (grått ledigt, rött bokat,
+   grönt ditt val), på skivan och sidorna. */
+.f3d-pick {
+  cursor: pointer;
+  outline: none;
+}
+
+.f3d-explain {
+  cursor: help;
+  outline: none;
+}
+
+.f3d-table.is-free .f3d-table-top {
+  background: color-mix(in srgb, var(--muted) 45%, #ffffff);
+  border-color: var(--muted);
+}
+
+.f3d-table.is-selected .f3d-table-top {
+  background: var(--success);
+  border: 2px solid color-mix(in srgb, var(--success) 70%, var(--ink));
+}
+
+.f3d-table.is-booked .f3d-table-top {
+  background: color-mix(in srgb, var(--danger) 30%, #ffffff);
+  border-color: var(--danger);
+}
+
+.f3d-table.is-blocked .f3d-table-top {
+  background: color-mix(in srgb, var(--danger) 14%, #ffffff);
+  border: 1px dashed var(--danger);
+}
+
+.f3d-table.is-unfit .f3d-table-top {
+  background: #ffffff;
+  border: 1px dashed color-mix(in srgb, var(--muted) 55%, transparent);
+}
+
+/* Ej ledigt utan känd anledning räknas som bokat (rött). */
+.f3d-table.is-taken .f3d-table-top {
+  background: color-mix(in srgb, var(--danger) 30%, #ffffff);
+  border-color: var(--danger);
+}
+
+.f3d-table.is-free .f3d-table-face:not(.ring) {
+  background: color-mix(in srgb, var(--muted) 45%, #d8d8dc);
+}
+
+.f3d-table.is-selected .f3d-table-face:not(.ring) {
+  background: color-mix(in srgb, var(--success) 75%, var(--ink));
+}
+
+.f3d-table.is-booked .f3d-table-face:not(.ring),
+.f3d-table.is-taken .f3d-table-face:not(.ring) {
+  background: color-mix(in srgb, var(--danger) 45%, #d8d8dc);
+}
+
+/* Vit text på det gröna, valda bordet - mörk text på grönt läses dåligt. */
+.f3d-table.is-selected .f3d-table-label,
+.f3d-table.is-selected .f3d-table-seats {
+  color: #ffffff;
+}
+
+.f3d-pick:focus-visible .f3d-table-top,
+.f3d-explain:focus-visible .f3d-table-top {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* --- Textsidor (integritetspolicy, villkor, om oss) ---------------------- */
+
+.page-prose {
+  width: min(760px, 100%);
+  margin: 0 auto;
+  padding: 24px 16px 56px;
+  font-family: var(--sans);
+  line-height: 1.65;
+}
+
+.page-prose h1 {
+  font: 600 clamp(32px, 5vw, 46px) / 1.1 var(--serif);
+  margin-bottom: 8px;
+}
+
+.page-prose h2 {
+  margin: 28px 0 8px;
+  font: 600 24px/1.2 var(--serif);
+  color: var(--gold-bright);
+}
+
+.page-prose ul {
+  padding-left: 20px;
+}
+
+.page-prose li + li {
+  margin-top: 8px;
+}
+
+/* --- Kortgaranti --------------------------------------------------------- */
+
+.guarantee-notice {
+  margin: 4px 0 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.14));
+  border-left: 3px solid var(--gold);
+  border-radius: 8px;
+  line-height: 1.5;
+  font-size: 0.95rem;
+}
+
+.guarantee-terms {
+  margin: 12px 0 20px;
+  padding-left: 1.2em;
+  line-height: 1.6;
+}
+
+.guarantee-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 8px 0 16px;
+  min-width: 0;
+}
+
+.fee-accept {
+  margin: 12px 0;
+}
+
+/* Bokning: säkerhetskontrollen och markerade dagar i datumlistan. */
+.booking-turnstile {
+  margin: 12px 0;
+  min-height: 65px;
+}
+
+.filter-pill .pill-note {
+  font-size: 0.85em;
+  opacity: 0.75;
+}
+
+.filter-pill.is-special:not(.active) {
+  border-style: dashed;
+}
+
+.opening-hours-special-heading {
+  margin: 20px 0 8px;
+  font-size: 1rem;
+}
+
+
+/* --- Beställ (avhämtning / QR vid bordet) -------------------------------------------------- */
+
+.order-hint {
+  text-align: center;
+  color: var(--muted);
+  margin: 0 0 16px;
+}
+
+.order-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 24px;
+  align-items: start;
+}
+
+.order-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.order-cart {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow);
+}
+
+.order-cart h2 {
+  font: 600 20px/1.2 var(--serif);
+  color: var(--accent-ink);
+}
+
+.order-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.order-form .btn-primary {
+  align-self: stretch;
+}
+
+/* Liten hjälptext under en fältetikett. */
+.field-hint {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--muted);
+  margin-top: -4px;
+}
+
+/* Mobil: varukorgen ligger längst ner - en flytande knapp leder dit. */
+.order-mobile-bar {
+  display: none;
+}
+
+.order-only-table {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.dish-foot .cart-qty span {
+  min-width: 18px;
+  text-align: center;
+}
+
+.cart-qty button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.order-steps {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.order-steps li {
+  flex: 1;
+  padding: 10px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  text-align: center;
+  font-weight: 500;
+}
+
+.order-steps li.done {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  border-color: var(--gold);
+  color: var(--gold-bright);
+}
+
+.order-status .cart-list {
+  margin-top: 8px;
+}
+
+@media (max-width: 1073px) {
+  .order-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .order-cart {
+    scroll-margin-top: calc(var(--header-h) + 12px);
+  }
+
+  .order-mobile-bar {
+    position: fixed;
+    left: 16px;
+    right: 16px;
+    bottom: calc(16px + env(safe-area-inset-bottom));
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 52px;
+    padding: 0 20px;
+    border-radius: var(--r-pill);
+    background: var(--accent);
+    color: var(--on-accent);
+    font-size: 16px;
+    text-decoration: none;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .order-layout {
+    padding-bottom: 88px;
+  }
+
+}
+
+/* Catering: kalkylen (/catering) och gästens förfrågan (/catering/<plats>/<id>) */
+.catering-dishes {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 24px;
+  padding: 0;
+  list-style: none;
+}
+
+.catering-dishes li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 84px;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+
+.catering-dishes .dish-desc {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.catering-dishes input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-soft);
+  color: var(--ink);
+  font: inherit;
+  text-align: right;
+}
+
+/* Steg 2 och 3 som kort - fälten (grå) syns tydligt mot den vita ytan. */
+.catering-details {
+  display: grid;
+  gap: 14px;
+  margin-top: 16px;
+  padding: 24px;
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.catering-details .catering-step-title {
+  margin-top: 0;
+}
+
+.catering-type {
+  display: grid;
+  gap: 8px;
+}
+
+.catering-discount {
+  color: var(--gold-bright);
+}
+
+.catering-request {
+  max-width: 720px;
+}
+
+.catering-offer {
+  margin-top: 24px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+
+.catering-offer h2 {
+  margin: 0 0 10px;
+  font-family: var(--serif);
+  color: var(--gold-bright);
+}
+
+.catering-offer code {
+  overflow-wrap: anywhere;
+}
+
+.catering-message {
+  margin: 0 0 12px;
+  font-style: italic;
+  color: var(--gold-bright);
+}
+
+.catering-terms {
+  margin-top: 10px;
+  color: var(--muted);
+}
+
+.catering-terms summary {
+  cursor: pointer;
+  color: var(--ink);
+}
+
+.catering-terms p {
+  white-space: pre-wrap;
+}
+
+.catering-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-top: 20px;
+}
+
+.catering-actions > p,
+.catering-actions > label {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.bankid-box {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  margin-top: 20px;
+  padding: 20px;
+  border: 1px solid var(--gold);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  text-align: center;
+}
+
+.bankid-hint {
+  margin: 0;
+  font-weight: 500;
+}
+
+.bankid-qr {
+  width: min(240px, 100%);
+  height: auto;
+  padding: 8px;
+  border-radius: var(--r-md);
+  background: #fff;
+}
+
+@media (max-width: 560px) {
+  .catering-dishes li {
+    grid-template-columns: minmax(0, 1fr) 72px;
+  }
+
+  .catering-dishes .dish-price {
+    grid-column: 1;
+    grid-row: 2;
+    font-size: 14px;
+  }
+
+  .catering-dishes input {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+
+}
+
+/* Bordet hålls (15 min) medan gästen fyller i uppgifterna */
+.booking-confirm-tables {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.booking-confirm-tables .btn-primary {
+  justify-self: start;
+}
+
+.hold-banner {
+  position: sticky;
+  top: calc(var(--header-h) + 8px);
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--gold);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.hold-clock {
+  font-variant-numeric: tabular-nums;
+  color: var(--gold-bright);
+}
+
+.hold-banner.urgent {
+  border-color: var(--danger);
+}
+
+.hold-banner.urgent .hold-clock {
+  color: var(--danger);
+}
+
+.booking-step:disabled {
+  opacity: 0.55;
+}
+
+/* Catering: numrerade steg och knappval i stället för rullistor. */
+.catering-step-title {
+  margin: 8px 0 4px;
+  font: 600 22px/1.25 var(--font);
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.catering-next {
+  margin-top: 8px;
+}
+
+.segmented {
+  display: inline-flex;
+  justify-self: start;
+  align-self: flex-start;
+  gap: 2px;
+  padding: 3px;
+  margin: 4px 0 12px;
+  border-radius: var(--r-md);
+  background: var(--fill);
+}
+
+.segmented label {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 18px;
+  border-radius: 9px;
+  font: 500 15px/1 var(--font);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.segmented label.on {
+  background: var(--surface);
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.segmented input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.segmented label:has(input:focus-visible) {
+  box-shadow: 0 0 0 4px var(--focus);
+}
+
+/* Integritetspolicyns tabell över cookies och lagring (PrivacyPage.tsx). */
+.storage-table-wrap {
+  overflow-x: auto;
+  margin: 12px 0 16px;
+}
+
+.storage-table {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: collapse;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.storage-table th {
+  text-align: left;
+  font-weight: 700;
+  padding: 0 12px 8px 0;
+  border-bottom: 2px solid var(--line, #d9d4c8);
+}
+
+.storage-table td {
+  padding: 10px 12px 10px 0;
+  border-bottom: 1px solid var(--line, #d9d4c8);
+  vertical-align: top;
+}
+
+.storage-table code {
+  font-size: 12.5px;
+  overflow-wrap: anywhere;
+}
+
+.storage-kind {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--muted, #57504d);
+}
+
+.storage-where {
+  color: var(--muted, #57504d);
+}
+
+/* Telefon: varje rad blir ett eget kort i stället för en bred tabell. */
+@media (max-width: 600px) {
+  .storage-table {
+    min-width: 0;
+  }
+
+  .storage-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .storage-table tr {
+    display: block;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--line, #d9d4c8);
+  }
+
+  .storage-table td {
+    display: block;
+    padding: 2px 0;
+    border: 0;
+  }
+
+  .storage-table td:nth-child(3),
+  .storage-table td:nth-child(4) {
+    font-size: 13px;
+    color: var(--muted, #57504d);
+  }
+
+  .storage-table td:nth-child(3)::before {
+    content: 'Sätts av: ';
+  }
+
+  .storage-table td:nth-child(4)::before {
+    content: 'Sparas: ';
+  }
+
+}
+
+/* Stolar i 3D: en sits och ett ryggstöd mot utsidan, inskjutna under bordet.
+   Bara bild - pekaren går igenom till bordet. */
+.f3d-chair {
+  position: absolute;
+  transform-style: preserve-3d;
+  pointer-events: none;
+}
+
+.f3d-chair-seat {
+  position: absolute;
+  inset: 0;
+  border-radius: 3px;
+  background: #d9cdb8;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+  transform: translateZ(12px);
+}
+
+.f3d-chair-back {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 26px;
+  border-radius: 3px 3px 0 0;
+  background: #b9ab95;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+  transform-origin: top center;
+  transform: rotateX(90deg);
+}
+
+.f3d-table.is-selected .f3d-chair-seat {
+  background: color-mix(in srgb, var(--success) 35%, #ffffff);
+}
+
+.f3d-table.is-selected .f3d-chair-back {
+  background: color-mix(in srgb, var(--success) 70%, #ffffff);
+}

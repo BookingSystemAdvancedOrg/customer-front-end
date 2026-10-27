@@ -1,0 +1,4062 @@
+/* Världen: Booqys bongrail, sedd från restaurangens sida.
+
+   Laddas efter components.css och äger menyn, beställningens kvitto och bokningens steg och planritning.
+   Restaurangens färg (--accent) bär skalet; underlaget är ett skrivbord i
+   papperston (--table) och innehållet trycks på kvittopapper (--surface)
+   med riven underkant. Tokens i theme.css; Booqy-blocket längst ner i
+   den här filen skriver över de äldre reglerna ovanför. */
+
+/* --- Grund ------------------------------------------------------------------ */
+
+body {
+  background: var(--table);
+  color: var(--ink);
+  font-feature-settings: 'ss01' 0;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 24%, transparent);
+  color: var(--ink);
+}
+
+html {
+  scrollbar-color: color-mix(in srgb, var(--ink) 28%, transparent) transparent;
+  accent-color: var(--accent);
+  caret-color: var(--accent);
+}
+
+:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent) 70%, var(--ink));
+  outline-offset: 2px;
+  box-shadow: none;
+  border-radius: 6px;
+}
+
+a {
+  color: var(--accent-ink);
+  text-underline-offset: 0.2em;
+  text-decoration-thickness: 1px;
+}
+
+.sr-only {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+h1, h2, h3, h4 {
+  margin: 0;
+  font-family: var(--font);
+  color: var(--ink);
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+svg {
+  display: block;
+}
+
+/* --- Sidhuvud på undersidor ---------------------------------------------------- */
+
+.page-head {
+  padding: clamp(28px, 5vw, 52px) 0 clamp(16px, 3vw, 24px);
+}
+
+.page-head h1 {
+  font-weight: 850;
+  font-size: clamp(2rem, 1.4rem + 2.6vw, 3.2rem);
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+}
+
+.page-lede {
+  margin-top: 10px;
+  max-width: 60ch;
+  color: var(--muted);
+  font-size: 1.06rem;
+}
+
+/* Äldre sidor (catering, kontakt, om oss, bokningsbekräftelse). */
+.page-hero {
+  text-align: left;
+  padding: clamp(28px, 5vw, 52px) 0 clamp(16px, 3vw, 24px);
+  margin: 0;
+}
+
+.page-hero h1,
+.booking-confirmation h1 {
+  font-weight: 850;
+  font-size: clamp(2rem, 1.4rem + 2.6vw, 3.2rem);
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+  margin: 6px 0 10px;
+}
+
+.hero-kicker {
+  color: var(--accent-ink);
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.hero-sub {
+  margin: 0;
+  max-width: 60ch;
+  color: var(--muted);
+}
+
+/* --- Menyn som tallrikar ------------------------------------------------------------ */
+
+.menu {
+  padding-top: clamp(28px, 5vw, 56px);
+}
+
+.menu-heading {
+  font-weight: 850;
+  font-size: clamp(1.8rem, 1.3rem + 1.8vw, 2.6rem);
+  letter-spacing: -0.03em;
+  margin-bottom: 14px;
+}
+
+.chip-rail {
+  position: sticky;
+  top: var(--header-h);
+  z-index: 20;
+  display: flex;
+  gap: 8px;
+  margin: 0 calc(var(--gutter) * -1) 8px;
+  padding: 12px var(--gutter);
+  overflow-x: auto;
+  scrollbar-width: none;
+  background: var(--surface);
+}
+
+.chip-rail::-webkit-scrollbar {
+  display: none;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  min-height: 42px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 0 0 1px var(--line);
+  font: 650 0.98rem/1 var(--font);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 160ms var(--ease), color 160ms var(--ease), box-shadow 160ms var(--ease);
+}
+
+.chip:hover {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ink) 30%, transparent);
+}
+
+.chip.is-active {
+  background: var(--ink);
+  color: var(--surface);
+  box-shadow: none;
+}
+
+.chip-count {
+  min-width: 22px;
+  padding: 3px 6px;
+  border-radius: var(--r-pill);
+  background: var(--fill);
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.chip.is-active .chip-count {
+  background: color-mix(in srgb, var(--surface) 20%, transparent);
+  color: var(--surface);
+}
+
+.menu-section {
+  scroll-margin-top: calc(var(--header-h) + 70px);
+  padding-top: clamp(12px, 2.4vw, 28px);
+}
+
+.menu-section-title {
+  font-weight: 800;
+  font-size: clamp(1.3rem, 1.15rem + 0.6vw, 1.6rem);
+  letter-spacing: -0.02em;
+  margin-bottom: 6px;
+}
+
+.dish-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: clamp(24px, 4vw, 56px);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.dish {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.dish-text {
+  min-width: 0;
+}
+
+.dish-name {
+  font-weight: 750;
+  font-size: 1.08rem;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+.dish-desc {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.dish-price {
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--ink);
+}
+
+.menu-allergy {
+  margin-top: clamp(28px, 4vw, 40px);
+  color: var(--muted);
+}
+
+@media (max-width: 760px) {
+  .dish-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+}
+
+/* Tallriken: bilden på en vit tallrik med kant, sedd ovanifrån. */
+.plate {
+  --size: 84px;
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: var(--size);
+  height: var(--size);
+  padding: calc(var(--size) * 0.07);
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: var(--plate-shadow);
+}
+
+.plate img {
+  position: absolute;
+  inset: 7%;
+  width: 86%;
+  height: 86%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.plate--empty::before {
+  content: '';
+  position: absolute;
+  inset: 16%;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 10%, transparent), inset 0 2px 6px color-mix(in srgb, var(--ink) 8%, transparent);
+}
+
+.plate-initial {
+  position: relative;
+  font-weight: 800;
+  font-size: calc(var(--size) * 0.3);
+  color: color-mix(in srgb, var(--accent-ink) 70%, var(--muted));
+}
+
+.plate--sm {
+  --size: 34px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2), 0 0 0 2px var(--surface);
+}
+
+.plate--lg {
+  --size: 120px;
+}
+
+@media (max-width: 560px) {
+  .plate {
+    --size: 72px;
+  }
+
+  .plate--sm {
+    --size: 30px;
+  }
+
+}
+
+.plate-flying {
+  position: fixed;
+  z-index: 100;
+  margin: 0;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+.order-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(320px, 36%, 420px);
+  gap: clamp(24px, 4vw, 48px);
+  align-items: start;
+}
+
+.order-menu .dish-list {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.order-menu .chip-rail {
+  margin-top: 4px;
+}
+
+.dish--order .dish-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.dish--order .dish-price {
+  margin-top: 6px;
+  font-size: 1rem;
+}
+
+.dish--order.is-in-cart .plate {
+  box-shadow: var(--plate-shadow), 0 0 0 3px var(--accent);
+}
+
+.add-btn {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.12), 0 8px 16px -8px color-mix(in srgb, var(--accent) 80%, #000);
+  transition: transform 140ms var(--ease), background-color 140ms var(--ease);
+}
+
+.add-btn:hover:not(:disabled) {
+  background: var(--accent-hover);
+  transform: scale(1.06);
+}
+
+.add-btn:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+.add-btn:disabled {
+  background: var(--fill);
+  color: var(--muted);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.add-btn svg,
+.stepper svg,
+.party-btn svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  box-shadow: 0 0 0 1.5px var(--accent);
+}
+
+.stepper button {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--accent-ink);
+  cursor: pointer;
+}
+
+.stepper button:hover:not(:disabled) {
+  background: var(--accent-soft);
+}
+
+.stepper button:disabled {
+  color: var(--muted);
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.stepper > span {
+  min-width: 24px;
+  text-align: center;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.order-only-table {
+  padding: 6px 12px;
+  border-radius: var(--r-pill);
+  background: var(--fill);
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Brickan (varukorgen). Ingen egen rullning: den följer sidan (se
+   .order-cart längre ner och shared/useStickyCart.ts). */
+.order-cart {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 22px;
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+  border: 0;
+}
+
+.order-cart h2,
+.order-cart .cart-item-price {
+  color: var(--ink);
+}
+
+.tray-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tray-head h2 {
+  font-weight: 800;
+  font-size: 1.3rem;
+}
+
+.tray-plates {
+  display: inline-flex;
+  min-height: 34px;
+}
+
+.tray-plates .plate + .plate {
+  margin-left: -10px;
+}
+
+.cart-empty {
+  color: var(--muted);
+}
+
+.cart-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.cart-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.cart-item-name {
+  font-weight: 600;
+}
+
+.cart-item-price {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.cart-list .cart-qty {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.cart-list .cart-qty button,
+.cart-qty button {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--fill);
+  color: var(--ink);
+  font: 700 1.05rem/1 var(--font);
+  cursor: pointer;
+}
+
+.cart-qty button:hover:not(:disabled) {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+
+.cart-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-weight: 800;
+  font-size: 1.25rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.cart-note {
+  margin-top: -8px;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.order-form {
+  display: grid;
+  gap: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.order-form .btn-primary {
+  width: 100%;
+}
+
+.order-mobile-bar {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  .floor-wrap {
+    overflow-x: auto;
+    margin-inline: calc(clamp(18px, 3vw, 28px) * -1);
+    padding-inline: clamp(18px, 3vw, 28px);
+    scrollbar-width: thin;
+  }
+
+  .floor-svg-frame {
+    min-width: 620px;
+  }
+
+}
+
+@media (max-width: 1000px) {
+  .order-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .order-cart {
+    scroll-margin-top: calc(var(--header-h) + 16px);
+  }
+
+  .order-mobile-bar {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    z-index: 30;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 12px;
+    min-height: 60px;
+    padding: 0 18px 0 10px;
+    border-radius: var(--r-pill);
+    background: var(--accent);
+    color: var(--on-accent);
+    text-decoration: none;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.16), 0 18px 34px -14px rgba(0, 0, 0, 0.55);
+  }
+
+  .order-mobile-bar strong {
+    font-size: 1.05rem;
+  }
+
+  .order-mobile-bar-count {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--on-accent);
+    color: var(--accent);
+    font-weight: 850;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .order-mobile-bar-total {
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+
+}
+
+/* --- Knappar, fält, meddelanden ------------------------------------------------------- */
+
+.btn-primary,
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 54px;
+  padding: 0 26px;
+  border-radius: var(--r-pill);
+  font: 750 1.05rem/1 var(--font);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 160ms var(--ease), transform 160ms var(--ease), box-shadow 160ms var(--ease);
+}
+
+.btn-primary {
+  border: 0;
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1), 0 10px 20px -10px color-mix(in srgb, var(--accent) 80%, #000);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+}
+
+.btn-primary:disabled {
+  background: var(--fill);
+  color: var(--muted);
+  box-shadow: none;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-secondary {
+  border: 0;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1.5px var(--line);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--ink) 35%, transparent);
+}
+
+.btn.small {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-weight: 700;
+}
+
+.booking-field {
+  font-weight: 650;
+  font-size: 0.95rem;
+}
+
+.booking-field input,
+.booking-field select,
+.booking-field textarea {
+  min-height: 52px;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: var(--r-md);
+  background: var(--fill);
+  box-shadow: inset 0 0 0 1px var(--line);
+  color: var(--ink);
+  font: 400 1.05rem/1.4 var(--font);
+}
+
+.booking-field input:focus,
+.booking-field select:focus,
+.booking-field textarea:focus {
+  outline: none;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.field-hint {
+  font-weight: 450;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.booking-check input {
+  accent-color: var(--accent);
+  width: 22px;
+  height: 22px;
+}
+
+.booking-check a {
+  color: var(--accent-ink);
+}
+
+.notice {
+  border: 0;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: 0 0 0 1px var(--line);
+  color: var(--muted);
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+
+.notice.error {
+  background: color-mix(in srgb, var(--danger) 8%, var(--surface));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--danger) 30%, transparent);
+  color: var(--danger-ink);
+}
+
+.filter-pill {
+  min-height: 46px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1.5px var(--line);
+  font: 650 1rem/1 var(--font);
+  font-variant-numeric: tabular-nums;
+}
+
+.filter-pill:hover {
+  filter: none;
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--ink) 35%, transparent);
+}
+
+.filter-pill.active {
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: none;
+}
+
+.booking > * {
+  max-width: 860px;
+}
+
+.booking-step {
+  gap: 16px;
+  padding: clamp(18px, 3vw, 28px);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.booking-step legend {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 800;
+  font-size: 1.3rem;
+  letter-spacing: -0.02em;
+}
+
+.step-no {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.booking-step:disabled .step-no {
+  background: var(--fill);
+  color: var(--muted);
+}
+
+.party {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.party-label {
+  font-weight: 700;
+}
+
+.party-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  border-radius: var(--r-pill);
+  background: var(--fill);
+}
+
+.party-btn {
+  display: grid;
+  place-items: center;
+  width: 50px;
+  height: 50px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1), 0 4px 10px -6px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+}
+
+.party-btn:hover:not(:disabled) {
+  color: var(--accent-ink);
+}
+
+.party-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.party-stepper select {
+  min-width: 128px;
+  min-height: 50px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--ink);
+  font: 800 1.1rem/1 var(--font);
+  text-align: center;
+  text-align-last: center;
+  appearance: none;
+  cursor: pointer;
+}
+
+.booking-dates {
+  gap: 8px;
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent);
+}
+
+.date-tile {
+  flex: 0 0 auto;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 2px;
+  width: 72px;
+  min-height: 84px;
+  padding: 8px 4px;
+  border: 0;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1.5px var(--line);
+  font-family: var(--font);
+  scroll-snap-align: start;
+  cursor: pointer;
+  transition: background-color 160ms var(--ease), color 160ms var(--ease), box-shadow 160ms var(--ease);
+}
+
+.date-tile:hover {
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--ink) 35%, transparent);
+}
+
+.date-tile-wd {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: capitalize;
+  color: var(--muted);
+}
+
+.date-tile-day {
+  font-size: 1.5rem;
+  font-weight: 850;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.date-tile-mon,
+.date-tile .pill-note {
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+
+.date-tile.active {
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: none;
+}
+
+.date-tile.active .date-tile-wd,
+.date-tile.active .date-tile-mon,
+.date-tile.active .pill-note {
+  color: color-mix(in srgb, var(--on-accent) 82%, transparent);
+}
+
+.date-tile.is-special:not(.active) .date-tile-day {
+  color: var(--muted);
+}
+
+.booking-times {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 8px;
+}
+
+.booking-times .filter-pill {
+  padding: 0;
+}
+
+.booking-table-list .filter-pill {
+  min-height: 44px;
+  font-size: 0.95rem;
+}
+
+.cell-muted {
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.booking-summary-line {
+  padding: 14px 16px;
+  border-radius: var(--r-md);
+  background: var(--accent-soft);
+  color: var(--ink);
+  font-weight: 650;
+}
+
+.booking-confirm-tables {
+  display: grid;
+  gap: 12px;
+}
+
+.booking-confirm-tables .btn-primary,
+.booking-step > .btn-primary {
+  width: 100%;
+}
+
+/* Planritningen sedd ovanifrån: bord med stolar, valda våningen i fokus och
+   de andra våningarna svagt under. */
+.floor-wrap {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.floor-svg-frame {
+  max-height: 70vh;
+  border-radius: var(--r-md);
+  background: var(--table);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.floor-svg-wall {
+  fill: var(--ink);
+  stroke: none;
+}
+
+.floor-svg-door {
+  fill: var(--table);
+}
+
+.floor-svg-window {
+  fill: color-mix(in srgb, #7fb2d6 70%, var(--surface));
+}
+
+.floor-ghost-wall {
+  fill: var(--ink);
+}
+
+.floor-ghost-table {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 0.05;
+}
+
+.floor-ghost-label {
+  font: 700 0.38px var(--font);
+  fill: var(--ink);
+}
+
+.floor-focus-plane {
+  fill: var(--table);
+  stroke: color-mix(in srgb, var(--ink) 12%, transparent);
+  stroke-width: 0.03;
+  filter: drop-shadow(0 0.12px 0.25px rgba(0, 0, 0, 0.25));
+}
+
+.floor-svg-table {
+  fill: var(--surface);
+  stroke: color-mix(in srgb, var(--ink) 22%, transparent);
+  stroke-width: 0.04;
+  filter: drop-shadow(0 0.05px 0.08px rgba(0, 0, 0, 0.3));
+  transition: fill 160ms var(--ease), stroke 160ms var(--ease);
+}
+
+.floor-svg-chair {
+  fill: var(--surface);
+  stroke: color-mix(in srgb, var(--ink) 25%, transparent);
+  stroke-width: 0.03;
+}
+
+/* Bordens färger (ägarens val, samma i 3D och förklaringen):
+   grått = ledigt, rött = bokat, grönt = ditt val. Spärrat är rött och
+   streckat; fel storlek bara en streckad kontur. Medvetet inte
+   restaurangens --accent: färgerna ska betyda samma sak på alla sajter. */
+.floor-svg-table.is-free {
+  fill: color-mix(in srgb, var(--muted) 22%, var(--surface));
+  stroke: var(--muted);
+  stroke-width: 0.07;
+}
+
+.floor-svg-chairs.is-free .floor-svg-chair {
+  stroke: color-mix(in srgb, var(--muted) 60%, transparent);
+}
+
+.floor-svg-table.is-selected {
+  fill: var(--success);
+  stroke: color-mix(in srgb, var(--success) 70%, var(--ink));
+  stroke-width: 0.06;
+}
+
+.floor-svg-chairs.is-selected .floor-svg-chair {
+  fill: color-mix(in srgb, var(--success) 30%, var(--surface));
+  stroke: var(--success);
+}
+
+.floor-svg-table.is-booked,
+.floor-svg-table.is-blocked,
+.floor-svg-table.is-taken {
+  fill: color-mix(in srgb, var(--danger) 28%, var(--table));
+  stroke: var(--danger);
+  stroke-width: 0.04;
+  filter: none;
+}
+
+.floor-svg-table.is-blocked {
+  fill: color-mix(in srgb, var(--danger) 14%, var(--table));
+  stroke-dasharray: 0.12 0.08;
+}
+
+.floor-svg-chairs.is-booked .floor-svg-chair,
+.floor-svg-chairs.is-blocked .floor-svg-chair,
+.floor-svg-chairs.is-taken .floor-svg-chair {
+  fill: color-mix(in srgb, var(--danger) 14%, var(--table));
+  stroke: transparent;
+}
+
+.floor-svg-table.is-unfit {
+  fill: var(--table);
+  stroke: color-mix(in srgb, var(--ink) 35%, transparent);
+  stroke-dasharray: 0.12 0.08;
+  filter: none;
+}
+
+.floor-svg-chairs.is-unfit .floor-svg-chair {
+  fill: transparent;
+  stroke: color-mix(in srgb, var(--ink) 25%, transparent);
+}
+
+.floor-svg-table-label {
+  font: 800 0.3px var(--font);
+  fill: var(--ink);
+}
+
+.floor-svg-table-seats {
+  font: 600 0.18px var(--font);
+  fill: var(--muted);
+}
+
+.floor-svg-pick .floor-svg-table.is-selected ~ .floor-svg-table-label,
+.floor-svg-pick .floor-svg-table.is-selected ~ .floor-svg-table-seats {
+  fill: #ffffff;
+}
+
+.floor-svg-pick,
+.floor-svg-explain {
+  cursor: pointer;
+}
+
+.floor-svg-pick:hover .floor-svg-table.is-free {
+  fill: color-mix(in srgb, var(--muted) 34%, var(--surface));
+}
+
+.floor-svg-pick:focus-visible {
+  outline: none;
+}
+
+.floor-svg-pick:focus-visible .floor-svg-table {
+  stroke: var(--ink);
+  stroke-width: 0.1;
+}
+
+.floor-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.floor-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.floor-legend-swatch {
+  width: 18px;
+  height: 14px;
+  border-radius: 4px;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.floor-legend-swatch.is-free {
+  background: color-mix(in srgb, var(--muted) 22%, var(--surface));
+  box-shadow: inset 0 0 0 2px var(--muted);
+}
+
+.floor-legend-swatch.is-selected {
+  background: var(--success);
+  box-shadow: none;
+}
+
+.floor-legend-swatch.is-booked {
+  background: color-mix(in srgb, var(--danger) 28%, var(--table));
+  box-shadow: inset 0 0 0 1.5px var(--danger);
+}
+
+.floor-legend-swatch.is-blocked {
+  background: color-mix(in srgb, var(--danger) 14%, var(--table));
+  box-shadow: none;
+  outline: 1.5px dashed var(--danger);
+  outline-offset: -2px;
+}
+
+.floor-legend-swatch.is-unfit {
+  background: var(--table);
+  box-shadow: none;
+  outline: 1.5px dashed color-mix(in srgb, var(--ink) 35%, transparent);
+  outline-offset: -2px;
+}
+
+.booking-step .filter-row {
+  justify-content: flex-start;
+  margin-top: 0;
+}
+
+.floor-view-toggle {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 3px;
+  border-radius: var(--r-pill);
+  background: var(--fill);
+}
+
+.floor-view-toggle button {
+  min-height: 34px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--muted);
+  font: 700 0.9rem/1 var(--font);
+  cursor: pointer;
+}
+
+.floor-view-toggle button.active {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.table-reasons summary {
+  cursor: pointer;
+  color: var(--accent-ink);
+  font-weight: 650;
+}
+
+/* Bekräftelsen: en lapp på bordet. */
+.booking-confirmation {
+  max-width: 640px;
+  margin-top: clamp(28px, 5vw, 52px);
+  padding: clamp(22px, 4vw, 36px);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.booking-summary {
+  display: grid;
+  gap: 2px;
+  margin: 18px 0;
+}
+
+.booking-summary > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.booking-summary dt {
+  color: var(--muted);
+}
+
+.booking-summary dd {
+  margin: 0;
+  font-weight: 700;
+  text-align: right;
+}
+
+/* =========================================================================
+   Booqy: bongrailen. Det här blocket skriver över skalet ovanför med
+   booqy.se:s formspråk: papper med riven underkant som hänger från en
+   stålrail, Archivo (bred, tung) för rubriker, Martian Mono för allt
+   skrivaren skriver (tider, priser, bord, statusar), 3 px hörn på allt
+   tryckt, och djup bara från papper som hänger. Restaurangens färg
+   (--accent) behåller headerbandet, heron, huvudknapparna och valda
+   tillstånd. Tokens i theme.css.
+   ========================================================================= */
+
+/* --- Grund ---------------------------------------------------------------- */
+
+body {
+  font-feature-settings: normal;
+}
+
+::selection {
+  background: var(--ink-red);
+  color: #fff;
+}
+
+html {
+  scrollbar-color: color-mix(in srgb, var(--ink) 28%, transparent) transparent;
+  caret-color: var(--ink);
+}
+
+:focus-visible {
+  outline: 3px solid var(--ink-red);
+  outline-offset: 3px;
+  box-shadow: none;
+  border-radius: 2px;
+}
+
+.order-mobile-bar:focus-visible {
+  outline-color: var(--on-accent);
+}
+
+a {
+  color: var(--accent-ink);
+  text-underline-offset: 0.18em;
+  text-decoration-thickness: 1px;
+}
+
+a:hover {
+  text-decoration-thickness: 2px;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font);
+  font-stretch: 112%;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+/* Etikett: det skrivaren skriver i marginalen (EXEMPEL, KATEGORI, FÄLTNAMN). */
+.hero-kicker,
+.category-sidebar-kicker,
+.category-dropdown-label,
+.booking-field > span:first-child,
+.offer-stub-label,
+.order-only-table,
+.storage-table th,
+.opening-hours-table th {
+  font: 500 0.6875rem/1.3 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Tryck: tider, priser, bord, antal. */
+.dish-price,
+.cart-item-price,
+.cart-total,
+.cart-total-before,
+.cart-discount,
+.booking-summary dd,
+.opening-hours-table td,
+.hold-clock,
+.date-tile-day,
+.chip-count,
+.stepper > span,
+.cart-qty span,
+.party-stepper select,
+.order-mobile-bar-total,
+.order-mobile-bar-count,
+.offer-peek-percent,
+.storage-table code,
+.catering-offer code {
+  font-family: var(--mono);
+  font-stretch: 87.5%;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Kvittot: papper, riven underkant, hänger från railen --------------- */
+
+.menu,
+.order-menu,
+.order-cart,
+.booking-step,
+.booking-confirmation,
+.catering-details,
+.page-prose,
+.printing {
+  position: relative;
+  background: var(--surface);
+  border: 0;
+  border-radius: 0;
+  box-shadow: var(--shadow);
+}
+
+.menu::after,
+.order-menu::after,
+.order-cart::after,
+.booking-step::after,
+.booking-confirmation::after,
+.catering-details::after,
+.page-prose::after,
+.printing::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--tooth-h);
+  background: conic-gradient(from -45deg at 50% 100%, var(--table) 0deg, transparent 1deg 89deg, var(--table) 90deg) 0 100% / var(--tooth) var(--tooth-h) repeat-x;
+  pointer-events: none;
+}
+
+/* Brickan bredvid menyn: stannar överst när den får plats i fönstret. Är
+   den högre (--cart-h, mäts i useStickyCart) rullar den med sidan tills
+   underkanten syns och stannar där, så knappen alltid går att nå. Ingen
+   egen rullning: en rullning per sida. */
+@media (min-width: 1001px) {
+  .order-cart {
+    position: sticky;
+    top: min(calc(var(--header-h) + 20px), calc(100svh - var(--cart-h, 0px) - 20px));
+  }
+
+}
+
+.menu,
+.order-menu,
+.order-cart,
+.booking-step,
+.booking-confirmation,
+.catering-details,
+.page-prose {
+  animation: drop 640ms var(--ease) both;
+}
+
+.booking-step:nth-of-type(2),
+.order-cart {
+  animation-delay: 80ms;
+}
+
+.booking-step:nth-of-type(3) {
+  animation-delay: 160ms;
+}
+
+.booking-step:nth-of-type(4) {
+  animation-delay: 240ms;
+}
+
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes drop {
+  from { opacity: 0; transform: translateY(-14px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes thunk {
+  0% { transform: scale(1.5) rotate(-4deg); opacity: 0; }
+  55% { transform: scale(0.95) rotate(-4deg); opacity: 1; }
+  100% { transform: scale(1) rotate(-4deg); }
+}
+
+@keyframes print-line {
+  0%, 10% { transform: scaleX(0); }
+  45%, 100% { transform: scaleX(1); }
+}
+
+/* Laddning: en remsa som skrivs ut. */
+.printing {
+  width: 220px;
+  margin: 28px auto;
+  padding: 16px 18px calc(12px + var(--tooth-h));
+  display: grid;
+  gap: 9px;
+  animation: drop 600ms var(--ease) both;
+}
+
+.printing__label {
+  font: 760 0.6875rem/1 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+  padding-bottom: 8px;
+  border-bottom: 1.5px dashed var(--paper-line);
+}
+
+.printing i {
+  display: block;
+  height: 7px;
+  border-radius: 2px;
+  background: var(--paper-line);
+  transform-origin: left;
+  animation: print-line 1600ms steps(14, end) infinite;
+}
+
+.printing i:nth-child(2) { width: 78%; animation-delay: 220ms; }
+.printing i:nth-child(3) { width: 62%; animation-delay: 440ms; }
+.printing i:nth-child(4) { width: 86%; animation-delay: 660ms; }
+
+.site-boot {
+  display: grid;
+  place-content: center;
+  gap: 12px;
+  min-height: 100svh;
+  padding: 24px;
+  text-align: center;
+  background: var(--table);
+}
+
+.site-boot h1 {
+  font: 860 clamp(1.8rem, 1rem + 2.6vw, 2.6rem)/1.02 var(--font);
+  font-stretch: 125%;
+  letter-spacing: -0.025em;
+}
+
+.site-boot p {
+  color: var(--muted);
+  max-width: 44ch;
+}
+
+.site-boot .btn-primary {
+  justify-self: center;
+}
+
+/* Stämpeln: status i rött (öppet läge) eller svart (klart). */
+.booking-status {
+  display: inline-block;
+  width: fit-content;
+  max-width: 100%;
+  padding: 3px 8px 2px;
+  border: 2px solid currentColor;
+  border-radius: 3px;
+  font: 800 0.78rem/1.2 var(--mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-red);
+  transform: rotate(-4deg);
+  margin: 6px 0 14px;
+  animation: thunk 420ms var(--ease) both;
+}
+
+.menu {
+  margin-top: 0;
+  padding: clamp(22px, 3vw, 36px) clamp(18px, 3vw, 40px) calc(clamp(26px, 3vw, 40px) + var(--tooth-h));
+}
+
+.menu-heading {
+  font: 760 0.8125rem/1.6 var(--mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding-bottom: 10px;
+  margin-bottom: 4px;
+  border-bottom: 1.5px dashed var(--paper-line);
+}
+
+.chip-rail {
+  margin: 0 calc(clamp(18px, 3vw, 40px) * -1) 4px;
+  padding: 10px clamp(18px, 3vw, 40px);
+  background: var(--surface);
+  border-bottom: 1.5px dashed var(--paper-line);
+}
+
+.chip {
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: 3px;
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--paper-line);
+  font: 700 0.9rem/1 var(--font);
+  font-stretch: 108%;
+}
+
+.chip:hover {
+  box-shadow: inset 0 0 0 1.5px var(--ink);
+}
+
+.chip.is-active {
+  background: var(--print);
+  color: var(--paper);
+  box-shadow: none;
+}
+
+.chip-count {
+  min-width: 0;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+.chip.is-active .chip-count {
+  background: transparent;
+  color: color-mix(in srgb, var(--paper) 70%, transparent);
+}
+
+.menu-section-title {
+  font-weight: 800;
+  font-stretch: 118%;
+  font-size: clamp(1.3rem, 1.15rem + 0.6vw, 1.6rem);
+  letter-spacing: -0.02em;
+}
+
+.dish {
+  gap: 14px;
+  padding: 12px 0;
+  border-bottom: 1.5px dashed var(--paper-line);
+}
+
+.dish-name {
+  font-weight: 750;
+  font-stretch: 108%;
+  font-size: 1.05rem;
+}
+
+.dish-desc {
+  font-size: 0.92rem;
+}
+
+.dish-price {
+  font-weight: 600;
+  font-size: 0.9rem;
+  letter-spacing: 0.01em;
+}
+
+.menu-allergy {
+  font-size: 0.95rem;
+  padding-top: 14px;
+}
+
+/* Tallriken blev ett tryckt foto: fyrkant med 3 px hörn. */
+.plate {
+  --size: 76px;
+  padding: 0;
+  border-radius: 3px;
+  background: var(--fill);
+  box-shadow: none;
+  overflow: hidden;
+}
+
+.plate img {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 3px;
+}
+
+.plate--empty::before {
+  content: none;
+}
+
+.plate-initial {
+  font: 500 calc(var(--size) * 0.26)/1 var(--mono);
+  color: var(--muted);
+}
+
+.plate--sm {
+  --size: 32px;
+  box-shadow: 0 0 0 2px var(--surface);
+}
+
+.plate--lg {
+  --size: 110px;
+}
+
+/* --- Sidhuvud på undersidor ------------------------------------------- */
+
+.page-head h1,
+.page-hero h1,
+.booking-confirmation h1 {
+  font-weight: 800;
+  font-stretch: 118%;
+  font-size: clamp(1.9rem, 1.2rem + 2.2vw, 3rem);
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+}
+
+.page-lede,
+.hero-sub {
+  color: var(--muted);
+  font-size: clamp(1.02rem, 1rem + 0.2vw, 1.12rem);
+}
+
+/* --- Knappar: skrivarens omvända block ---------------------------------- */
+
+.btn-primary,
+.btn-secondary,
+.btn,
+.offer-submit {
+  min-height: 48px;
+  padding: 0 20px;
+  border-radius: 3px;
+  font: 700 1rem/1 var(--font);
+  font-stretch: 112%;
+  letter-spacing: 0.01em;
+  transition: background-color 160ms var(--ease), transform 160ms var(--ease), box-shadow 160ms var(--ease), border-color 160ms var(--ease);
+}
+
+.btn-primary,
+.btn.primary,
+.offer-submit {
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: 0 2px 6px -2px rgba(0, 0, 0, 0.35);
+}
+
+.btn-primary:hover:not(:disabled),
+.btn.primary:hover:not(:disabled),
+.offer-submit:hover:not(:disabled) {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px -6px rgba(0, 0, 0, 0.5);
+}
+
+.btn-primary:active:not(:disabled),
+.btn.primary:active:not(:disabled),
+.btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.btn-primary:disabled,
+.btn.primary:disabled,
+.offer-submit:disabled {
+  background: var(--fill);
+  color: var(--muted);
+  box-shadow: none;
+  /* Ingen tonad knapp: dämpat bläck på pappersskugga läses i båda lägena. */
+  opacity: 1;
+}
+
+.btn-secondary,
+.btn.ghost,
+.btn.small {
+  background: transparent;
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1.5px var(--paper-line);
+}
+
+.btn-secondary:hover:not(:disabled),
+.btn.ghost:hover:not(:disabled),
+.btn.small:hover:not(:disabled) {
+  box-shadow: inset 0 0 0 1.5px var(--ink);
+  filter: none;
+  transform: translateY(-1px);
+}
+
+.btn.small {
+  min-height: 40px;
+  padding: 0 14px;
+  font-size: 0.92rem;
+}
+
+.link-button {
+  color: var(--accent-ink);
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+/* --- Fält: tryckta i papperets skugga ----------------------------------- */
+
+.booking-field {
+  gap: 6px;
+}
+
+.booking-field input,
+.booking-field select,
+.booking-field textarea,
+.catering-dishes input,
+.cart-code-row input,
+.offer-field input {
+  min-height: 48px;
+  padding: 10px 14px;
+  border: 1.5px solid var(--paper-line);
+  border-radius: 3px;
+  background: var(--fill);
+  box-shadow: none;
+  color: var(--ink);
+  font: 400 1rem/1.4 var(--font);
+  transition: border-color 160ms var(--ease), background-color 160ms var(--ease);
+}
+
+.booking-field input:hover,
+.booking-field select:hover,
+.booking-field textarea:hover {
+  border-color: var(--muted);
+}
+
+.booking-field input:focus,
+.booking-field select:focus,
+.booking-field textarea:focus,
+.catering-dishes input:focus,
+.cart-code-row input:focus,
+.offer-field input:focus {
+  outline: none;
+  background: var(--surface);
+  border-color: var(--ink);
+  box-shadow: none;
+}
+
+.field-hint {
+  font-weight: 400;
+  font-size: 0.85rem;
+  text-transform: none;
+  letter-spacing: 0;
+  font-family: var(--font);
+}
+
+.booking-check {
+  font-size: 0.95rem;
+}
+
+.booking-check input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--ink);
+}
+
+.notice {
+  border: 1.5px dashed var(--paper-line);
+  border-radius: 3px;
+  background: var(--surface);
+  box-shadow: none;
+  color: var(--muted);
+  padding: 12px 16px;
+  font-size: 0.95rem;
+}
+
+.notice.error {
+  background: var(--surface);
+  border-color: var(--ink-red);
+  box-shadow: none;
+  color: var(--ink-red);
+}
+
+/* Fliken (tider, våningar, bord, filter): tryckt val. */
+.filter-pill {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1.5px var(--paper-line);
+  font: 600 0.9rem/1 var(--mono);
+  font-stretch: 87.5%;
+  letter-spacing: 0.01em;
+  transition: background-color 160ms var(--ease), color 160ms var(--ease), box-shadow 160ms var(--ease);
+}
+
+.filter-pill:hover {
+  filter: none;
+  box-shadow: inset 0 0 0 1.5px var(--ink);
+}
+
+.filter-pill:active {
+  transform: none;
+}
+
+.filter-pill.active {
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: none;
+}
+
+.filter-pill.is-special:not(.active) {
+  box-shadow: none;
+  outline: 1.5px dashed var(--paper-line);
+  outline-offset: -1.5px;
+}
+
+/* --- Beställ: kvittot till vänster, brickan till höger ------------------ */
+
+.order-hint {
+  border-radius: 3px;
+  border: 1.5px dashed var(--paper-line);
+  background: var(--surface);
+  box-shadow: none;
+  text-align: left;
+}
+
+.order-menu {
+  display: block;
+  padding: clamp(18px, 3vw, 28px) clamp(18px, 3vw, 28px) calc(24px + var(--tooth-h));
+}
+
+.order-menu .chip-rail {
+  margin: 0 calc(clamp(18px, 3vw, 28px) * -1) 4px;
+  padding: 10px clamp(18px, 3vw, 28px);
+}
+
+.order-menu .menu-section + .menu-section {
+  margin-top: 8px;
+}
+
+.dish--order.is-in-cart .plate {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.add-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 3px;
+  box-shadow: 0 2px 6px -2px rgba(0, 0, 0, 0.35);
+}
+
+.add-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px -6px rgba(0, 0, 0, 0.5);
+}
+
+.add-btn:active:not(:disabled) {
+  transform: none;
+  box-shadow: none;
+}
+
+.add-btn:disabled {
+  box-shadow: none;
+}
+
+.stepper {
+  padding: 2px;
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+}
+
+.stepper button {
+  width: 38px;
+  height: 38px;
+  border-radius: 3px;
+}
+
+.stepper > span {
+  font-weight: 700;
+}
+
+.order-only-table {
+  border-radius: 3px;
+  padding: 6px 8px;
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--paper-line);
+  white-space: normal;
+  text-align: center;
+}
+
+.order-cart {
+  gap: 14px;
+  padding: 22px 22px calc(22px + var(--tooth-h));
+}
+
+.tray-head h2,
+.order-cart h2 {
+  font: 760 0.8125rem/1.6 var(--mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.tray-plates .plate + .plate {
+  margin-left: -8px;
+}
+
+.cart-empty {
+  font-size: 0.95rem;
+}
+
+.cart-list li {
+  padding: 8px 0;
+  border-bottom: 1.5px dashed var(--paper-line);
+}
+
+.cart-item-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.cart-item-price {
+  font-weight: 600;
+  font-size: 0.9rem;
+  /* Samma bredd på varje rad, så att knapparna står i en kolumn. */
+  min-width: 7ch;
+  text-align: right;
+}
+
+.cart-list .cart-qty button,
+.cart-qty button {
+  width: 30px;
+  height: 30px;
+  border-radius: 3px;
+  background: var(--fill);
+  font: 700 1rem/1 var(--font);
+}
+
+.cart-total {
+  font-weight: 800;
+  font-size: 1rem;
+  padding-top: 4px;
+  gap: 12px;
+}
+
+.cart-total > span:last-child {
+  white-space: nowrap;
+}
+
+.cart-note {
+  font-size: 0.82rem;
+}
+
+.order-form {
+  padding-top: 14px;
+  border-top: 1.5px dashed var(--paper-line);
+}
+
+.order-cart .order-form .btn-primary {
+  width: 100%;
+}
+
+/* Kassan i brickan: ett steg i taget (Din beställning, Vem är du?, Kvitto
+   och önskemål, Godkänn och betala). En stor knapp framåt, en lugn bakåt. */
+.order-cart .order-form {
+  gap: 18px;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.checkout-step {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  animation: checkout-in 280ms var(--ease) both;
+}
+
+@keyframes checkout-in {
+  from { opacity: 0; transform: translateX(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+.order-cart .checkout-title {
+  font: 800 1.5rem/1.15 var(--font);
+  font-stretch: 112%;
+  letter-spacing: -0.02em;
+  text-transform: none;
+  color: var(--ink);
+  text-wrap: balance;
+}
+
+.order-cart h2:focus {
+  outline: none;
+}
+
+.checkout-actions {
+  display: grid;
+  gap: 6px;
+}
+
+.order-cart .checkout-next {
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 56px;
+  font-size: 1.08rem;
+}
+
+.checkout-next svg,
+.checkout-back svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: none;
+}
+
+.checkout-back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 48px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--ink);
+  font: 650 1rem/1 var(--font);
+  cursor: pointer;
+  transition: background-color 160ms var(--ease);
+}
+
+.checkout-back:hover:not(:disabled) {
+  background: var(--fill);
+}
+
+.checkout-back:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.checkout-privacy summary {
+  list-style: none;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.checkout-privacy summary::-webkit-details-marker {
+  display: none;
+}
+
+.checkout-privacy-more {
+  color: var(--accent-ink);
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  white-space: nowrap;
+}
+
+.checkout-privacy[open] .checkout-privacy-more {
+  display: none;
+}
+
+.checkout-privacy .guest-notice {
+  margin-top: 10px;
+}
+
+.order-cart .booking-check {
+  min-height: 44px;
+}
+
+@media (max-width: 1000px) {
+  .order-mobile-bar {
+    transition: opacity 200ms var(--ease), transform 200ms var(--ease);
+  }
+
+  .order-mobile-bar.is-hidden {
+    opacity: 0;
+    transform: translateY(12px);
+    pointer-events: none;
+  }
+
+}
+
+/* --- Kassan: två spalter som en vanlig webbkassa ------------------------
+   Ett pappersark: överst restaurangens namn och brödsmulorna (Varukorg >
+   Dina uppgifter > Betala > Klart), till vänster ett steg i taget i lugna
+   kort, till höger sammanfattningen med den stora knappen. En tunn linje
+   mellan spalterna, inga skuggor inne i arket. Mobil: en spalt,
+   "Visa beställning" överst och knappen fast längst ner. */
+.checkout {
+  position: relative;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: clamp(18px, 3vw, 36px) clamp(18px, 3.4vw, 44px) calc(clamp(24px, 3vw, 40px) + var(--tooth-h));
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+  scroll-margin-top: calc(var(--header-h) + 12px);
+  /* `backwards`, inte `both`: en kvarliggande transform gör arket till
+     referens för den fasta knappen på mobilen (se .page). */
+  animation: drop 640ms var(--ease) backwards;
+}
+
+.checkout::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--tooth-h);
+  background: conic-gradient(from -45deg at 50% 100%, var(--table) 0deg, transparent 1deg 89deg, var(--table) 90deg) 0 100% / var(--tooth) var(--tooth-h) repeat-x;
+  pointer-events: none;
+}
+
+.checkout-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+  padding-bottom: clamp(16px, 2vw, 22px);
+  margin-bottom: clamp(20px, 3vw, 32px);
+  border-bottom: 1px solid var(--paper-line);
+}
+
+.checkout-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  font: 800 1.08rem/1.2 var(--font);
+  font-stretch: 112%;
+  letter-spacing: -0.01em;
+}
+
+.checkout-brand img {
+  width: 32px;
+  height: 32px;
+  border-radius: 3px;
+  object-fit: cover;
+}
+
+.crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font: 600 0.92rem/1.3 var(--font);
+}
+
+.crumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+}
+
+.crumb.is-done,
+.crumb.is-current {
+  color: var(--ink);
+}
+
+.crumb.is-current {
+  font-weight: 800;
+}
+
+.crumb-link {
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--paper-line);
+  text-underline-offset: 0.25em;
+  cursor: pointer;
+}
+
+.crumb-link:hover {
+  text-decoration-color: currentColor;
+}
+
+.crumb-sep {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* På varukorgssidan står smulorna under rubriken. */
+.page-head .crumbs {
+  margin-top: 10px;
+}
+
+.checkout-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
+  align-items: start;
+}
+
+.checkout-main {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+  padding-right: clamp(24px, 4vw, 48px);
+}
+
+.checkout-side {
+  position: sticky;
+  top: calc(var(--header-h) + 20px);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+  padding-left: clamp(24px, 4vw, 48px);
+  border-left: 1px solid var(--paper-line);
+}
+
+.checkout .checkout-title {
+  font: 820 clamp(1.6rem, 1.2rem + 1.3vw, 2.1rem)/1.1 var(--font);
+  font-stretch: 115%;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+.checkout-title:focus {
+  outline: none;
+}
+
+.checkout-sub {
+  margin-bottom: 10px;
+  font: 750 1.08rem/1.3 var(--font);
+  font-stretch: 108%;
+  letter-spacing: -0.005em;
+  color: var(--ink);
+}
+
+.checkout-side .checkout-sub {
+  margin-bottom: 4px;
+}
+
+.checkout-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.checkout-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: clamp(16px, 2.4vw, 22px);
+  border: 1px solid var(--paper-line);
+  border-radius: 6px;
+  background: var(--fill);
+}
+
+.checkout-card .booking-field input,
+.checkout-card .booking-field textarea {
+  background: var(--surface);
+}
+
+.checkout-card--facts {
+  gap: 4px;
+  color: var(--muted);
+}
+
+.checkout-card--facts p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.checkout-fact-strong {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.checkout-block .pay-form {
+  gap: 12px;
+}
+
+.checkout-block .pay-secure {
+  margin-top: 14px;
+}
+
+.checkout-main .checkout-back {
+  align-self: flex-start;
+  margin-left: -12px;
+}
+
+/* Sammanfattningen: rad, delsumma, moms, totalt. */
+.sum-lines {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sum-lines li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 0;
+}
+
+.sum-lines .plate {
+  --size: 52px;
+  border-radius: 6px;
+  box-shadow: none;
+}
+
+.sum-lines .plate img,
+.sum-lines .plate::before {
+  border-radius: 6px;
+}
+
+.sum-line-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.sum-line-name {
+  font-weight: 650;
+  font-size: 0.95rem;
+  overflow-wrap: anywhere;
+}
+
+.sum-line-qty,
+.sum-line-price,
+.sum-rows dd,
+.sum-total span:last-child,
+.checkout-peek strong {
+  font-family: var(--mono);
+  font-stretch: 87.5%;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.sum-line-qty {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.sum-line-price {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.sum-rows {
+  display: grid;
+  gap: 8px;
+  margin: 6px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--paper-line);
+}
+
+.sum-rows div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sum-rows dt {
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.sum-rows dd {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.sum-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--paper-line);
+  font-weight: 800;
+  font-size: 1.15rem;
+}
+
+.checkout-cta .checkout-next {
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 56px;
+  font-size: 1.08rem;
+}
+
+.checkout-cta .checkout-next svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.checkout-peek {
+  display: none;
+}
+
+@media (max-width: 899px) {
+  .checkout {
+    padding-bottom: calc(110px + var(--tooth-h));
+  }
+
+  .checkout-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .checkout-main {
+    padding-right: 0;
+  }
+
+  .checkout-side {
+    position: static;
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .checkout-side-sum {
+    display: none;
+  }
+
+  .checkout-peek {
+    display: block;
+    margin-bottom: 20px;
+    border: 1px solid var(--paper-line);
+    border-radius: 6px;
+    background: var(--fill);
+  }
+
+  .checkout-peek summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 54px;
+    padding: 0 16px;
+    list-style: none;
+    cursor: pointer;
+    font-weight: 700;
+  }
+
+  .checkout-peek summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .checkout-peek summary span {
+    flex: 1;
+  }
+
+  .checkout-peek summary svg {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: transform 200ms var(--ease);
+  }
+
+  .checkout-peek[open] summary svg {
+    transform: rotate(180deg);
+  }
+
+  .checkout-peek-body {
+    padding: 0 16px 16px;
+  }
+
+  .checkout-cta {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    z-index: 30;
+  }
+
+  .checkout-cta .checkout-next {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.16), 0 18px 34px -14px rgba(0, 0, 0, 0.55);
+  }
+
+}
+
+@media (max-width: 480px) {
+  .checkout-bar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .crumbs {
+    gap: 2px 4px;
+    font-size: 0.8rem;
+  }
+
+  .crumb {
+    gap: 4px;
+  }
+
+  .crumb-sep {
+    width: 12px;
+    height: 12px;
+  }
+
+}
+
+@media (max-width: 480px) {
+  .order-cart .checkout-title {
+    font-size: 1.35rem;
+  }
+
+  .tray-head .tray-plates {
+    display: none;
+  }
+
+}
+
+@media (max-width: 1000px) {
+  .order-mobile-bar {
+    border-radius: 3px;
+    box-shadow: var(--shadow);
+    font-family: var(--font);
+  }
+
+  .order-mobile-bar-count {
+    border-radius: 3px;
+    font-weight: 700;
+  }
+
+}
+
+.booking > * {
+  width: 100%;
+  min-width: 0;
+  max-width: 860px;
+}
+
+.booking-step {
+  gap: 16px;
+  padding: clamp(18px, 3vw, 28px) clamp(18px, 3vw, 28px) calc(clamp(20px, 3vw, 28px) + var(--tooth-h));
+}
+
+.booking-step legend {
+  font-weight: 800;
+  font-stretch: 118%;
+  font-size: 1.3rem;
+  letter-spacing: -0.02em;
+}
+
+.step-no {
+  width: 30px;
+  height: 30px;
+  border-radius: 3px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font: 760 0.8rem/1 var(--mono);
+}
+
+.party-stepper {
+  padding: 3px;
+  border-radius: 3px;
+  background: var(--fill);
+}
+
+.party-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 3px;
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+.party-stepper select {
+  min-height: 44px;
+  border-radius: 3px;
+  font: 700 1rem/1 var(--mono);
+  font-stretch: 87.5%;
+}
+
+.date-tile {
+  width: 68px;
+  min-height: 80px;
+  border-radius: 3px;
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--paper-line);
+}
+
+.date-tile:hover {
+  box-shadow: inset 0 0 0 1.5px var(--ink);
+}
+
+.date-tile-wd {
+  font: 500 0.66rem/1.2 var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.date-tile-day {
+  font-weight: 700;
+  font-size: 1.4rem;
+}
+
+.date-tile-mon,
+.date-tile .pill-note {
+  font: 500 0.66rem/1.2 var(--mono);
+}
+
+.date-tile.active {
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: none;
+}
+
+.booking-summary-line {
+  border-radius: 3px;
+  border: 1.5px dashed var(--paper-line);
+  background: var(--fill);
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.floor-view-toggle {
+  padding: 3px;
+  border-radius: 3px;
+  background: var(--fill);
+}
+
+.floor-view-toggle button {
+  border-radius: 3px;
+  font: 700 0.8rem/1 var(--mono);
+}
+
+.floor-view-toggle button.active {
+  background: var(--print);
+  color: var(--paper);
+  box-shadow: none;
+}
+
+.floor-svg-frame {
+  border-radius: 3px;
+  background: var(--table);
+  box-shadow: inset 0 0 0 1.5px var(--paper-line);
+}
+
+.floor-legend {
+  font: 500 0.72rem/1.4 var(--mono);
+  letter-spacing: 0.03em;
+}
+
+.floor-legend-swatch {
+  border-radius: 2px;
+}
+
+.hold-banner {
+  border: 0;
+  border-top: 4px solid var(--steel);
+  border-radius: 0 0 3px 3px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  font-size: 0.95rem;
+}
+
+.hold-banner .btn-secondary {
+  min-height: 40px;
+  padding: 0 14px;
+  font-size: 0.92rem;
+}
+
+.hold-clock {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.hold-banner.urgent {
+  border-top-color: var(--ink-red);
+}
+
+.hold-banner.urgent .hold-clock {
+  color: var(--ink-red);
+}
+
+.guarantee-notice {
+  border: 1.5px dashed var(--paper-line);
+  border-radius: 3px;
+  background: var(--fill);
+  font-size: 0.92rem;
+}
+
+.table-reasons summary,
+.catering-terms summary {
+  font-weight: 650;
+  color: var(--accent-ink);
+}
+
+/* Bekräftelsen: kvittot som skrivs ut när bokningen är klar. */
+.booking-confirmation {
+  max-width: 640px;
+  margin-top: clamp(28px, 5vw, 52px);
+  padding: clamp(22px, 4vw, 36px) clamp(22px, 4vw, 36px) calc(clamp(24px, 4vw, 36px) + var(--tooth-h));
+}
+
+.booking-summary > div {
+  padding: 9px 0;
+  border-bottom: 1.5px dashed var(--paper-line);
+}
+
+.booking-summary dt {
+  font: 500 0.6875rem/1.6 var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.booking-summary dd {
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.booking-sent,
+.booking-manage-link {
+  font-size: 0.95rem;
+}
+
+.order-steps {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+}
+
+/* --- Catering: rätterna som rader, kalkylen som kvitto ------------------- */
+
+.catering-dishes {
+  gap: 0;
+  margin-bottom: 16px;
+}
+
+.catering-dishes li {
+  padding: 10px 0;
+  border: 0;
+  border-bottom: 1.5px dashed var(--paper-line);
+  border-radius: 0;
+  background: transparent;
+}
+
+.catering-dishes input {
+  min-height: 42px;
+  padding: 6px 10px;
+  text-align: right;
+  font-family: var(--mono);
+  font-stretch: 87.5%;
+  font-variant-numeric: tabular-nums;
+}
+
+.catering-dishes .dish-price {
+  font-size: 0.85rem;
+}
+
+.catering-details {
+  gap: 14px;
+  margin-top: 18px;
+  padding: clamp(18px, 3vw, 28px) clamp(18px, 3vw, 28px) calc(24px + var(--tooth-h));
+}
+
+.catering-step-title {
+  font-weight: 800;
+  font-stretch: 118%;
+  font-size: 1.3rem;
+  letter-spacing: -0.02em;
+}
+
+.menu-content-title {
+  font-weight: 800;
+  font-stretch: 112%;
+  font-size: 1.1rem;
+  margin: 14px 0 2px;
+}
+
+.segmented {
+  padding: 3px;
+  border-radius: 3px;
+  background: var(--fill);
+}
+
+.segmented label {
+  border-radius: 3px;
+  font: 600 0.92rem/1 var(--font);
+}
+
+.segmented label.on {
+  background: var(--print);
+  color: var(--paper);
+  box-shadow: none;
+}
+
+.catering-discount {
+  color: var(--ink-red);
+}
+
+.catering-offer,
+.bankid-box {
+  border: 1.5px dashed var(--paper-line);
+  border-radius: 3px;
+  background: var(--fill);
+}
+
+.catering-offer h2 {
+  font: 760 0.8125rem/1.6 var(--mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.catering-message {
+  font-style: normal;
+  color: var(--ink);
+}
+
+.bankid-qr {
+  border-radius: 3px;
+}
+
+.booking-status:empty {
+  display: none;
+}
+
+/* --- Textsidor: kvittot med villkoren ---------------------------------- */
+
+.page-prose {
+  max-width: 820px;
+  margin: clamp(20px, 3vw, 32px) auto clamp(28px, 4vw, 48px);
+  padding: clamp(26px, 4vw, 48px) clamp(22px, 4vw, 56px) calc(40px + var(--tooth-h));
+  line-height: 1.6;
+}
+
+.page-prose h1 {
+  font-weight: 800;
+  font-stretch: 118%;
+  font-size: clamp(1.9rem, 1.2rem + 2.2vw, 3rem);
+  line-height: 1.02;
+  margin-bottom: 10px;
+}
+
+.page-prose h2 {
+  margin: 28px 0 8px;
+  font: 760 0.8125rem/1.6 var(--mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.page-prose p,
+.page-prose li {
+  color: var(--ink);
+}
+
+.page-prose .cell-muted {
+  color: var(--muted);
+}
+
+.page-hero.page-prose {
+  text-align: left;
+}
+
+.storage-table th {
+  border-bottom: 1.5px solid var(--ink);
+}
+
+.storage-table td {
+  border-bottom: 1.5px dashed var(--paper-line);
+}
+
+@media (max-width: 600px) {
+  .storage-table tr {
+    border-bottom: 1.5px dashed var(--paper-line);
+  }
+
+}
+
+/* --- Öppettider (modal): ett kvitto på väggen --------------------------- */
+
+.opening-hours-modal-panel {
+  width: min(26rem, 100%);
+  padding: 1.2rem 1.4rem calc(1.4rem + var(--tooth-h));
+  border: 0;
+  border-radius: 0;
+  background: var(--surface);
+  box-shadow: none;
+  animation: drop 480ms var(--ease) both;
+  -webkit-mask:
+    conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / var(--tooth) var(--tooth-h) repeat-x,
+    linear-gradient(#000 0 0) top / 100% calc(100% - var(--tooth-h) + 1px) no-repeat;
+  mask:
+    conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / var(--tooth) var(--tooth-h) repeat-x,
+    linear-gradient(#000 0 0) top / 100% calc(100% - var(--tooth-h) + 1px) no-repeat;
+}
+
+.opening-hours-modal-header {
+  border-bottom: 1.5px dashed var(--paper-line);
+}
+
+.opening-hours-modal-heading {
+  font: 760 0.8125rem/1.6 var(--mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.opening-hours-modal-close {
+  width: 2.2rem;
+  height: 2.2rem;
+  border: 1.5px solid var(--paper-line);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--ink);
+}
+
+.opening-hours-modal-close:hover {
+  border-color: var(--ink);
+  background: transparent;
+}
+
+.opening-hours-table {
+  font-size: 0.85rem;
+}
+
+.opening-hours-table th,
+.opening-hours-table td {
+  padding: 0.45rem 0;
+  border-top: 1.5px dashed var(--paper-line);
+}
+
+.opening-hours-table td {
+  text-align: right;
+  color: var(--ink);
+}
+
+.opening-hours-special-heading {
+  font: 760 0.75rem/1.6 var(--mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* --- Kupongen: samma papper, samma hörn --------------------------------- */
+
+.offer-card {
+  filter: drop-shadow(0 14px 18px rgba(0, 0, 0, 0.3)) drop-shadow(0 2px 3px rgba(0, 0, 0, 0.2));
+}
+
+.offer-ticket,
+.offer-stub,
+.offer-peek,
+.offer-tab,
+.offer-peek-percent,
+.offer-close,
+.offer-dish {
+  border-radius: 3px;
+}
+
+.offer-stub::after {
+  border-right-color: color-mix(in srgb, var(--print) 25%, transparent);
+}
+
+.offer-stub-percent {
+  font: 820 2.3rem/1 var(--font);
+  font-stretch: 125%;
+  letter-spacing: -0.02em;
+}
+
+.offer-stub-percent small {
+  font-size: 1.2rem;
+}
+
+.offer-form h2,
+.offer-done h2 {
+  font-weight: 800;
+  font-stretch: 112%;
+}
+
+.offer-submit {
+  min-height: 44px;
+}
+
+.offer-field input {
+  min-height: 44px;
+}
+
+@media (max-width: 760px) {
+  .menu {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .chip-rail {
+    margin: 0 -18px 4px;
+    padding: 10px 18px;
+  }
+
+}
+
+@media (max-width: 560px) {
+  :root {
+    font-size: 16px;
+  }
+
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu,
+.order-menu,
+.order-cart,
+.checkout-step,
+.checkout,
+.booking-step,
+.booking-confirmation,
+.catering-details,
+.page-prose,
+.booking-status,
+.opening-hours-modal-panel,
+.printing,
+.printing i {
+    animation: none !important;
+  }
+
+  .printing i {
+    transform: none;
+  }
+
+}
+
+/* =========================================================================
+   Booqy: flödena. Stegraden, det hållna bordet, rörelsen och en lugnare
+   palett. Tokens här skriver över theme.css.
+   Restaurangens färg (--accent) används bara för huvudknappar, valda val,
+   stegraden och länkar. Allt som betyder något har fasta färger som är
+   lika på alla sajter: grått ledigt, rött upptaget, grönt ditt val; rött
+   fel, grönt klart. Rörelse: 150-400 ms, Booqys ease, och ingenting rör
+   sig för den som bett om mindre rörelse (regeln i index.css).
+   ========================================================================= */
+
+:root {
+  /* Lugn bas: skrivbordet, papperet, trycket. */
+  --table: #f1eee6;
+  --table-2: #e9e5db;
+  --surface: #fbfaf6;
+  --fill: #f1eee6;
+  --paper-line: #d9d4c8;
+  --ink: #1c1918;
+  --muted: #5a534f;
+
+  /* Betydelsefärger (alla minst 4,5:1 mot papper och sin egen mjuka ton). */
+  --ok: #2c6a3f;
+  --ok-ink: #245735;
+  --ok-soft: #e3efe6;
+  --warn: #8a5a00;
+  --warn-soft: #f6ecd6;
+  --bad: #9e1d26;
+  --bad-soft: #f6e3e4;
+  --success: var(--ok);
+  --danger: var(--bad);
+  --danger-ink: var(--bad);
+  --warning: var(--warn);
+
+  /* Borden: grått ledigt, rött upptaget, grönt ditt val. Samma i 2D, 3D
+     och förklaringen, oavsett restaurangens färg. */
+  --seat-free: #dedbd3;
+  --seat-free-hover: #cfcbc1;
+  --seat-free-line: #8c8680;
+  --seat-free-side: #b5b0a8;
+  --seat-pick: #2c6a3f;
+  --seat-pick-line: #1f4d2d;
+  --seat-pick-side: #245735;
+  --seat-pick-ink: #ffffff;
+  --seat-taken: #ecc9cb;
+  --seat-taken-line: #9e1d26;
+  --seat-taken-side: #d9a9ad;
+  --seat-blocked: #f3dfe0;
+  --seat-unfit: #f1eee6;
+  --seat-unfit-line: #a8a29b;
+
+  /* Lokalen i 3D: väggar i papper och stål, inte i restaurangens färg. */
+  --wall: #d6d2c9;
+  --wall-2: #c4bfb4;
+  --wall-cap: #dcd8cf;
+  --door: #b09a80;
+  --door-2: #9a846a;
+
+  /* Restaurangens färg som text: mörkad tills den går att läsa på papper. */
+  --accent-ink: var(--tenant-accent-ink, var(--tenant-accent, #350001));
+  --focus-ring: #9e1d26;
+  --focus-halo: var(--paper);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --muted: #b8aca6;
+    --ok: #7cc695;
+    --ok-ink: #9ad6ae;
+    --ok-soft: #223a2a;
+    --warn: #e0b35a;
+    --warn-soft: #3a2f16;
+    --bad: #ee8a90;
+    --bad-soft: #432326;
+    --seat-free: #6b655f;
+    --seat-free-hover: #7a746d;
+    --seat-free-line: #a8a29b;
+    --seat-free-side: #4f4a45;
+    --seat-pick: #2f7a48;
+    --seat-pick-line: #7cc695;
+    --seat-pick-side: #245735;
+    --seat-taken: #6a3236;
+    --seat-taken-line: #ee8a90;
+    --seat-taken-side: #4e2528;
+    --seat-blocked: #4a2a2d;
+    --seat-unfit: #332e2b;
+    --seat-unfit-line: #7a736d;
+    --wall: #4a4440;
+    --wall-2: #3a3532;
+    --wall-cap: #57514c;
+    --door: #6e5a46;
+    --door-2: #5a4838;
+    --focus-ring: #ee8a90;
+    --focus-halo: #1c1918;
+  }
+
+}
+
+:root[data-theme='dark'] {
+  --muted: #b8aca6;
+  --ok: #7cc695;
+  --ok-ink: #9ad6ae;
+  --ok-soft: #223a2a;
+  --warn: #e0b35a;
+  --warn-soft: #3a2f16;
+  --bad: #ee8a90;
+  --bad-soft: #432326;
+  --seat-free: #6b655f;
+  --seat-free-hover: #7a746d;
+  --seat-free-line: #a8a29b;
+  --seat-free-side: #4f4a45;
+  --seat-pick: #2f7a48;
+  --seat-pick-line: #7cc695;
+  --seat-pick-side: #245735;
+  --seat-pick-ink: #ffffff;
+  --seat-taken: #6a3236;
+  --seat-taken-line: #ee8a90;
+  --seat-taken-side: #4e2528;
+  --seat-blocked: #4a2a2d;
+  --seat-unfit: #332e2b;
+  --seat-unfit-line: #7a736d;
+  --wall: #4a4440;
+  --wall-2: #3a3532;
+  --wall-cap: #57514c;
+  --door: #6e5a46;
+  --door-2: #5a4838;
+  --focus-ring: #ee8a90;
+  --focus-halo: #1c1918;
+}
+
+/* Fokus: Booqys röda ring med en pappersvit kant, så den syns på vilken
+   yta som helst (papper, knapp i restaurangens färg, grönt bord). */
+:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--focus-halo);
+}
+
+.order-mobile-bar:focus-visible {
+  outline-color: var(--on-accent);
+  box-shadow: none;
+}
+
+.f3d-pick:focus-visible .f3d-table-top,
+.f3d-explain:focus-visible .f3d-table-top {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.floor-svg-pick:focus-visible .floor-svg-table,
+.floor-svg-explain:focus-visible .floor-svg-table {
+  stroke: var(--focus-ring);
+  stroke-width: 0.1;
+}
+
+/* Länkar i textmassan: restaurangens färg bara när den går att läsa. */
+a,
+.link-button,
+.table-reasons summary,
+.catering-terms summary {
+  color: var(--accent-ink);
+}
+
+.notice.error,
+.field-hint.error {
+  color: var(--bad);
+  border-color: var(--bad);
+}
+
+.notice.error {
+  background: var(--bad-soft);
+  border-style: solid;
+}
+
+.notice.is-ok {
+  border: 1.5px solid var(--ok);
+  background: var(--ok-soft);
+  color: var(--ok-ink);
+}
+
+.notice--stack {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+
+.notice--stack p {
+  margin: 0;
+}
+
+.notice--stack .cell-muted {
+  font-size: 0.9rem;
+}
+
+.btn-small {
+  min-height: 40px;
+  padding: 0 14px;
+  font-size: 0.92rem;
+}
+
+.cart-discount,
+.cart-code-ok {
+  color: var(--ok-ink);
+}
+
+/* --- Stegraden: var är jag, vad kommer sedan ------------------------------ */
+
+.flow {
+  display: flex;
+  align-items: center;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.page-head--rail {
+  padding-bottom: 0;
+}
+
+.page-head--rail .flow {
+  margin-top: 0;
+}
+
+.flow-step {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 8px;
+  min-width: 0;
+  font: 600 0.78rem/1.2 var(--mono);
+  font-stretch: 87.5%;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+}
+
+.flow-step + .flow-step {
+  flex: 1 1 auto;
+}
+
+/* Perforeringen mellan stegen: streckad fram till det aktuella, hel bakom. */
+.flow-step + .flow-step::before {
+  content: '';
+  flex: 1 1 14px;
+  min-width: 12px;
+  height: 0;
+  margin: 0 10px;
+  border-top: 1.5px dashed var(--paper-line);
+}
+
+.flow-step.is-done + .flow-step::before {
+  border-top-style: solid;
+  border-top-color: var(--ink);
+}
+
+.flow-no {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 3px;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1.5px var(--paper-line);
+  font: 700 0.72rem/1 var(--mono);
+  color: var(--muted);
+  transition: background-color 240ms var(--ease), color 240ms var(--ease), box-shadow 240ms var(--ease), transform 240ms var(--ease);
+}
+
+.flow-no svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.flow-step.is-done .flow-no {
+  background: var(--ink);
+  color: var(--paper);
+  box-shadow: none;
+}
+
+.flow-step.is-current .flow-no {
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: none;
+  transform: scale(1.12);
+}
+
+.flow-step.is-current .flow-label {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.flow-label {
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .flow-step:not(.is-current) .flow-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .flow-step + .flow-step::before {
+    margin: 0 6px;
+  }
+
+}
+
+/* --- Steg som kommer in: ett kort lyft, inte ett klipp ---------------------- */
+
+.step-enter {
+  animation: step-in 320ms var(--ease) both;
+}
+
+.booking-step.step-enter {
+  animation: step-in 320ms var(--ease) both;
+}
+
+@keyframes step-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+.page-head {
+  scroll-margin-top: calc(var(--header-h) + 12px);
+}
+
+.booking-step[aria-busy='true'] legend {
+  color: var(--muted);
+}
+
+/* Sammanfattningen: en etikett och raden under. */
+.booking-summary-line {
+  display: grid;
+  gap: 2px;
+  border-color: var(--paper-line);
+  background: var(--fill);
+}
+
+.summary-kicker {
+  font: 500 0.6875rem/1.3 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Laddning: tider som skrivs ut (skelett) och remsan inuti ett kvitto. */
+.skeleton-pills {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 8px;
+}
+
+.skeleton-pills i {
+  display: block;
+  height: 44px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--fill) 0%, var(--table-2) 50%, var(--fill) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1200ms linear infinite;
+}
+
+@keyframes shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+.printing--inline {
+  margin: 8px 0;
+  box-shadow: none;
+  border: 1.5px dashed var(--paper-line);
+  animation: none;
+}
+
+.printing--inline::after {
+  content: none;
+}
+
+/* Upptagen knapp: snurran och knappen behåller sin färg, lite dämpad. */
+.spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-right: 9px;
+  vertical-align: -2px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  animation: spin 720ms linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.btn-primary.is-busy:disabled {
+  background: var(--accent);
+  color: var(--on-accent);
+  opacity: 0.8;
+  box-shadow: none;
+}
+
+.order-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.order-fields:disabled {
+  /* Medan det skickas: dämpat men läsbart (texten håller 4,5:1). */
+  opacity: 0.85;
+}
+
+/* --- Det hållna bordet: ett kvitto som hänger kvar högst upp ------------- */
+
+.hold-banner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 16px;
+  align-items: center;
+  padding: 12px 16px 14px;
+  border: 0;
+  border-top: 4px solid var(--ok);
+  border-radius: 0 0 3px 3px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  animation: drop 420ms var(--ease) both;
+}
+
+.hold-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  font-size: 0.95rem;
+}
+
+.hold-kicker {
+  font: 500 0.6875rem/1.3 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ok);
+}
+
+.hold-clock {
+  font: 700 1.05rem/1 var(--mono);
+  font-stretch: 87.5%;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.hold-bar {
+  grid-column: 1 / -1;
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--fill);
+  overflow: hidden;
+}
+
+.hold-bar i {
+  display: block;
+  height: 100%;
+  background: var(--ok);
+  transform-origin: left;
+  transition: transform 1000ms linear;
+}
+
+.hold-banner.urgent {
+  border-top-color: var(--bad);
+}
+
+.hold-banner.urgent .hold-kicker,
+.hold-banner.urgent .hold-clock {
+  color: var(--bad);
+}
+
+.hold-banner.urgent .hold-bar i {
+  background: var(--bad);
+}
+
+.hold-banner.urgent .hold-clock {
+  display: inline-block;
+  animation: tick 1000ms var(--ease) infinite;
+}
+
+@keyframes tick {
+  0%, 100% { transform: none; }
+  50% { transform: scale(1.08); }
+}
+
+/* --- Planritningen: lokalen i papper, borden i sina egna färger ---------- */
+
+.f3d-scene {
+  background: var(--table);
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1.5px var(--paper-line);
+}
+
+.f3d-face.h-n,
+.f3d-face.h-s,
+.f3d-face.v-w,
+.f3d-face.v-e {
+  background: linear-gradient(var(--wall), var(--wall-2));
+}
+
+.f3d-cap {
+  background: var(--wall-cap);
+}
+
+.f3d-door .f3d-face {
+  background: linear-gradient(var(--door), var(--door-2));
+}
+
+.f3d-table-face {
+  background: var(--seat-free-side);
+}
+
+.f3d-table-face.ring {
+  box-shadow: 0 0 0 1px var(--seat-free-line);
+}
+
+.f3d-table-top {
+  background: var(--surface);
+  border: 1px solid var(--seat-free-line);
+}
+
+.f3d-table-body {
+  transition: transform 240ms var(--ease);
+}
+
+.f3d-table-label,
+.f3d-table-seats {
+  font-family: var(--mono);
+  font-stretch: 87.5%;
+  color: var(--ink);
+}
+
+.f3d-table-seats {
+  font-weight: 500;
+}
+
+.f3d-table.is-free .f3d-table-top {
+  background: var(--seat-free);
+  border-color: var(--seat-free-line);
+}
+
+.f3d-table.is-free .f3d-table-face:not(.ring) {
+  background: var(--seat-free-side);
+}
+
+.f3d-pick:hover .f3d-table-top {
+  background: var(--seat-free-hover);
+}
+
+.f3d-pick:hover .f3d-table-body {
+  transform: translateZ(6px);
+}
+
+/* Det valda bordet lyfter från golvet. */
+.f3d-table.is-selected .f3d-table-body {
+  transform: translateZ(14px);
+}
+
+.f3d-table.is-selected .f3d-table-top {
+  background: var(--seat-pick);
+  border: 2px solid var(--seat-pick-line);
+}
+
+.f3d-table.is-selected .f3d-table-face:not(.ring) {
+  background: var(--seat-pick-side);
+}
+
+.f3d-table.is-selected .f3d-table-face.ring {
+  box-shadow: 0 0 0 1px var(--seat-pick-line);
+}
+
+.f3d-table.is-selected .f3d-table-label,
+.f3d-table.is-selected .f3d-table-seats {
+  color: var(--seat-pick-ink);
+}
+
+.f3d-table.is-booked .f3d-table-top,
+.f3d-table.is-taken .f3d-table-top {
+  background: var(--seat-taken);
+  border-color: var(--seat-taken-line);
+}
+
+.f3d-table.is-booked .f3d-table-face:not(.ring),
+.f3d-table.is-taken .f3d-table-face:not(.ring) {
+  background: var(--seat-taken-side);
+}
+
+.f3d-table.is-blocked .f3d-table-top {
+  background: var(--seat-blocked);
+  border: 1px dashed var(--seat-taken-line);
+}
+
+.f3d-table.is-unfit .f3d-table-top {
+  background: var(--seat-unfit);
+  border: 1px dashed var(--seat-unfit-line);
+}
+
+.f3d-table.is-unfit .f3d-table-face:not(.ring),
+.f3d-table.is-blocked .f3d-table-face:not(.ring) {
+  background: var(--seat-free-side);
+}
+
+.f3d-hint {
+  left: 10px;
+  bottom: 10px;
+  padding: 5px 9px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  font: 500 0.7rem/1.3 var(--mono);
+  color: var(--muted);
+}
+
+.f3d-hint-icon {
+  width: 18px;
+  height: 18px;
+  border: 0;
+  background: transparent;
+  font-size: 0.8rem;
+}
+
+.floor-svg-frame {
+  box-shadow: inset 0 0 0 1.5px var(--paper-line);
+}
+
+.floor-svg-table {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: fill 160ms var(--ease), stroke 160ms var(--ease), transform 240ms var(--ease);
+}
+
+.floor-svg-table.is-free {
+  fill: var(--seat-free);
+  stroke: var(--seat-free-line);
+}
+
+.floor-svg-chairs.is-free .floor-svg-chair {
+  stroke: var(--seat-free-line);
+}
+
+.floor-svg-pick:hover .floor-svg-table.is-free {
+  fill: var(--seat-free-hover);
+}
+
+.floor-svg-table.is-selected {
+  fill: var(--seat-pick);
+  stroke: var(--seat-pick-line);
+  transform: scale(1.08);
+}
+
+.floor-svg-chairs.is-selected .floor-svg-chair {
+  fill: color-mix(in srgb, var(--seat-pick) 30%, var(--surface));
+  stroke: var(--seat-pick);
+}
+
+.floor-svg-table.is-booked,
+.floor-svg-table.is-taken {
+  fill: var(--seat-taken);
+  stroke: var(--seat-taken-line);
+}
+
+.floor-svg-chairs.is-booked .floor-svg-chair,
+.floor-svg-chairs.is-taken .floor-svg-chair,
+.floor-svg-chairs.is-blocked .floor-svg-chair {
+  fill: var(--seat-blocked);
+}
+
+.floor-svg-table.is-blocked {
+  fill: var(--seat-blocked);
+  stroke: var(--seat-taken-line);
+}
+
+.floor-svg-table.is-unfit {
+  fill: var(--seat-unfit);
+  stroke: var(--seat-unfit-line);
+}
+
+.floor-svg-table-label,
+.floor-svg-table-seats {
+  font-family: var(--mono);
+}
+
+.floor-svg-pick .floor-svg-table.is-selected ~ .floor-svg-table-label,
+.floor-svg-pick .floor-svg-table.is-selected ~ .floor-svg-table-seats {
+  fill: var(--seat-pick-ink);
+}
+
+.floor-legend-swatch.is-free {
+  background: var(--seat-free);
+  box-shadow: inset 0 0 0 1.5px var(--seat-free-line);
+}
+
+.floor-legend-swatch.is-selected {
+  background: var(--seat-pick);
+  box-shadow: inset 0 0 0 1.5px var(--seat-pick-line);
+}
+
+.floor-legend-swatch.is-booked {
+  background: var(--seat-taken);
+  box-shadow: inset 0 0 0 1.5px var(--seat-taken-line);
+}
+
+.floor-legend-swatch.is-blocked {
+  background: var(--seat-blocked);
+  box-shadow: none;
+  outline: 1.5px dashed var(--seat-taken-line);
+  outline-offset: -2px;
+}
+
+.floor-legend-swatch.is-unfit {
+  background: var(--seat-unfit);
+  box-shadow: none;
+  outline: 1.5px dashed var(--seat-unfit-line);
+  outline-offset: -2px;
+}
+
+/* --- Brickan: det som lades till syns ------------------------------------- */
+
+.stepper {
+  animation: pop-in 220ms var(--ease) both;
+}
+
+.tray-plates .plate {
+  animation: pop-in 260ms var(--ease) both;
+}
+
+.cart-item-name {
+  padding: 2px 4px;
+  margin-left: -4px;
+  border-radius: 2px;
+  animation: line-flash 700ms var(--ease) both;
+}
+
+@media (max-width: 1073px) {
+  .order-mobile-bar-count {
+    animation: bump 360ms var(--ease) both;
+  }
+
+}
+
+@keyframes pop-in {
+  from { opacity: 0; transform: scale(0.85); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes line-flash {
+  from { background: var(--ok-soft); }
+  to { background: transparent; }
+}
+
+@keyframes bump {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+
+/* --- Klart: stämpeln, pappersregnet och vad som händer nu ----------------- */
+
+.booking-status.stamp-ok {
+  color: var(--ok);
+}
+
+.confirmation-lede {
+  margin-top: 6px;
+  font-size: 1.05rem;
+}
+
+.order-next {
+  margin: -6px 0 14px;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.order-status .flow {
+  margin: 4px 0 18px;
+}
+
+.next-up {
+  margin: 18px 0;
+  padding: 14px 16px;
+  border: 1.5px dashed var(--paper-line);
+  border-radius: 3px;
+  background: var(--fill);
+}
+
+.next-up h2 {
+  margin-bottom: 6px;
+  font: 760 0.8125rem/1.6 var(--mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.next-up ol {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 20px;
+  font-size: 0.95rem;
+}
+
+.confetti {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.confetti i {
+  position: absolute;
+  top: -12px;
+  left: calc((var(--i) + 0.5) * (100% / 14));
+  width: 8px;
+  height: 5px;
+  border-radius: 1px;
+  background: var(--accent);
+  opacity: 0;
+  animation: confetti-fall 1100ms cubic-bezier(0.2, 0.6, 0.4, 1) both;
+  animation-delay: calc(var(--i) * 40ms);
+}
+
+.confetti i:nth-child(3n) {
+  background: var(--ok);
+}
+
+.confetti i:nth-child(3n + 1) {
+  background: var(--paper-line);
+}
+
+.confetti i:nth-child(4n) {
+  width: 5px;
+  height: 8px;
+  background: var(--ink);
+}
+
+@keyframes confetti-fall {
+  0% { opacity: 0; transform: translateY(0) rotate(0); }
+  12% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(260px) rotate(540deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .confetti,
+  .skeleton-pills i {
+    animation: none !important;
+  }
+
+  .confetti {
+    display: none;
+  }
+
+  .hold-bar i {
+    transition: none;
+  }
+
+  .step-enter,
+  .hold-banner,
+  .stepper,
+  .tray-plates .plate,
+  .cart-item-name,
+  .order-mobile-bar-count {
+    animation: none !important;
+  }
+
+}
+
+/* --- Ljust/mörkt läge: knappen i sidhuvudet (shared/ThemeToggle) --------
+   En tryckknapp på bandet, bredvid öppet-chippet. Ikonen visar läget som
+   gäller; vid byte tonar den bort medan den andra vrids in. */
+
+.theme-toggle {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: color-mix(in srgb, var(--on-accent) 86%, transparent);
+  cursor: pointer;
+  transition: background-color 160ms var(--ease), color 160ms var(--ease);
+}
+
+.theme-toggle:hover {
+  background: color-mix(in srgb, var(--on-accent) 10%, transparent);
+  color: var(--on-accent);
+}
+
+.theme-toggle-icon {
+  position: relative;
+  display: inline-grid;
+  width: 20px;
+  height: 20px;
+}
+
+.theme-toggle-icon svg {
+  grid-area: 1 / 1;
+  width: 20px;
+  height: 20px;
+  transition: opacity 320ms var(--ease), rotate 360ms var(--ease), scale 360ms var(--ease);
+}
+
+.theme-toggle[aria-pressed='false'] .theme-toggle-moon {
+  opacity: 0;
+  rotate: -90deg;
+  scale: 0.6;
+}
+
+.theme-toggle[aria-pressed='true'] .theme-toggle-sun {
+  opacity: 0;
+  rotate: 90deg;
+  scale: 0.6;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-toggle,
+  .theme-toggle-icon svg {
+    transition: none;
+  }
+
+}
+
+/* Platshållare i fält: dämpat bläck, aldrig webbläsarens eget grå. */
+::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+
+/* Order status: the order number big and green in the top right corner */
+.order-status h1.order-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+.order-code {
+  padding: 0.08em 0.32em 0.04em;
+  border-radius: 6px;
+  background: var(--ok-soft);
+  color: var(--ok-ink);
+  box-shadow: inset 0 0 0 2px var(--ok);
+  font-family: var(--mono);
+  font-stretch: 100%;
+  font-size: 1.15em;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  margin-left: auto;
+}
+@media (max-width: 420px) {
+  .order-status h1.order-head { flex-wrap: nowrap; font-size: 1.5rem; }
+
+}
+
+/* Kortgarantins avgifter: i notisen före bokningen och i bekräftelsen. */
+.guarantee-notice .guarantee-terms {
+  margin: 8px 0 0;
+}
+.guarantee-confirmation .guarantee-terms {
+  margin: 8px 0 16px;
+}
+
+/* 2D-stolarnas ryggstöd och: stolarna är bara bild, inte klickbara. */
+.floor-svg-chairs {
+  pointer-events: none;
+}
+
+.floor-svg-chair-back {
+  fill: color-mix(in srgb, var(--ink) 30%, var(--surface));
+}
+
+.floor-svg-chairs.is-selected .floor-svg-chair-back {
+  fill: var(--success);
+}

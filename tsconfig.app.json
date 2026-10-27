@@ -11,6 +11,8 @@
 
     /* Bundler mode */
     "moduleResolution": "bundler",
+    /* @booqy/site-kit från källkoden i packages/site-kit (se vite.config.ts) */
+    "customConditions": ["@booqy/source"],
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
