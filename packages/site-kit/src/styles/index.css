@@ -1,0 +1,12 @@
+/* @booqy/site-kit/styles.css: komponenternas standardlook, i samma ordning
+   som kundsajten alltid laddat dem (ordningen avgör vilken regel som
+   vinner). theme.css sist: tokens och grund. */
+@import './offer.css';
+@import './components.css';
+@import './world.css';
+@import './privacy.css';
+@import './payment.css';
+@import './equipment-return.css';
+@import './calculator.css';
+@import './date-input.css';
+@import './theme.css';

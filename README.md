@@ -9,6 +9,14 @@ aktiva funktioner, platser och juridisk person. Sidor: start, meny, boka bord
 om oss, kontakt, integritetspolicy och bokningsvillkor. Vite + React +
 TypeScript.
 
+All logik (API-klienten, vilken restaurang domänen tillhör, boka, meny,
+beställ och betala, catering, GDPR, juridik, besöksstatistik) ligger i
+paketet `@booqy/site-kit` i `packages/site-kit` (npm-workspace, se dess
+README). Själva appen i `src/` är bara layout, sidor och look: skalet
+(`shared/CustomerLayout.tsx`, `site.css`), startsidans hero, kontakt och om
+oss. `npm test`, `npm run lint` och `npm run build` i roten kör både paketet
+och appen. Appen blir `site-template` i GitHub-organisationen `booqy-sites`.
+
 ## Kom igång lokalt
 
 ```bash
@@ -30,7 +38,7 @@ Sajten är **helt publik**:
   inga tokens, inga API-nycklar. Allt `VITE_`-prefixat är publikt per
   definition och behandlas så.
 - **Bara publika rutter, två sorters skrivanrop.** API-lagret
-  (`src/shared/api.ts`) skickar aldrig cookies eller Authorization-header.
+  (`packages/site-kit/src/shared/api.ts`) skickar aldrig cookies eller Authorization-header.
   Skrivanropen är gästens bokning och gästens avbokning. Avbokning kräver
   bokningens hanteringstoken, som står i länkens fragment (`#...`, når
   aldrig servern som URL) och skickas som header `X-Manage-Token`.

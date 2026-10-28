@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
-import { OpeningHoursModal } from './OpeningHoursModal'
-import { ThemeToggle } from './ThemeToggle'
-import { useLocationInfo } from './useLocationInfo'
-import { openStatus } from './locationApi'
-import { useSite } from './SiteContext'
-import { trackPage } from './visits'
-import { OfferCard } from '../features/erbjudande/OfferCard'
-import './customer.css'
-import './world.css'
+import {
+  OfferCard,
+  OpeningHoursModal,
+  ThemeToggle,
+  openStatus,
+  trackPage,
+  useLocationInfo,
+  useSite,
+} from '@booqy/site-kit'
 import { BooqyWordmark } from './BooqyWordmark'
 
 /**

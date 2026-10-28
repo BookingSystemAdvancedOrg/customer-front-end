@@ -1,0 +1,191 @@
+/* Tokens och grund för site-kit: alla färger, typsnitt, hörn och avstånd
+   som komponenterna läser, med Booqys bongrail som standard. En sajt
+   skriver över variablerna i sin egen CSS (laddad efter den här) för att
+   byta look utan att röra komponenterna. Ljust/mörkt: systemets val, eller
+   data-theme på <html> när gästen valt (booqy-theme i localStorage, se
+   shared/theme.ts). Restaurangens färg (--tenant-accent*) sätts av
+   SiteProvider. Typsnittsfilerna (@font-face) är sajtens. */
+
+:root {
+  /* Booqys material */
+  --paper: #fbfaf6;
+  --paper-2: #f1eee6;
+  --paper-line: #d9d4c8;
+  --print: #1c1918;
+  --print-2: #57504d;
+  --ink-red: #9e1d26;
+  --steel: #bfc3c7;
+  --steel-lo: #80868c;
+
+  /* Ytorna: skrivbordet (--table) och kvittopapperet (--surface) */
+  --table: var(--paper-2);
+  --table-2: #e9e5db;
+  --bg: var(--table);
+  --surface: var(--paper);
+  --fill: var(--paper-2);
+  --surface-glass: var(--paper);
+  --page-scrim: rgba(241, 238, 230, 0.9);
+  --border: var(--paper-line);
+  --line: var(--paper-line);
+  --ink: var(--print);
+  --muted: var(--print-2);
+  --on-accent: var(--tenant-on-accent, #ffffff);
+  --danger: var(--ink-red);
+  --danger-ink: #7f141c;
+  --success: #2c6a3f;
+  --warning: #8a5a00;
+  --scrim: rgba(31, 0, 2, 0.62);
+
+  /* Djup bara från papper som hänger: mjuka skuggor neråt, aldrig glöd. */
+  --shadow: 0 14px 18px rgba(0, 0, 0, 0.22), 0 2px 3px rgba(0, 0, 0, 0.14);
+  --shadow-lg: var(--shadow);
+  --plate-shadow: 0 2px 3px rgba(0, 0, 0, 0.16), 0 8px 12px -6px rgba(0, 0, 0, 0.3);
+  --rail-shadow: 0 8px 16px -8px rgba(0, 0, 0, 0.55);
+
+  --accent: var(--tenant-accent, #350001);
+  --accent-ink: var(--tenant-accent, #350001);
+  --accent-hover: color-mix(in srgb, var(--accent) 86%, #000);
+  --accent-active: color-mix(in srgb, var(--accent) 76%, #000);
+  --accent-soft: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  --focus: color-mix(in srgb, var(--accent) 35%, transparent);
+  --tint-accent: color-mix(in srgb, var(--accent) 12%, transparent);
+
+  --font: 'Archivo', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: 'Martian Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  /* Papper klipps, det rundas inte: 3 px på allt tryckt och skruvat, 6 px på navpiller. */
+  --r-sm: 3px;
+  --r-md: 3px;
+  --r-lg: 3px;
+  --r-pill: 3px;
+  --r-nav: 6px;
+  --tooth: 12px;
+  --tooth-h: 6px;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --spring: cubic-bezier(0.16, 1, 0.3, 1);
+  --wrap: 1180px;
+  --gutter: clamp(16px, 4vw, 40px);
+
+  /* Äldre namn */
+  --gold: var(--accent);
+  --gold-bright: var(--ink);
+  --gold-deep: var(--accent-active);
+  --brand-dark: var(--on-accent);
+  --surface-soft: var(--fill);
+  --serif: var(--font);
+  --sans: var(--font);
+  /* Verkligt värde sätts av CustomerLayout (mätt). */
+  --header-h: 64px;
+
+  font: 400 1.0625rem/1.6 var(--font);
+  font-stretch: 100%;
+  color: var(--ink);
+  background: var(--bg);
+  color-scheme: light;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Mörkt läge: samma värld i varmt tryckfärgsvart, papperet blir sotat. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --table: #1c1918;
+    --table-2: #231f1d;
+    --surface: #2a2523;
+    --fill: #332e2b;
+    --surface-glass: var(--surface);
+    --page-scrim: rgba(28, 25, 24, 0.9);
+    --border: rgba(255, 255, 255, 0.12);
+    --line: rgba(255, 255, 255, 0.14);
+    --paper-line: rgba(255, 255, 255, 0.16);
+    --ink: #f6ece9;
+    --muted: #b8aca6;
+    --danger: #e0686f;
+    --danger-ink: #ee8a90;
+    --success: #5fb57d;
+    --steel: #6f757a;
+    --steel-lo: #3c4146;
+    --scrim: rgba(0, 0, 0, 0.66);
+    --shadow: 0 14px 18px rgba(0, 0, 0, 0.5), 0 2px 3px rgba(0, 0, 0, 0.4);
+    --plate-shadow: 0 2px 3px rgba(0, 0, 0, 0.45), 0 8px 12px -6px rgba(0, 0, 0, 0.6);
+    --accent: var(--tenant-accent-dark, #b88f8a);
+    --accent-ink: var(--tenant-accent-ink-dark, #dcbcb7);
+    --on-accent: var(--tenant-on-accent-dark, #1c1918);
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme='dark'] {
+  --table: #1c1918;
+  --table-2: #231f1d;
+  --surface: #2a2523;
+  --fill: #332e2b;
+  --surface-glass: var(--surface);
+  --border: rgba(255, 255, 255, 0.12);
+  --line: rgba(255, 255, 255, 0.14);
+  --paper-line: rgba(255, 255, 255, 0.16);
+  --ink: #f6ece9;
+  --muted: #b8aca6;
+  --steel: #6f757a;
+  --steel-lo: #3c4146;
+  --accent: var(--tenant-accent-dark, #b88f8a);
+  --accent-ink: var(--tenant-accent-ink-dark, #dcbcb7);
+  --on-accent: var(--tenant-on-accent-dark, #1c1918);
+  color-scheme: dark;
+}
+
+:focus-visible {
+  outline: 3px solid var(--ink-red);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+h1,
+h2 {
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+}
+
+html {
+  /* Klipper horisontell overflow (t.ex. sidfasta bakgrundsfoton) utan att
+     bryta `position: sticky` längre in i sidan - se kommentaren på
+     .landing (borttagen) för varför den inte låg där. */
+  overflow-x: hidden;
+}
+
+body {
+  min-height: 100svh;
+}
+
+h1,
+h2,
+h3,
+p,
+ul {
+  margin: 0;
+}
+
+button {
+  font: inherit;
+}
