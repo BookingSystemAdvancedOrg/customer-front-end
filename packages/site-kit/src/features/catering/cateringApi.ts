@@ -367,6 +367,13 @@ export function bankIdMessage(hintCode: string | undefined, sameDevice: boolean)
       return 'Det BankID du försöker använda är för gammalt eller spärrat. Använd ett annat BankID eller beställ ett nytt hos din internetbank.'
     case 'startFailed':
       return 'BankID-appen verkar inte finnas i din dator eller telefon. Installera den och beställ ett BankID hos din internetbank.'
+    case 'checking':
+      return 'Kontrollerar signeringen'
+    case 'rejected':
+    case 'canceled':
+      return 'Offerten går inte längre att signera. Kontakta restaurangen om du vill ha en ny offert.'
+    case 'timedout':
+      return 'Tiden för att signera har gått ut. Kontakta restaurangen om du vill ha en ny offert.'
     default:
       return 'Signera med BankID.'
   }
@@ -390,6 +397,11 @@ const ERRORS: Record<string, string> = {
   offer_changed: 'Restaurangen har skickat en ny version av offerten. Läs den och signera igen.',
   signing_unavailable: 'BankID går inte att nå just nu. Försök igen om en stund.',
   signing_alreadyInProgress: 'Du har redan en BankID-signering igång. Avbryt den i appen och försök igen.',
+  signing_document_timedout: 'Tiden för att signera har gått ut. Kontakta restaurangen om du vill ha en ny offert.',
+  signing_document_canceled: 'Offerten går inte längre att signera. Ladda om sidan.',
+  signing_document_rejected: 'Offerten går inte längre att signera. Kontakta restaurangen.',
+  signing_document_closed: 'Offerten är redan signerad. Ladda om sidan.',
+  no_signing_started: 'Signeringen startade inte. Försök igen.',
   not_payable: 'Beställningen kan inte betalas just nu.',
   payment_unavailable: 'Betalningen är inte tillgänglig just nu. Försök igen om en stund.',
   payment_provider_rejected: 'Betalningen kunde inte startas. Försök igen eller kontakta restaurangen.',
