@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import CateringPage from './CateringPage'
-import CateringRequestPage, { SIGN_POLL_MS } from './CateringRequestPage'
+import CateringRequestPage, { RETURN_CHECK_MS, SIGN_POLL_MS } from './CateringRequestPage'
 import { firstDate, tokenFor } from './cateringApi'
 import type { CateringSettings, GuestRequest, Quote, Tier } from './cateringApi'
 import { WithSite } from '../../test/siteFixture'
@@ -305,6 +305,29 @@ describe('CateringRequestPage', () => {
     renderGuest()
     await user.click(await screen.findByRole('button', { name: 'Signera med BankID' }))
     expect(assign).toHaveBeenCalledWith('https://sign.example/p/1')
+  })
+
+  it('back from the signing page it checks until the signature is registered', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      api.getRequest.mockResolvedValue(guest())
+      api.signingStatus.mockResolvedValueOnce({ status: 'pending' })
+        .mockResolvedValueOnce({ status: 'complete', request: guest({ status: 'signed', canSign: false, signedBy: 'Anna Andersson' }) })
+      renderGuest('?signering=klar#t=tok-1')
+      expect(await screen.findByText(/Kontrollerar signeringen/)).toBeInTheDocument()
+      await act(async () => { vi.advanceTimersByTime(RETURN_CHECK_MS) })
+      expect(await screen.findByText(/Signerad med BankID av Anna Andersson/)).toBeInTheDocument()
+      expect(api.signingStatus).toHaveBeenCalledTimes(2)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('back from the signing page it explains a document that timed out', async () => {
+    api.getRequest.mockResolvedValue(guest())
+    api.signingStatus.mockResolvedValue({ status: 'failed', hintCode: 'timedout' })
+    renderGuest('?signering=klar#t=tok-1')
+    expect(await screen.findByRole('alert')).toHaveTextContent('Tiden för att signera har gått ut.')
   })
 
   it('a company accepts without BankID and downloads the signed copy', async () => {

@@ -21,6 +21,9 @@ import { PaidStamp, PaymentTicket } from '../../shared/payment/PaymentTicket'
 
 /** BankID: frågan om status en gång i sekunden (QR-koden byts varje sekund). */
 export const SIGN_POLL_MS = 1_000
+/** Tillbaka från signeringstjänsten: så många statusfrågor, med så långt mellanrum. */
+export const RETURN_CHECKS = 5
+export const RETURN_CHECK_MS = 2_000
 
 const HEADLINE: Record<GuestRequest['status'], string> = {
   requested: 'Tack! Din förfrågan är skickad.',
@@ -117,15 +120,33 @@ export default function CateringRequestPage() {
     }
   }, [locationId, requestId, token])
 
-  // Tillbaka från signeringstjänstens sida: fråga en gång hur det gick.
+  // Tillbaka från signeringstjänstens sida: fråga hur det gick, några
+  // gånger om tjänsten inte hunnit registrera signaturen.
   const returnedFromSigning = params.get('signering') === 'klar'
   useEffect(() => {
     if (!returnedFromSigning || request?.status !== 'offer_sent' || !token) return
     let active = true
-    signingStatus(locationId, requestId, token).then(
-      (state) => active && state.request && setRequest(state.request),
-      () => {},
-    )
+    let tries = 0
+    setSigning({ hint: 'checking' })
+    const check = async () => {
+      try {
+        const state = await signingStatus(locationId, requestId, token)
+        if (!active) return
+        if (state.status === 'pending' && ++tries < RETURN_CHECKS) {
+          timer.current = window.setTimeout(() => void check(), RETURN_CHECK_MS)
+          return
+        }
+        setSigning(null)
+        if (state.status === 'failed') setError(bankIdMessage(state.hintCode, isMobile()))
+        else if (state.status === 'pending') setError('Signeringen är inte klar än. Ladda om sidan om en liten stund.')
+        if (state.request) setRequest(state.request)
+      } catch (err) {
+        if (!active) return
+        setSigning(null)
+        setError(errorMessage(err))
+      }
+    }
+    void check()
     return () => {
       active = false
     }
@@ -342,7 +363,10 @@ export default function CateringRequestPage() {
 
           {signing && (
             <div className="bankid-box" role="status" aria-live="polite">
-              <p className="bankid-hint">{bankIdMessage(signing.hint, isMobile())}</p>
+              <p className="bankid-hint">
+                {bankIdMessage(signing.hint, isMobile())}
+                {signing.hint === 'checking' && <span className="checking-dots" aria-hidden="true" />}
+              </p>
               {signing.qr && !isMobile() && <img className="bankid-qr" src={signing.qr} alt="QR-kod för BankID" />}
               {signing.autoStartToken && (
                 <a className="btn-secondary"
