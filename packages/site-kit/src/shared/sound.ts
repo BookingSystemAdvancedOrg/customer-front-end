@@ -3,7 +3,7 @@ import { SOUND_KEY } from './storageRegistry'
 
 /**
  * Klickljudet, samma som booqy.se, admin och Booqy Console: ett modernt, tyst
- * klick som i Windows (Web Audio, skapat i stunden, inga filer) när gästen
+ * mjukt "pop", som en droppe (Web Audio, uträknat i förväg, inga filer) när gästen
  * trycker på en länk eller knapp, eller på Enter eller mellanslag. Aldrig vid
  * hovring. Ljudet är på från början och startar vid första trycket
  * (webbläsarnas regler för ljud); knappen Klickljud i sidfoten stänger av det
@@ -14,12 +14,12 @@ const TARGETS =
   "a[href], button, summary, [role='tab'], [role='button'], label[for], select, input[type='checkbox'], input[type='radio']"
 const CTA = "button[type='submit'], .btn-primary, .btn.primary"
 
-// Ett modernt, tyst klick som i Windows: ett kort, rent "tk" med lite kropp.
+// Ett mjukt, runt "pop" som faller lite i ton, som en droppe.
 // Ljusast för länkar, lite djupare för knappar och huvudknapparna. [ton Hz, topp]
 const VOICES: Record<'tick' | 'press' | 'cta', [number, number]> = {
-  tick: [2400, 0.425],
-  press: [2150, 0.5],
-  cta: [1900, 0.56],
+  tick: [900, 0.425],
+  press: [780, 0.5],
+  cta: [660, 0.56],
 }
 
 function storedSound(): boolean {
@@ -102,23 +102,23 @@ function wake(c: AudioContext): Promise<void> {
 }
 
 /**
- * Klicket som färdiga ljudprover: en kort brusig kant, ett rent pling och en
- * liten kropp, som Windows klick. Räknas ut en gång per röst i vanlig
+ * Klicket som färdiga ljudprover: en rund ton som faller lite (ett
+ * mjukt pop). Räknas ut en gång per röst i vanlig
  * JavaScript och spelas sedan bara upp. Inga filter eller oscillatorer när man
  * klickar, så det låter likadant och fungerar även i Safari.
  */
 function clickSamples(sr: number, pitch: number, peak: number): Float32Array {
-  const n = Math.ceil(sr * 0.045)
+  const n = Math.ceil(sr * 0.09)
   const out = new Float32Array(n)
-  let seed = 7
+  let phase = 0
   let max = 0
   for (let i = 0; i < n; i++) {
     const t = i / sr
-    const ping = Math.sin(2 * Math.PI * pitch * t) * Math.exp(-t / 0.007)
-    const body = 0.5 * Math.sin(2 * Math.PI * pitch * 0.45 * t) * Math.exp(-t / 0.005)
-    seed = (seed * 16807) % 2147483647
-    const edge = 0.35 * (seed / 1073741823.5 - 1) * Math.exp(-t / 0.0007)
-    out[i] = Math.min(1, t / 0.0006) * (ping + body + edge)
+    // en rund ton som faller lite, som en droppe: ingen vass kant
+    const f = pitch * (1 + 0.9 * Math.exp(-t / 0.008))
+    phase += (2 * Math.PI * f) / sr
+    const tone = Math.sin(phase) + 0.15 * Math.sin(2 * phase)
+    out[i] = Math.min(1, t / 0.0015) * Math.exp(-t / 0.022) * tone
     max = Math.max(max, Math.abs(out[i]))
   }
   for (let i = 0; i < n; i++) out[i] *= peak / max
@@ -181,6 +181,18 @@ function kindOf(el: Element): keyof typeof VOICES {
   return 'tick'
 }
 
+// signalen: en prick och två ringar där man trycker, var som helst på sidan
+// (av med "minska rörelse")
+function signal(x: number, y: number) {
+  if (typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+  const ring = document.createElement('span')
+  ring.className = 'press-ripple'
+  ring.style.left = `${x}px`
+  ring.style.top = `${y}px`
+  document.body.appendChild(ring)
+  window.setTimeout(() => ring.remove(), 900)
+}
+
 let installed = false
 
 /** Lyssnar en gång på dokumentet; varje tryck på sidan får klicket. */
@@ -215,6 +227,7 @@ export function installSound() {
     'pointerdown',
     (e) => {
       if (e.button !== 0) return
+      signal(e.clientX, e.clientY)
       const el = (e.target as Element | null)?.closest?.(TARGETS)
       if (!el || (el as HTMLButtonElement).disabled) return
       play(kindOf(el))
