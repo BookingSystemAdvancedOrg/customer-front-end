@@ -2,8 +2,8 @@ import { useSyncExternalStore } from 'react'
 import { SOUND_KEY } from './storageRegistry'
 
 /**
- * Klickljudet, samma som booqy.se, admin och Booqy Console: ett dämpat,
- * traditionellt klick (Web Audio, skapat i stunden, inga filer) när gästen
+ * Klickljudet, samma som booqy.se, admin och Booqy Console: ett traditionellt
+ * mekaniskt klick (Web Audio, skapat i stunden, inga filer) när gästen
  * trycker på en länk eller knapp, eller på Enter eller mellanslag. Aldrig vid
  * hovring. Ljudet är på från början och startar vid första trycket
  * (webbläsarnas regler för ljud); knappen Klickljud i sidfoten stänger av det
@@ -14,13 +14,13 @@ const TARGETS =
   "a[href], button, summary, [role='tab'], [role='button'], label[for], select, input[type='checkbox'], input[type='radio']"
 const CTA = "button[type='submit'], .btn-primary, .btn.primary"
 
-// Ett traditionellt klick, dämpat: ett kort, mjukt knäpp med en liten rund
-// ton under, som en bra strömbrytare på håll. Ljusast för länkar, lite
-// djupare för knappar och huvudknapparna. [ton Hz, volym]
+// Ett traditionellt mekaniskt klick: ett fast klick när knappen går ner och
+// ett lättare tick när den fjädrar tillbaka. Ljusast för länkar, lite djupare
+// och fylligare för knappar och huvudknapparna. [ton Hz, volym]
 const VOICES: Record<'tick' | 'press' | 'cta', [number, number]> = {
-  tick: [3000, 0.4],
-  press: [2600, 0.48],
-  cta: [2200, 0.5],
+  tick: [4200, 0.34],
+  press: [3600, 0.42],
+  cta: [3100, 0.48],
 }
 
 function storedSound(): boolean {
@@ -88,34 +88,39 @@ function play(kind: keyof typeof VOICES) {
     const sr = c.sampleRate
     const out = c.createBiquadFilter()
     out.type = 'lowpass'
-    out.frequency.value = 5000
+    out.frequency.value = 7000
     out.connect(c.destination)
-    // knäppet: 6 ms brus som tonas in på en halv millisekund, så det aldrig sprakar
-    const buf = c.createBuffer(1, Math.ceil(sr * 0.008), sr)
-    const d = buf.getChannelData(0)
-    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.min(1, i / (sr * 0.0005)) * Math.pow(1 - i / d.length, 3)
-    const src = c.createBufferSource()
-    src.buffer = buf
-    const band = c.createBiquadFilter()
-    band.type = 'bandpass'
-    band.frequency.value = pitch
-    band.Q.value = 1.2
-    const g = c.createGain()
-    g.gain.value = vol * 2.4
-    src.connect(band).connect(g).connect(out)
-    src.start(t)
-    // kroppen: en kort rund ton under knäppet, det som gör det till en knapp och inte brus
-    const osc = c.createOscillator()
-    osc.type = 'sine'
-    osc.frequency.setValueAtTime(pitch * 0.42, t)
-    osc.frequency.exponentialRampToValueAtTime(pitch * 0.34, t + 0.025)
-    const og = c.createGain()
-    og.gain.setValueAtTime(0, t)
-    og.gain.linearRampToValueAtTime(vol, t + 0.0015)
-    og.gain.exponentialRampToValueAtTime(0.0001, t + 0.032)
-    osc.connect(og).connect(out)
-    osc.start(t)
-    osc.stop(t + 0.035)
+    // ett knäpp i strömbrytaren: 4 ms brus som klingar på en ton, med en liten
+    // knack under. Bruset är detsamma varje gång (fast frö), som en riktig
+    // brytare, så varje tryck låter likadant och volymen aldrig hoppar
+    const snap = (at: number, hz: number, gain: number) => {
+      const buf = c.createBuffer(1, Math.ceil(sr * 0.004), sr)
+      const d = buf.getChannelData(0)
+      let seed = 7
+      for (let i = 0; i < d.length; i++) d[i] = ((seed = (seed * 16807) % 2147483647) / 1073741823.5 - 1) * Math.min(1, i / (sr * 0.0003)) * Math.pow(1 - i / d.length, 2)
+      const src = c.createBufferSource()
+      src.buffer = buf
+      const ring = c.createBiquadFilter()
+      ring.type = 'bandpass'
+      ring.frequency.value = hz
+      ring.Q.value = 5
+      const g = c.createGain()
+      g.gain.value = gain * 6
+      src.connect(ring).connect(g).connect(out)
+      src.start(at)
+      const osc = c.createOscillator()
+      osc.frequency.value = hz * 0.3
+      const og = c.createGain()
+      og.gain.setValueAtTime(0, at)
+      og.gain.linearRampToValueAtTime(gain * 0.8, at + 0.001)
+      og.gain.exponentialRampToValueAtTime(0.0001, at + 0.012)
+      osc.connect(og).connect(out)
+      osc.start(at)
+      osc.stop(at + 0.014)
+    }
+    // nedtryck, och strax efter det lättare släppet
+    snap(t, pitch, vol)
+    snap(t + 0.026, pitch * 1.2, vol * 0.45)
   } catch {
     /* inget ljud */
   }
