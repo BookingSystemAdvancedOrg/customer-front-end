@@ -61,13 +61,48 @@ export function useSound(): [boolean, () => void] {
   return [value, () => setSound(!value)]
 }
 
+let unlocked = false
+
+// Safari kan lämna ljudmotorn fast: efter viloläge, byte av ljudutgång (AirPods,
+// samtal, en annan app) eller en lång stund i bakgrunden säger den ofta "running"
+// men klockan står still och inget hörs, eller så vaknar den aldrig. Då byts den
+// mot en ny vid nästa tryck i stället för att klicket tystnar tills sidan laddas om.
+let seen = { time: -1, at: 0 }
+let wokeAt = 0
+
+function stuck(c: AudioContext): boolean {
+  if (c.state === 'closed') return true
+  const now = performance.now()
+  if (c.state === 'running') {
+    wokeAt = 0
+    if (c.currentTime !== seen.time) {
+      seen = { time: c.currentTime, at: now }
+      return false
+    }
+    return now - seen.at > 250
+  }
+  return wokeAt > 0 && now - wokeAt > 1000
+}
+
 function audio(): AudioContext | null {
+  if (ctx && stuck(ctx)) {
+    ctx.close().catch(() => {})
+    ctx = null
+    unlocked = false
+  }
   if (!ctx) {
     const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
     if (!AC) return null
     ctx = new AC()
+    seen = { time: -1, at: 0 }
+    wokeAt = 0
   }
   return ctx
+}
+
+function wake(c: AudioContext): Promise<void> {
+  if (!wokeAt) wokeAt = performance.now()
+  return c.resume()
 }
 
 /**
@@ -117,7 +152,7 @@ function play(kind: keyof typeof VOICES) {
     if (!c) return
     // Safari startar ljudet sovande: väck det och spela när det är igång
     if (c.state !== 'running') {
-      c.resume().then(() => {
+      wake(c).then(() => {
         if (c.state === 'running') play(kind)
       }, () => {})
       return
@@ -141,7 +176,6 @@ function kindOf(el: Element): keyof typeof VOICES {
 }
 
 let installed = false
-let unlocked = false
 
 /** Lyssnar en gång på dokumentet; varje tryck på sidan får klicket. */
 export function installSound() {
@@ -153,7 +187,7 @@ export function installSound() {
     if (!on) return
     try {
       const c = audio()
-      if (c && c.state !== 'running') void c.resume()
+      if (c && c.state !== 'running') void wake(c)
       if (c && !unlocked) {
         // Safari öppnar bara ljud i en riktig gest: ett tyst prov i den första håller det öppet
         const silent = c.createBufferSource()
@@ -167,6 +201,10 @@ export function installSound() {
     }
   }
   for (const type of ['pointerup', 'click', 'touchend', 'keydown']) document.addEventListener(type, unlock, { capture: true, passive: true })
+  // tillbaka till fliken: läs av ljudklockan, så att nästa tryck ser om den står still
+  document.addEventListener('visibilitychange', () => {
+    if (ctx && document.visibilityState === 'visible') stuck(ctx)
+  })
   document.addEventListener(
     'pointerdown',
     (e) => {
