@@ -1,7 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
-import { SiteProvider, configureSiteKit } from '@booqy/site-kit'
+import { SiteProvider, configureSiteKit, installSound } from '@booqy/site-kit'
 import archivoUrl from './assets/fonts/archivo.woff2?url'
 import martianUrl from './assets/fonts/martian-mono.woff2?url'
 import App from './App'
@@ -15,6 +15,8 @@ configureSiteKit({
   menuImageBaseUrl: import.meta.env.VITE_MENU_IMAGE_BASE_URL as string | undefined,
   paymentFonts: { sans: archivoUrl, mono: martianUrl },
 })
+
+installSound()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

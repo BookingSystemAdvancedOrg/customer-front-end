@@ -38,6 +38,7 @@ export const ORDER_TOKEN_PREFIX = 'order-token:'
 export const CATERING_TOKEN_PREFIX = 'catering-token:'
 export const OFFER_CARD_KEY = 'offer-card'
 export const THEME_KEY = 'booqy-theme'
+export const SOUND_KEY = 'booqy-sound'
 
 export const STORAGE_REGISTRY: readonly StorageEntry[] = [
   {
@@ -53,6 +54,14 @@ export const STORAGE_REGISTRY: readonly StorageEntry[] = [
     kind: 'localStorage',
     setBy: 'Webbplatsen',
     purpose: 'Ditt val av ljust eller mörkt läge (knappen i sidhuvudet). Sätts bara om du trycker på den; annars följer sidan din enhets inställning.',
+    lifetime: 'Tills du rensar webbläsaren',
+    category: 'nödvändig',
+  },
+  {
+    name: SOUND_KEY,
+    kind: 'localStorage',
+    setBy: 'Webbplatsen',
+    purpose: 'Ditt val att stänga av eller slå på klickljudet (knappen Klickljud i sidfoten). Sätts bara om du trycker på den; annars är ljudet på.',
     lifetime: 'Tills du rensar webbläsaren',
     category: 'nödvändig',
   },

@@ -104,6 +104,8 @@ export { OpeningHoursModal } from './shared/OpeningHoursModal'
 export { PhoneInput } from './shared/PhoneInput'
 export { editPhone, formatPhone, toE164 } from './shared/phone'
 export { ThemeToggle } from './shared/ThemeToggle'
+export { SoundToggle } from './shared/SoundToggle'
+export { installSound, setSound, soundOn, useSound } from './shared/sound'
 export { MoonIcon, SunIcon } from './shared/ThemeIcons'
 export { applyTheme, currentTheme, setTheme, storedTheme, systemTheme } from './shared/theme'
 export type { Theme } from './shared/theme'
@@ -134,7 +136,7 @@ export {
   lateCancelApplies,
 } from './shared/bookingTerms'
 export type { TermsContext, TermsSection } from './shared/bookingTerms'
-export { STORAGE_REGISTRY, THEME_KEY } from './shared/storageRegistry'
+export { SOUND_KEY, STORAGE_REGISTRY, THEME_KEY } from './shared/storageRegistry'
 export type { StorageCategory, StorageEntry, StorageKind } from './shared/storageRegistry'
 
 /* --- Besöksstatistik ------------------------------------------------------ */

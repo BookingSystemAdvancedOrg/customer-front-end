@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
   OfferCard,
   OpeningHoursModal,
+  SoundToggle,
   ThemeToggle,
   openStatus,
   trackPage,
@@ -252,6 +253,7 @@ export function CustomerLayout() {
             <Link to="/cookies">Cookies</Link>
             {tenant.features.reservations && <Link to="/bokningsvillkor">Bokningsvillkor</Link>}
           </nav>
+          <SoundToggle className="site-footer-sound" />
           <p className="site-footer-credit">Drivs av <BooqyWordmark className="site-footer-booqy" /></p>
         </div>
       </footer>

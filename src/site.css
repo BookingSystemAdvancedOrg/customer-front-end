@@ -689,6 +689,34 @@
   color: rgba(255, 255, 255, 0.85);
 }
 
+/* Klickljudet av och på, som på booqy.se: en liten textknapp bland länkarna */
+.site-footer-sound {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 12px 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.85);
+  font: inherit;
+  cursor: default;
+  transition: background-color 160ms var(--ease), border-color 160ms var(--ease);
+}
+
+.site-footer-sound svg {
+  width: 16px;
+  height: 16px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .site-footer-sound:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.32);
+  }
+}
+
 @media (max-width: 760px) {
   .footer-cols {
     grid-template-columns: 1fr;
