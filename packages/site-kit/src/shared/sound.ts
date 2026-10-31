@@ -63,39 +63,35 @@ export function useSound(): [boolean, () => void] {
 
 let unlocked = false
 
-// Safari kan lämna ljudmotorn fast: efter viloläge, byte av ljudutgång (AirPods,
-// samtal, en annan app) eller en lång stund i bakgrunden säger den ofta "running"
-// men klockan står still och inget hörs, eller så vaknar den aldrig. Då byts den
-// mot en ny vid nästa tryck i stället för att klicket tystnar tills sidan laddas om.
-let seen = { time: -1, at: 0 }
+// Safari kan lämna ljudmotorn tyst: efter viloläge, byte av ljudutgång (AirPods,
+// samtal, en annan app) eller en stund i bakgrunden, ofta medan den säger att allt
+// går ("running"). Därför får ett tryck efter 30 sekunders tystnad en ny motor, som
+// hör till den utgång som gäller nu; likaså efter att man kommit tillbaka till
+// fliken, när Safari säger att ljudet avbröts, eller när den inte vaknat en sekund
+// efter att den väcktes.
+let stale = false
 let wokeAt = 0
-
-function stuck(c: AudioContext): boolean {
-  if (c.state === 'closed') return true
-  const now = performance.now()
-  if (c.state === 'running') {
-    wokeAt = 0
-    if (c.currentTime !== seen.time) {
-      seen = { time: c.currentTime, at: now }
-      return false
-    }
-    return now - seen.at > 250
-  }
-  return wokeAt > 0 && now - wokeAt > 1000
-}
+let usedAt = 0
+const IDLE_MS = 30_000
 
 function audio(): AudioContext | null {
-  if (ctx && stuck(ctx)) {
+  if (ctx && (stale || Date.now() - usedAt > IDLE_MS || ctx.state === 'closed' || (ctx.state !== 'running' && wokeAt > 0 && performance.now() - wokeAt > 1000))) {
     ctx.close().catch(() => {})
     ctx = null
     unlocked = false
   }
+  stale = false
   if (!ctx) {
     const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
     if (!AC) return null
-    ctx = new AC()
-    seen = { time: -1, at: 0 }
+    const c = new AC()
+    c.onstatechange = () => {
+      if (c.state === 'running') wokeAt = 0
+      else if ((c.state as string) === 'interrupted') stale = true
+    }
+    ctx = c
     wokeAt = 0
+    usedAt = Date.now()
   }
   return ctx
 }
@@ -153,17 +149,27 @@ function play(kind: keyof typeof VOICES) {
     // Safari startar ljudet sovande: väck det och spela när det är igång
     if (c.state !== 'running') {
       wake(c).then(() => {
-        if (c.state === 'running') play(kind)
+        if (c.state === 'running') sound(c, kind)
       }, () => {})
       return
     }
+    sound(c, kind)
+  } catch {
+    /* inget ljud */
+  }
+}
+
+function sound(c: AudioContext, kind: keyof typeof VOICES) {
+  try {
     const src = c.createBufferSource()
     src.buffer = clickBuffer(c, kind)
     const gain = c.createGain()
-    gain.gain.value = 1
+    // samma nivå som standardvolymen (40 %) i admin och Booqy Console
+    gain.gain.value = 0.4 * (5 / 7)
     src.connect(gain)
     gain.connect(c.destination)
     src.start(0)
+    usedAt = Date.now()
   } catch {
     /* inget ljud */
   }
@@ -201,9 +207,9 @@ export function installSound() {
     }
   }
   for (const type of ['pointerup', 'click', 'touchend', 'keydown']) document.addEventListener(type, unlock, { capture: true, passive: true })
-  // tillbaka till fliken: läs av ljudklockan, så att nästa tryck ser om den står still
+  // tillbaka till fliken: nästa tryck får en ny ljudmotor
   document.addEventListener('visibilitychange', () => {
-    if (ctx && document.visibilityState === 'visible') stuck(ctx)
+    if (ctx && document.visibilityState === 'visible') stale = true
   })
   document.addEventListener(
     'pointerdown',
