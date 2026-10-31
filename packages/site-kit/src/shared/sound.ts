@@ -18,9 +18,9 @@ const CTA = "button[type='submit'], .btn-primary, .btn.primary"
 // ton under, som en bra strömbrytare på håll. Ljusast för länkar, lite
 // djupare för knappar och huvudknapparna. [ton Hz, volym]
 const VOICES: Record<'tick' | 'press' | 'cta', [number, number]> = {
-  tick: [3000, 0.13],
-  press: [2600, 0.17],
-  cta: [2200, 0.21],
+  tick: [3000, 0.4],
+  press: [2600, 0.48],
+  cta: [2200, 0.5],
 }
 
 function storedSound(): boolean {
@@ -88,34 +88,34 @@ function play(kind: keyof typeof VOICES) {
     const sr = c.sampleRate
     const out = c.createBiquadFilter()
     out.type = 'lowpass'
-    out.frequency.value = 4500
+    out.frequency.value = 5000
     out.connect(c.destination)
     // knäppet: 6 ms brus som tonas in på en halv millisekund, så det aldrig sprakar
-    const buf = c.createBuffer(1, Math.ceil(sr * 0.006), sr)
+    const buf = c.createBuffer(1, Math.ceil(sr * 0.008), sr)
     const d = buf.getChannelData(0)
-    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.min(1, i / (sr * 0.0005)) * Math.pow(1 - i / d.length, 4)
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.min(1, i / (sr * 0.0005)) * Math.pow(1 - i / d.length, 3)
     const src = c.createBufferSource()
     src.buffer = buf
     const band = c.createBiquadFilter()
     band.type = 'bandpass'
     band.frequency.value = pitch
-    band.Q.value = 1.4
+    band.Q.value = 1.2
     const g = c.createGain()
-    g.gain.value = vol
+    g.gain.value = vol * 2.4
     src.connect(band).connect(g).connect(out)
     src.start(t)
     // kroppen: en kort rund ton under knäppet, det som gör det till en knapp och inte brus
     const osc = c.createOscillator()
     osc.type = 'sine'
     osc.frequency.setValueAtTime(pitch * 0.42, t)
-    osc.frequency.exponentialRampToValueAtTime(pitch * 0.36, t + 0.015)
+    osc.frequency.exponentialRampToValueAtTime(pitch * 0.34, t + 0.025)
     const og = c.createGain()
     og.gain.setValueAtTime(0, t)
-    og.gain.linearRampToValueAtTime(vol * 0.6, t + 0.001)
-    og.gain.exponentialRampToValueAtTime(0.0001, t + 0.018)
+    og.gain.linearRampToValueAtTime(vol, t + 0.0015)
+    og.gain.exponentialRampToValueAtTime(0.0001, t + 0.032)
     osc.connect(og).connect(out)
     osc.start(t)
-    osc.stop(t + 0.02)
+    osc.stop(t + 0.035)
   } catch {
     /* inget ljud */
   }
