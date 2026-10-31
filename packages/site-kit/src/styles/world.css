@@ -3986,13 +3986,13 @@ a,
   transition: opacity 320ms var(--ease), rotate 360ms var(--ease), scale 360ms var(--ease);
 }
 
-.theme-toggle[aria-pressed='false'] .theme-toggle-moon {
+.theme-toggle[data-mode='light'] .theme-toggle-moon {
   opacity: 0;
   rotate: -90deg;
   scale: 0.6;
 }
 
-.theme-toggle[aria-pressed='true'] .theme-toggle-sun {
+.theme-toggle[data-mode='dark'] .theme-toggle-sun {
   opacity: 0;
   rotate: 90deg;
   scale: 0.6;
@@ -4059,4 +4059,12 @@ a,
 
 .floor-svg-chairs.is-selected .floor-svg-chair-back {
   fill: var(--success);
+}
+
+/* Light/dark switch: the new colours sweep over the page in a circle from
+   the button (switchTheme in theme.ts animates the clip); no cross-fade. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
 }

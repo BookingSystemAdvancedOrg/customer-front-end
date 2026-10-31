@@ -2,12 +2,13 @@
 <html lang="sv">
   <head>
     <meta charset="UTF-8" />
-    <!-- Standardikonen (Booqys bok) ligger i src/assets så att Vite ger den
+    <!-- Standardikonen (Booqys b, mörk på ljus flik och vit på mörk, utan
+         bakgrund) ligger i src/assets så att Vite ger den
          ett hashat filnamn: deployen cachar allt utom index.html i ett år.
          En restaurang med egen ikon (branding.faviconUrl) byter den i
          SiteProvider. -->
-    <link rel="icon" type="image/svg+xml" href="/src/assets/favicon.svg" />
-    <link rel="apple-touch-icon" href="/src/assets/apple-touch-icon.png" />
+    <link rel="icon" type="image/svg+xml" href="/src/assets/favicon.svg" media="(prefers-color-scheme: light)" />
+    <link rel="icon" type="image/svg+xml" href="/src/assets/favicon-dark.svg" media="(prefers-color-scheme: dark)" />
     <meta name="theme-color" content="#f1eee6" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#1c1918" media="(prefers-color-scheme: dark)" />
     <link rel="manifest" href="/site.webmanifest" />
