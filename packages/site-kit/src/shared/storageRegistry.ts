@@ -144,18 +144,20 @@ export const STORAGE_REGISTRY: readonly StorageEntry[] = [
   {
     name: GIFT_CARD_PURCHASE_KEY,
     kind: 'sessionStorage',
-    setBy: 'Presentkort',
+    setBy: 'Webbplatsen',
     purpose: 'Kommer ihåg ditt presentkortsköp medan kortbetalningen bekräftas, så att tack-sidan kan visa det.',
     lifetime: 'Tills köpet är klart eller fliken stängs',
     category: 'nödvändig',
+    where: 'Presentkort',
   },
   {
     name: `${WAITLIST_TOKEN_PREFIX}{plats}`,
     kind: 'localStorage',
-    setBy: 'Kö',
+    setBy: 'Webbplatsen',
     purpose: 'Sparar din plats i kön så att du ser när ditt bord är klart.',
     lifetime: 'Till slutet av dagen du ställde dig i kö',
     category: 'nödvändig',
+    where: 'Kö',
   },
   {
     name: 'Besöksstatistik',
