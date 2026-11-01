@@ -42,7 +42,7 @@ export function SkelDishes({ n = 4, label = 'Hämtar menyn' }: { n?: number; lab
       <SkelBlock w={140} h={26} />
       {Array.from({ length: n }, (_, i) => (
         <div className="skel-dish" key={i}>
-          <SkelBlock w={76} h={76} style={{ borderRadius: 14 }} />
+          <SkelBlock w={76} h={76} style={{ borderRadius: 'var(--r-md)' }} />
           <div className="skel-lines">
             <SkelBlock w="44%" h={15} />
             <SkelBlock w="78%" h={12} />
