@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { cleanup, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { SiteProvider } from '@booqy/site-kit'
@@ -70,5 +70,69 @@ describe('App on SiteProvider', () => {
     renderSite()
 
     expect(await screen.findByRole('button', { name: 'Försök igen' })).toBeInTheDocument()
+  })
+})
+
+describe('feature routes (gift cards, queue, site builder)', () => {
+  const ALL_ON = { reservations: true, ordering: false, catering: false, terminal: false, giftCards: true, waitlist: true, siteBuilder: true }
+
+  function renderAt(path: string, tenant: Parameters<typeof siteConfig>[0], publicJoin = false) {
+    window.history.replaceState(null, '', '/?restaurang=testkrogen')
+    const config = siteConfig(tenant)
+    if (publicJoin) config.locations[0].waitlist = { publicJoin: true }
+    vi.stubGlobal('fetch', vi.fn(async (url: string) =>
+      url.includes('/site-config') ? json(config) : json({ items: [] })))
+    return render(
+      <MemoryRouter initialEntries={[path]}>
+        <SiteProvider>
+          <App />
+        </SiteProvider>
+      </MemoryRouter>,
+    )
+  }
+
+  it('routes nothing new while the features are off: the paths fall back to the menu', async () => {
+    for (const path of ['/presentkort', '/presentkort/saldo', '/ko', '/forhandsvisning', '/en-sida']) {
+      const { unmount } = renderAt(path, {})
+      await screen.findByRole('link', { name: 'Testkrogen - startsida' })
+      expect(screen.queryByRole('heading', { name: /Presentkort|Saldo på presentkort|Kö|Förhandsvisning/ })).not.toBeInTheDocument()
+      expect(screen.queryByText('Den här sidan är på väg.')).not.toBeInTheDocument()
+      expect(screen.queryByRole('link', { name: 'Presentkort' })).not.toBeInTheDocument()
+      unmount()
+    }
+  })
+
+  it('routes gift cards, balance and preview, and links Presentkort in the nav, when on', async () => {
+    renderAt('/presentkort', { features: ALL_ON })
+    expect(await screen.findByRole('heading', { name: 'Presentkort' })).toBeInTheDocument()
+    expect(screen.getAllByRole('link', { name: 'Presentkort' }).length).toBeGreaterThan(0)
+    cleanup()
+    renderAt('/presentkort/saldo', { features: ALL_ON })
+    expect(await screen.findByRole('heading', { name: 'Saldo på presentkort' })).toBeInTheDocument()
+    cleanup()
+    renderAt('/forhandsvisning', { features: ALL_ON })
+    expect(await screen.findByRole('heading', { name: 'Förhandsvisning' })).toBeInTheDocument()
+  })
+
+  it('routes the queue only when the location takes queue sign-ups on the site', async () => {
+    renderAt('/ko', { features: ALL_ON })
+    await screen.findByRole('link', { name: 'Testkrogen - startsida' })
+    expect(screen.queryByRole('heading', { name: 'Kö' })).not.toBeInTheDocument()
+    cleanup()
+    renderAt('/ko', { features: ALL_ON }, true)
+    expect(await screen.findByRole('heading', { name: 'Kö' })).toBeInTheDocument()
+  })
+
+  it('draws unknown paths as builder pages only for a published builder site', async () => {
+    renderAt('/en-sida', { features: ALL_ON, site: { mode: 'builder', version: 0 } })
+    await screen.findByRole('link', { name: 'Testkrogen - startsida' })
+    expect(screen.queryByText('Den här sidan är på väg.')).not.toBeInTheDocument()
+    cleanup()
+    renderAt('/en-sida', { features: ALL_ON, site: { mode: 'custom', version: 3 } })
+    await screen.findByRole('link', { name: 'Testkrogen - startsida' })
+    expect(screen.queryByText('Den här sidan är på väg.')).not.toBeInTheDocument()
+    cleanup()
+    renderAt('/en-sida', { features: ALL_ON, site: { mode: 'builder', version: 2 } })
+    expect(await screen.findByText('Den här sidan är på väg.')).toBeInTheDocument()
   })
 })

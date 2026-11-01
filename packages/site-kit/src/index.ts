@@ -35,6 +35,7 @@ export type {
   SitePrivacy,
   SpecialDay,
 } from './shared/site'
+export type { LocationWaitlist, SiteBuilderState, SiteFeatureKey, SiteSlotId } from './shared/contracts'
 
 /* --- API --------------------------------------------------------------- */
 export { ApiError, apiBaseUrl, apiDelete, apiGet, apiPost, isApiConfigured } from './shared/api'
@@ -138,7 +139,7 @@ export {
   lateCancelApplies,
 } from './shared/bookingTerms'
 export type { TermsContext, TermsSection } from './shared/bookingTerms'
-export { SOUND_KEY, STORAGE_REGISTRY, THEME_KEY } from './shared/storageRegistry'
+export { GIFT_CARD_PURCHASE_KEY, SOUND_KEY, STORAGE_REGISTRY, THEME_KEY, WAITLIST_TOKEN_PREFIX } from './shared/storageRegistry'
 export type { StorageCategory, StorageEntry, StorageKind } from './shared/storageRegistry'
 
 /* --- Besöksstatistik ------------------------------------------------------ */

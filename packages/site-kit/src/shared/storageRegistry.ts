@@ -15,6 +15,8 @@
  * här omprövas först: då krävs samtycke innan de sätts.
  */
 
+import { GIFT_CARD_PURCHASE_KEY, WAITLIST_TOKEN_PREFIX } from './contracts'
+
 export type StorageKind = 'cookie' | 'localStorage' | 'sessionStorage' | 'ingen'
 export type StorageCategory = 'nödvändig' | 'funktionell' | 'analys' | 'marknadsföring'
 
@@ -39,6 +41,8 @@ export const CATERING_TOKEN_PREFIX = 'catering-token:'
 export const OFFER_CARD_KEY = 'offer-card'
 export const THEME_KEY = 'booqy-theme'
 export const SOUND_KEY = 'booqy-sound'
+// Presentkort och kö: nyckelnamnen kommer från kontraktet (application/contracts/booqy.yaml).
+export { GIFT_CARD_PURCHASE_KEY, WAITLIST_TOKEN_PREFIX }
 
 export const STORAGE_REGISTRY: readonly StorageEntry[] = [
   {
@@ -136,6 +140,22 @@ export const STORAGE_REGISTRY: readonly StorageEntry[] = [
     lifetime: 'Tills fliken stängs',
     category: 'nödvändig',
     where: 'Välkomsterbjudande',
+  },
+  {
+    name: GIFT_CARD_PURCHASE_KEY,
+    kind: 'sessionStorage',
+    setBy: 'Presentkort',
+    purpose: 'Kommer ihåg ditt presentkortsköp medan kortbetalningen bekräftas, så att tack-sidan kan visa det.',
+    lifetime: 'Tills köpet är klart eller fliken stängs',
+    category: 'nödvändig',
+  },
+  {
+    name: `${WAITLIST_TOKEN_PREFIX}{plats}`,
+    kind: 'localStorage',
+    setBy: 'Kö',
+    purpose: 'Sparar din plats i kön så att du ser när ditt bord är klart.',
+    lifetime: 'Till slutet av dagen du ställde dig i kö',
+    category: 'nödvändig',
   },
   {
     name: 'Besöksstatistik',
