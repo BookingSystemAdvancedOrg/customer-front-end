@@ -1,0 +1,8 @@
+{
+  "paths": ["src", "packages/site-kit/src"],
+  "block": [
+    "features/site-builder/**",
+    "features/ko/**",
+    "features/presentkort/**"
+  ]
+}

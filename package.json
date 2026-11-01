@@ -9,7 +9,7 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "npm test -w @booqy/brand && npm test -w @booqy/site-kit && vitest run",
-    "brand-lint": "node packages/brand/scripts/brand-lint.mjs src packages/site-kit/src"
+    "brand-lint": "node packages/brand/scripts/brand-lint.mjs --config brand-lint.config.json"
   },
   "dependencies": {
     "@booqy/brand": "0.1.0",
