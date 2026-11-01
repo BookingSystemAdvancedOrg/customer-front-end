@@ -192,7 +192,7 @@ describe('BestallPage', () => {
     const options = stripe.provider.mock.calls[0][0]
     expect(options.clientSecret).toBe('cs_test_secret')
     expect(options.elementsOptions.loader).toBe('never')
-    expect(options.elementsOptions.appearance.variables).toMatchObject({ borderRadius: '3px', colorPrimary: '#350001' })
+    expect(options.elementsOptions.appearance.variables).toMatchObject({ borderRadius: '3px', colorPrimary: '#1a120e' })
     expect(options.elementsOptions.fonts.map((f: { family: string }) => f.family)).toContain('Martian Mono')
     const loadStripe = (await import('@stripe/stripe-js')).loadStripe
     expect(loadStripe).toHaveBeenCalledWith('pk_test_1', { stripeAccount: 'acct_1', locale: 'sv' })

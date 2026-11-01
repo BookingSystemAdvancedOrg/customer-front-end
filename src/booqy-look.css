@@ -10,6 +10,13 @@
    site.css. Ljust är standard; mörkt är samma rum på kvällen. */
 
 @font-face {
+  font-family: 'Martian Mono';
+  src: url('./assets/fonts/martian-mono.woff2') format('woff2-variations');
+  font-weight: 100 800;
+  font-stretch: 75% 112.5%;
+  font-display: swap;
+}
+@font-face {
   font-family: 'Bricolage Grotesque';
   src: url('./assets/fonts/bricolage-grotesque-800-latin-ext.woff2') format('woff2');
   font-weight: 600 800;
@@ -88,6 +95,10 @@
   --accent-soft: #f6f1ea;
   --on-accent: #ffffff;
   --focus: rgba(168, 132, 98, 0.45);
+  /* fälten, också Stripes (site-kit payment/appearance.ts läser dem) */
+  --field-bg: var(--surface);
+  --field-radius: 12px;
+  --field-border: 1px;
   --tint-accent: rgba(168, 132, 98, 0.16);
   --danger: #9e1d26;
   --danger-ink: #9e1d26;
@@ -434,10 +445,9 @@ body::before {
   background: var(--glass-hi);
   box-shadow: var(--rim), var(--shadow);
 }
-/* tips inne i ett kort är bara text */
-.order-menu .order-hint,
-.order-cart .order-hint,
-.booking-step .order-hint {
+/* tips inne i ett kort (varukorg, bokningssteg, cateringofferten) är bara text;
+   bara sidans egna tips (.page > .order-hint) är ett glaspiller */
+.order-hint:not(.page > *) {
   border: 0;
   border-radius: 0;
   background: none;
@@ -611,6 +621,15 @@ body::before {
 .cart-item-price,
 .cart-total {
   font-family: var(--mono);
+}
+/* etiketten i sans (beloppet är det som trycks), så "Totalt inkl. moms" får
+   plats på en rad även på en smal telefon; raden under hänger inte upp i den */
+.cart-total > span:first-child {
+  font-family: var(--font);
+  font-weight: 700;
+}
+.cart-note {
+  margin-top: 2px;
 }
 .plate,
 .dish img,

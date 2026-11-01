@@ -3,7 +3,7 @@ import { THEME_KEY } from './storageRegistry'
 
 /**
  * Ljust och mörkt läge. Gästens val ligger i localStorage (booqy-theme) och
- * på <html data-theme>; public/theme.v1.js sätter attributet innan sidan
+ * på <html data-theme>; public/theme.v2.js sätter attributet innan sidan
  * ritas, så att den aldrig blinkar ljus före mörk. Utan val följer sajten
  * systemets inställning, även när den ändras medan sidan är öppen. Samma
  * nyckel i alla Booqys appar.
@@ -12,7 +12,7 @@ import { THEME_KEY } from './storageRegistry'
 export type Theme = 'light' | 'dark'
 
 /** Färgen webbläsarens egen ram får (meta theme-color): skrivbordet. */
-const THEME_COLOR: Record<Theme, string> = { light: '#f1eee6', dark: '#1c1918' }
+const THEME_COLOR: Record<Theme, string> = { light: '#f6f1ea', dark: '#1a120e' }
 const DARK_QUERY = '(prefers-color-scheme: dark)'
 
 function isTheme(value: unknown): value is Theme {
