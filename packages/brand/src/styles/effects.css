@@ -1,0 +1,299 @@
+/* ---- Press: squeeze and ripple (effects/press.ts) ----------------------- */
+.bq-is-pressed {
+  scale: 0.97;
+  transition: scale var(--bq-duration-press) var(--bq-ease-out);
+}
+.bq-is-pressed-text {
+  opacity: 0.6;
+  transition: opacity var(--bq-duration-press) var(--bq-ease-out);
+}
+.bq-ripple {
+  position: fixed;
+  z-index: var(--bq-z-ripple);
+  width: 84px;
+  height: 84px;
+  margin: -42px 0 0 -42px;
+  border-radius: var(--bq-radius-round);
+  pointer-events: none;
+  background: radial-gradient(circle, var(--bq-ripple), transparent 32%);
+  animation: bq-press-dot 420ms ease-out forwards;
+}
+.bq-ripple::before,
+.bq-ripple::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--bq-radius-round);
+  border: 2px solid var(--bq-ripple-ring);
+  opacity: 0;
+  animation: bq-press-signal var(--bq-duration-ripple) var(--bq-ease-out) forwards;
+}
+.bq-ripple::after {
+  animation-delay: 150ms;
+}
+@keyframes bq-press-signal {
+  0% { scale: 0.12; opacity: 0.95; }
+  55% { opacity: 0.6; }
+  100% { scale: 1; opacity: 0; }
+}
+@keyframes bq-press-dot {
+  from { scale: 0.4; opacity: 1; }
+  to { scale: 1; opacity: 0; }
+}
+
+/* ---- Glass (effects/glass.ts adds .glass-refract on Chromium) ----------- */
+.bq-glass {
+  background: var(--bq-glass);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  backdrop-filter: blur(24px) saturate(1.4);
+  box-shadow: var(--bq-shadow-rim), var(--bq-shadow-lg);
+}
+.glass-refract .bq-glass {
+  backdrop-filter: url(#booqy-glass) blur(24px) saturate(1.4);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .bq-glass { background: var(--bq-surface); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .bq-glass,
+  .glass-refract .bq-glass {
+    background: var(--bq-surface);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+/* ---- Glide pill (effects/glide.ts) -------------------------------------- */
+[data-bq-glide] {
+  position: relative;
+  isolation: isolate;
+}
+[data-bq-glide]::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  top: 0;
+  left: 0;
+  width: var(--bq-glide-w, 0);
+  height: var(--bq-glide-h, 0);
+  translate: var(--bq-glide-x, 0) var(--bq-glide-y, 0);
+  border-radius: var(--bq-radius-pill);
+  background: var(--bq-accent);
+  box-shadow: var(--bq-shadow-pill);
+  opacity: 0;
+  pointer-events: none;
+}
+[data-bq-glide][data-bq-glide-on]::before {
+  opacity: 1;
+}
+[data-bq-glide][data-bq-glide-placed]::before {
+  transition:
+    translate var(--bq-duration-glide) var(--bq-ease-glide),
+    width var(--bq-duration-glide) var(--bq-ease-glide),
+    height var(--bq-duration-glide) var(--bq-ease-glide),
+    opacity var(--bq-duration-fast) var(--bq-ease-out);
+}
+
+/* ---- Skeletons (components/Skeleton.tsx) -------------------------------- */
+.bq-skel__inner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--bq-space-5);
+}
+.bq-skel-block {
+  display: block;
+  flex: none;
+  width: var(--bq-skel-w, 100%);
+  height: var(--bq-skel-h, 14px);
+  max-width: 100%;
+  border-radius: var(--bq-radius-inner);
+  background: var(--bq-skeleton);
+  filter: blur(4px);
+  animation: bq-skel-breathe 1.8s ease-in-out infinite;
+}
+.bq-skel-block--round {
+  border-radius: var(--bq-radius-pill);
+}
+.bq-skel-lines {
+  display: flex;
+  flex-direction: column;
+  gap: var(--bq-space-3);
+}
+.bq-skel-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--bq-space-4);
+  overflow: hidden;
+  padding: var(--bq-space-5);
+  border-radius: var(--bq-radius-card);
+  background: var(--bq-glass);
+  box-shadow: var(--bq-shadow-rim);
+}
+.bq-skel-sheen {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(100deg, transparent 30%, var(--bq-sheen) 50%, transparent 70%);
+  translate: -100% 0;
+  animation: bq-skel-sheen var(--bq-duration-print) ease-in-out infinite;
+}
+@keyframes bq-skel-breathe {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+@keyframes bq-skel-sheen {
+  to { translate: 100% 0; }
+}
+
+/* ---- Receipt print (components/Printing.tsx) ---------------------------- */
+.bq-printing {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--bq-space-3);
+  vertical-align: middle;
+  color: var(--bq-muted);
+}
+.bq-printing--block {
+  display: flex;
+  padding: var(--bq-space-3) 0;
+}
+.bq-printing--screen {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 60svh;
+}
+.bq-printing__label {
+  font: 500 var(--bq-text-xs)/1 var(--bq-font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.bq-printing--inline {
+  gap: var(--bq-space-2);
+}
+.bq-printing--inline .bq-printing__label {
+  font: inherit;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.bq-printing__printer {
+  position: relative;
+  display: inline-block;
+  flex-shrink: 0;
+  width: 56px;
+  height: 66px;
+  overflow: hidden;
+}
+.bq-printing--inline .bq-printing__printer {
+  width: 18px;
+  height: 20px;
+}
+.bq-printing__slot {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  border-radius: 2px;
+  background: var(--bq-ink);
+}
+.bq-printing--inline .bq-printing__slot {
+  height: 3px;
+}
+.bq-printing__slip {
+  position: absolute;
+  top: 5px;
+  left: 6px;
+  right: 6px;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 6px;
+  background: var(--bq-surface);
+  box-shadow: inset 0 0 0 1px var(--bq-line);
+  /* the torn bottom edge of the receipt */
+  -webkit-mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / 6px 3px repeat-x, linear-gradient(#000 0 0) top / 100% calc(100% - 3px) no-repeat;
+  mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / 6px 3px repeat-x, linear-gradient(#000 0 0) top / 100% calc(100% - 3px) no-repeat;
+  animation: bq-print-feed var(--bq-duration-print) var(--bq-ease-out) infinite;
+}
+.bq-printing--inline .bq-printing__slip {
+  top: 2px;
+  left: 2px;
+  right: 2px;
+  gap: 2px;
+  padding: 3px 2px;
+}
+.bq-printing__line {
+  display: block;
+  width: 100%;
+  height: 3px;
+  border-radius: 1px;
+  background: var(--bq-ink);
+  opacity: 0.75;
+  transform: scaleX(0);
+  transform-origin: left center;
+  animation: bq-print-write var(--bq-duration-print) var(--bq-ease-out) infinite;
+}
+.bq-printing--inline .bq-printing__line {
+  height: 2px;
+}
+.bq-printing__line--head { width: 55%; height: 4px; }
+.bq-printing__line--short { width: 70%; }
+.bq-printing__line--sum { width: 45%; height: 4px; margin-left: auto; transform-origin: right center; }
+.bq-printing__line:nth-child(2) { animation-delay: 160ms; }
+.bq-printing__line:nth-child(3) { animation-delay: 320ms; }
+.bq-printing__line:nth-child(4) { animation-delay: 480ms; }
+.bq-printing__line:nth-child(5) { animation-delay: 700ms; }
+@keyframes bq-print-feed {
+  0% { transform: translateY(-100%); }
+  28% { transform: translateY(0); }
+  84% { transform: translateY(0); opacity: 1; }
+  92% { transform: translateY(8px); opacity: 0; }
+  100% { transform: translateY(-100%); opacity: 0; }
+}
+@keyframes bq-print-write {
+  0%, 30% { transform: scaleX(0); }
+  44% { transform: scaleX(1); }
+  84% { transform: scaleX(1); opacity: 0.75; }
+  92%, 100% { transform: scaleX(1); opacity: 0; }
+}
+
+/* ---- Liquid fill (effects/liquid.ts) ------------------------------------ */
+.bq-liquid--full {
+  background-color: rgba(var(--bq-liquid), var(--bq-liquid-alpha, 0.4));
+}
+
+/* ---- Theme sweep (effects/theme.ts switchTheme) ------------------------- */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+/* ---- Reduced motion: the end state, no loops ---------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .bq-is-pressed {
+    scale: none;
+    opacity: 0.75;
+    transition: opacity var(--bq-duration-press) linear;
+  }
+  .bq-ripple {
+    display: none;
+  }
+  [data-bq-glide][data-bq-glide-placed]::before {
+    transition: translate var(--bq-duration-fast) linear, width var(--bq-duration-fast) linear, height var(--bq-duration-fast) linear;
+  }
+  .bq-skel-block,
+  .bq-skel-sheen,
+  .bq-printing__slip,
+  .bq-printing__line {
+    animation: none;
+  }
+  .bq-printing__slip,
+  .bq-printing__line {
+    transform: none;
+  }
+}

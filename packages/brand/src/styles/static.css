@@ -1,0 +1,6 @@
+/* booqy.se: one look, light tokens only (the page's data-theme is ignored). */
+@import '../generated/tokens.light.css';
+@import './base.css';
+@import './effects.css';
+@import './bar.css';
+@import './components.css';
