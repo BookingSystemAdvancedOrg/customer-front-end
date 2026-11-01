@@ -14,6 +14,7 @@ import { GuaranteeTermsText } from '../boka/GuaranteeStep'
 import AddToCalendar from '../../shared/AddToCalendar'
 import { bookingEvent, restaurantName } from '../../shared/calendar'
 import { SiteContext } from '../../shared/SiteContext'
+import { SkelLines } from '../../shared/Skeleton'
 
 const STATUS_TEXT: Record<string, string> = {
   pending: 'Väntar på kortgaranti',
@@ -91,7 +92,11 @@ export default function ManageBookingPage() {
   return (
     <section className="booking-confirmation">
       <h1>Din bokning</h1>
-      {!booking && !error && <p className="notice" role="status">Hämtar bokningen…</p>}
+      {!booking && !error && (
+        <div className="skel" role="status" aria-label="Hämtar bokningen" aria-busy="true">
+          <SkelLines n={5} />
+        </div>
+      )}
       {error && <p className="notice error" role="alert">{error}</p>}
       {booking && (
         <>

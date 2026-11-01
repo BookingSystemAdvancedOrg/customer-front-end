@@ -2,12 +2,14 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { SiteProvider, configureSiteKit, installSound } from '@booqy/site-kit'
+import { installGlide } from './shared/glide'
 import archivoUrl from './assets/fonts/archivo.woff2?url'
 import martianUrl from './assets/fonts/martian-mono.woff2?url'
 import App from './App'
 import '@booqy/site-kit/styles.css'
 import './index.css'
 import './site.css'
+import './booqy-look.css'
 
 configureSiteKit({
   apiBaseUrl: import.meta.env.VITE_API_BASE_URL as string | undefined,
@@ -17,6 +19,7 @@ configureSiteKit({
 })
 
 installSound()
+installGlide()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

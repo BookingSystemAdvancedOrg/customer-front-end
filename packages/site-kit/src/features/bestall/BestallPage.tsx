@@ -39,6 +39,7 @@ import type { PayStatus } from '../../shared/payment/PaymentTicket'
 import { GuestDataNotice } from '../../shared/GuestDataNotice'
 import { MarketingConsent, NO_CONSENT, consentFields } from '../../shared/MarketingConsent'
 import type { ConsentChoice } from '../../shared/MarketingConsent'
+import { SkelDishes } from '../../shared/Skeleton'
 
 const STEPS = [{ label: 'Varukorg' }, { label: 'Dina uppgifter' }, { label: 'Betala' }, { label: 'Klart' }]
 
@@ -630,7 +631,7 @@ export default function BestallPage() {
 
       <div className="order-layout">
         <div className="order-menu">
-          {menu === null && <p className="notice" role="status">Hämtar menyn…</p>}
+          {menu === null && <SkelDishes />}
           {groups.length > 1 && (
             <nav className="chip-rail" aria-label="Kategorier">
               {groups.map((g) => (

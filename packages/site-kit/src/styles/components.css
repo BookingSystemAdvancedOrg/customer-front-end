@@ -2131,3 +2131,83 @@
     animation: none;
   }
 }
+
+/* --- Skelett medan sidor hämtas (shared/Skeleton.tsx), som i admin -------- */
+
+.skel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  overflow: hidden;
+}
+.skel-block {
+  display: block;
+  flex: none;
+  max-width: 100%;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--ink) 10%, transparent);
+  filter: blur(4px);
+  animation: skel-breathe 1.8s ease-in-out infinite;
+}
+.skel-round {
+  border-radius: 999px;
+}
+.skel-lines {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.skel-dish {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid color-mix(in srgb, var(--ink) 8%, transparent);
+}
+.skel-card {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.skel-sheen {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.5) 50%, transparent 70%);
+  translate: -100% 0;
+  animation: skel-sheen 2.6s ease-in-out infinite;
+}
+:root[data-theme='dark'] .skel-sheen {
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.06) 50%, transparent 70%);
+}
+@keyframes skel-breathe {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@keyframes skel-sheen {
+  0% {
+    translate: -100% 0;
+  }
+  60%,
+  100% {
+    translate: 100% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skel-block {
+    animation: none;
+    opacity: 0.8;
+  }
+  .skel-sheen {
+    display: none;
+  }
+}
