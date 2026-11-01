@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
   OfferCard,
   OpeningHoursModal,
+  SkelCard,
   SoundToggle,
   ThemeToggle,
   openStatus,
@@ -213,7 +214,9 @@ export function CustomerLayout() {
 
       <main className="site-main">
         <div className="page" key={`${current.locationId}:${pathname}`}>
-          <Outlet />
+          <Suspense fallback={<SkelCard label="Hämtar sidan" />}>
+            <Outlet />
+          </Suspense>
         </div>
       </main>
 

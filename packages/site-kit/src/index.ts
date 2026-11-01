@@ -127,6 +127,8 @@ export type { ConsentChoice } from './shared/MarketingConsent'
 export { default as PrivacyPolicy } from './features/juridik/PrivacyPage'
 export { default as CookiePolicy } from './features/juridik/CookiesPage'
 export { default as BookingTermsPage } from './features/juridik/TermsPage'
+export { sitePages } from './pages'
+export { SkelCard } from './shared/Skeleton'
 export { NoticeText, parseNotice } from './features/juridik/NoticeText'
 export {
   bookingTerms,

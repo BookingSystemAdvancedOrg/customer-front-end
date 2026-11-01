@@ -1,20 +1,22 @@
+import { lazy } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
-import {
-  BookingFlow,
-  BookingTermsPage,
-  CateringFlow,
-  CateringRequest,
-  CookiePolicy,
-  ManageBooking,
-  OrderFlow,
-  OrderStatus,
-  PrivacyPolicy,
-  useSite,
-} from '@booqy/site-kit'
+import { sitePages, useSite } from '@booqy/site-kit'
 import { CustomerLayout } from './shared/CustomerLayout'
 import MenyPage from './features/meny/MenyPage'
 import KontaktPage from './features/kontakt/KontaktPage'
 import OmOssPage from './features/om/OmOssPage'
+
+// Flödena hämtas först när gästen öppnar dem (menyn, startsidan, är med från
+// början); CustomerLayout visar laddningen under tiden.
+const BookingFlow = lazy(sitePages.booking)
+const ManageBooking = lazy(sitePages.manageBooking)
+const OrderFlow = lazy(sitePages.order)
+const OrderStatus = lazy(sitePages.orderStatus)
+const CateringFlow = lazy(sitePages.catering)
+const CateringRequest = lazy(sitePages.cateringRequest)
+const PrivacyPolicy = lazy(sitePages.privacy)
+const CookiePolicy = lazy(sitePages.cookies)
+const BookingTermsPage = lazy(sitePages.bookingTerms)
 
 /**
  * Restaurangens publika webbplats - samma sajt för alla restauranger, med
