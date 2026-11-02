@@ -36,7 +36,7 @@
   margin: 8px 0 4px;
   padding: 18px clamp(14px, 3vw, 22px);
   border: 1.5px dashed var(--paper-line);
-  border-radius: 3px;
+  border-radius: var(--r-md);
   box-shadow: none;
   animation: step-in 320ms var(--ease) both;
 }

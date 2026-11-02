@@ -3,6 +3,7 @@ import { Plate } from '../../shared/Plate'
 import { useMenuList } from './useMenuList'
 import { CATEGORY_LABEL, formatPrice, groupByCategory, menuImageUrl } from './menuApi'
 import type { MenuCategory } from './menuApi'
+import { SkelDishes } from '../../shared/Skeleton'
 
 /**
  * Hela menyn som tallrikar sedda ovanifrån: alla kategorier i en lång lista
@@ -44,7 +45,7 @@ export function Menu() {
         </p>
       )}
       {error && <p className="notice error" role="alert">{error}</p>}
-      {loading && !error && <p className="notice" role="status">Hämtar menyn…</p>}
+      {loading && !error && <SkelDishes />}
       {!loading && !error && configured && groups.length === 0 && (
         <p className="notice" role="status">Menyn är tom just nu.</p>
       )}

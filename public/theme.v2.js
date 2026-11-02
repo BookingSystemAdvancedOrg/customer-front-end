@@ -20,6 +20,6 @@
   // Webbläsarens egen ram (meta theme-color) följer skrivbordet.
   var metas = document.querySelectorAll('meta[name="theme-color"]')
   for (var i = 0; i < metas.length; i++) {
-    metas[i].setAttribute('content', theme === 'dark' ? '#1c1918' : '#f1eee6')
+    metas[i].setAttribute('content', theme === 'dark' ? '#1a120e' : '#f6f1ea')
   }
 })(document.documentElement)

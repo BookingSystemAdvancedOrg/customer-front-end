@@ -29,6 +29,7 @@ import { GuestDataNotice } from '../../shared/GuestDataNotice'
 import { MarketingConsent, NO_CONSENT, consentFields } from '../../shared/MarketingConsent'
 import type { ConsentChoice } from '../../shared/MarketingConsent'
 import { DateInput, TimeInput } from '../../shared/DateInput'
+import { SkelCard } from '../../shared/Skeleton'
 
 const STEPS = [{ label: 'Meny' }, { label: 'När & var' }, { label: 'Uppgifter' }, { label: 'Skicka' }]
 /** Väntetid efter senaste ändringen innan priset hämtas på nytt. */
@@ -261,7 +262,7 @@ export default function CateringPage() {
   }
 
   if (loadError) return <p className="notice error" role="alert">{loadError}</p>
-  if (!settings) return <p className="notice" role="status">Hämtar cateringmenyn…</p>
+  if (!settings) return <SkelCard label="Hämtar cateringmenyn" lines={6} />
   if (!settings.enabled) {
     return <p className="notice" role="status">{config.tenant.name} tar inte emot cateringförfrågningar just nu.</p>
   }

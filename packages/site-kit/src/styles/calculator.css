@@ -30,7 +30,7 @@
 .dish-tag {
   padding: 1px 8px;
   border: 1px solid var(--paper-line);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   color: var(--ink);
 }
 

@@ -18,6 +18,7 @@ import {
 import type { CateringPayment, GuestRequest, Line, Totals } from './cateringApi'
 import { useSite } from '../../shared/SiteContext'
 import { PaidStamp, PaymentTicket } from '../../shared/payment/PaymentTicket'
+import { SkelLines } from '../../shared/Skeleton'
 
 /** BankID: frågan om status en gång i sekunden (QR-koden byts varje sekund). */
 export const SIGN_POLL_MS = 1_000
@@ -267,7 +268,11 @@ export default function CateringRequestPage() {
   return (
     <section className="booking-confirmation catering-request">
       <h1>Catering</h1>
-      {!request && !error && <p className="notice" role="status">Hämtar förfrågan…</p>}
+      {!request && !error && (
+        <div className="skel" role="status" aria-label="Hämtar förfrågan" aria-busy="true">
+          <SkelLines n={6} />
+        </div>
+      )}
       {error && <p className="notice error" role="alert">{error}</p>}
       {request && (
         <>

@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { isApiConfigured } from '../../shared/api'
 import { useSite } from '../../shared/SiteContext'
+import { Slot } from '../../shared/slots'
 import { useLocationInfo } from '../../shared/useLocationInfo'
 import { PhoneInput } from '../../shared/PhoneInput'
 import { normalizePhone, validEmail } from '../boka/bookingApi'
@@ -39,6 +40,7 @@ import type { PayStatus } from '../../shared/payment/PaymentTicket'
 import { GuestDataNotice } from '../../shared/GuestDataNotice'
 import { MarketingConsent, NO_CONSENT, consentFields } from '../../shared/MarketingConsent'
 import type { ConsentChoice } from '../../shared/MarketingConsent'
+import { SkelDishes } from '../../shared/Skeleton'
 
 const STEPS = [{ label: 'Varukorg' }, { label: 'Dina uppgifter' }, { label: 'Betala' }, { label: 'Klart' }]
 
@@ -130,6 +132,7 @@ export default function BestallPage() {
   const [code, setCode] = useState<CodeTerms | null>(null)
   const [codeError, setCodeError] = useState<string | null>(null)
   const [codeBusy, setCodeBusy] = useState(false)
+  const [giftCardCode, setGiftCardCode] = useState('')
   const [codeOpen, setCodeOpen] = useState(() => Boolean(new URLSearchParams(search).get('kod')))
 
   useEffect(() => {
@@ -314,6 +317,7 @@ export default function BestallPage() {
         acceptTerms: true,
         ...(turnstileToken ? { turnstileToken } : {}),
         ...(applied ? { discountCode: applied.code } : {}),
+        ...(giftCardCode.trim() ? { giftCardCode: giftCardCode.trim() } : {}),
         ...consentFields(guest.consent, config.privacy, marketing),
         embedded: true,
       })
@@ -535,6 +539,7 @@ export default function BestallPage() {
                           jag pengarna tillbaka.
                         </span>
                       </label>
+                      <Slot id="bestall.checkout.giftcard" props={{ value: giftCardCode, onChange: setGiftCardCode, totalOre: total }} />
                       <MarketingConsent value={guest.consent} onChange={(consent) => setGuest({ ...guest, consent })} />
                       <details className="checkout-privacy">
                         <summary>
@@ -630,7 +635,7 @@ export default function BestallPage() {
 
       <div className="order-layout">
         <div className="order-menu">
-          {menu === null && <p className="notice" role="status">Hämtar menyn…</p>}
+          {menu === null && <SkelDishes />}
           {groups.length > 1 && (
             <nav className="chip-rail" aria-label="Kategorier">
               {groups.map((g) => (

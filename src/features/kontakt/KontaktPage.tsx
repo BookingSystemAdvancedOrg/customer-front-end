@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useLocationInfo, useSite } from '@booqy/site-kit'
+import { Button } from '@booqy/brand'
 
 const SUBJECT_OPTIONS = [
   { value: 'rekommendation', label: 'Rekommendation' },
@@ -54,7 +55,9 @@ export default function KontaktPage() {
       )}
 
       {email && (
-      <form className="contact-form" onSubmit={handleSubmit}>
+      // Pilot för @booqy/brand: knappen är märkets Button i restaurangtemat, så den
+      // får restaurangens färg (--tenant-*) i stället för Booqys espresso.
+      <form className="contact-form" data-bq-theme="restaurant" onSubmit={handleSubmit}>
         <div className="contact-form-field">
           <label htmlFor="kontakt-name">Namn</label>
           <input
@@ -113,9 +116,9 @@ export default function KontaktPage() {
           />
         </div>
 
-        <button type="submit" className="btn primary wide">
+        <Button type="submit" variant="primary" wide>
           Skicka
-        </button>
+        </Button>
       </form>
       )}
     </>

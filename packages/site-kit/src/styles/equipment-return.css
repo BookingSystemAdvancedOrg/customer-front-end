@@ -19,7 +19,7 @@
 .equipment-return .booking-check {
   padding: 12px 14px;
   border: 1.5px dashed var(--paper-line);
-  border-radius: 3px;
+  border-radius: var(--r-md);
   background: var(--surface);
   cursor: pointer;
 }

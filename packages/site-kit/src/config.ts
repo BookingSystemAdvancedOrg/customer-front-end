@@ -12,8 +12,9 @@ export interface SiteKitConfig {
   devTenantSlug?: string
   /** CDN för menybilder; API:t ger bara S3-nyckeln. */
   menuImageBaseUrl?: string
-  /** Sajtens typsnittsfiler (woff2-URL:er) för Stripes iframes. */
-  paymentFonts?: { sans?: string; mono?: string }
+  /** Sajtens typsnittsfiler (woff2-URL:er) för Stripes iframes; sansFamily
+   *  är namnet fälten sätts i (Archivo om inget ges). */
+  paymentFonts?: { sans?: string; sansFamily?: string; mono?: string }
 }
 
 let current: SiteKitConfig = {}

@@ -1,20 +1,31 @@
+import { lazy } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
-import {
-  BookingFlow,
-  BookingTermsPage,
-  CateringFlow,
-  CateringRequest,
-  CookiePolicy,
-  ManageBooking,
-  OrderFlow,
-  OrderStatus,
-  PrivacyPolicy,
-  useSite,
-} from '@booqy/site-kit'
+import { sitePages, useSite } from '@booqy/site-kit'
 import { CustomerLayout } from './shared/CustomerLayout'
 import MenyPage from './features/meny/MenyPage'
 import KontaktPage from './features/kontakt/KontaktPage'
 import OmOssPage from './features/om/OmOssPage'
+
+// Flödena hämtas först när gästen öppnar dem (menyn, startsidan, är med från
+// början); CustomerLayout visar laddningen under tiden.
+const BookingFlow = lazy(sitePages.booking)
+const ManageBooking = lazy(sitePages.manageBooking)
+const OrderFlow = lazy(sitePages.order)
+const OrderStatus = lazy(sitePages.orderStatus)
+const CateringFlow = lazy(sitePages.catering)
+const CateringRequest = lazy(sitePages.cateringRequest)
+const PrivacyPolicy = lazy(sitePages.privacy)
+const CookiePolicy = lazy(sitePages.cookies)
+const BookingTermsPage = lazy(sitePages.bookingTerms)
+const GiftCards = lazy(sitePages.presentkort)
+const GiftCardBalance = lazy(sitePages.presentkortSaldo)
+const Queue = lazy(sitePages.ko)
+const SitePreview = lazy(sitePages.forhandsvisning)
+const BuilderPage = lazy(sitePages.builderPage)
+const Events = lazy(sitePages.evenemang)
+const EventDetail = lazy(sitePages.evenemangDetalj)
+const Tickets = lazy(sitePages.biljett)
+const TicketReceive = lazy(sitePages.biljettTaEmot)
 
 /**
  * Restaurangens publika webbplats - samma sajt för alla restauranger, med
@@ -27,12 +38,20 @@ import OmOssPage from './features/om/OmOssPage'
  * bokning/beställning (länkar i sms och mejl) finns alltid. Catering
  * (kalkyl -> offertförfrågan) med catering i planen; gästens sida för en
  * förfrågan (offert, BankID-signering, betalning) finns alltid.
+ * Presentkort, kö (när platsen tar emot kö på sajten), förhandsvisning och
+ * evenemang (med biljettsidorna) finns bara med funktionen i planen. En sajt från webbplatsbyggaren med en
+ * publicerad version ritar okända sökvägar som byggarens sidor.
  */
 function App() {
-  const { config } = useSite()
+  const { config, location } = useSite()
   const reservations = config.tenant.features.reservations
   const ordering = config.tenant.features.ordering
   const catering = config.tenant.features.catering
+  const giftCards = config.tenant.features.giftCards
+  const queue = config.tenant.features.waitlist && location.waitlist?.publicJoin
+  const siteBuilder = config.tenant.features.siteBuilder
+  const events = config.tenant.features.events
+  const builder = siteBuilder && config.tenant.site?.mode === 'builder' && config.tenant.site.version > 0
   return (
     <Routes>
       <Route element={<CustomerLayout />}>
@@ -49,7 +68,15 @@ function App() {
         <Route path="kontakt" element={<KontaktPage />} />
         <Route path="integritetspolicy" element={<PrivacyPolicy />} />
         <Route path="cookies" element={<CookiePolicy />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        {giftCards && <Route path="presentkort" element={<GiftCards />} />}
+        {giftCards && <Route path="presentkort/saldo" element={<GiftCardBalance />} />}
+        {queue && <Route path="ko" element={<Queue />} />}
+        {siteBuilder && <Route path="forhandsvisning" element={<SitePreview />} />}
+        {events && <Route path="evenemang" element={<Events />} />}
+        {events && <Route path="evenemang/:eventId" element={<EventDetail />} />}
+        {events && <Route path="biljett" element={<Tickets />} />}
+        {events && <Route path="biljett/ta-emot" element={<TicketReceive />} />}
+        <Route path="*" element={builder ? <BuilderPage /> : <Navigate to="/" replace />} />
       </Route>
     </Routes>
   )

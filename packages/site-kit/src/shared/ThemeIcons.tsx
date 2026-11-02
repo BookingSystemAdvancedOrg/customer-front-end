@@ -30,3 +30,23 @@ export function MoonIcon({ className }: { className?: string }) {
     </svg>
   )
 }
+
+/** Högtalaren för klickljudet: med ljudvågor när ljudet är på. */
+export function SoundIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} {...ICON}>
+      <path d="M4 9.5h3.2L11.5 6v12l-4.3-3.5H4z" />
+      <path d="M15 9.2a4 4 0 0 1 0 5.6M17.6 6.8a7.5 7.5 0 0 1 0 10.4" />
+    </svg>
+  )
+}
+
+/** Högtalaren utan ljud: ett kryss i stället för vågorna. */
+export function MuteIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} {...ICON}>
+      <path d="M4 9.5h3.2L11.5 6v12l-4.3-3.5H4z" />
+      <path d="M15.5 9.5l5 5M20.5 9.5l-5 5" />
+    </svg>
+  )
+}

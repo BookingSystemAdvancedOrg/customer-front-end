@@ -50,6 +50,8 @@ export interface OrderRequest {
   turnstileToken?: string
   /** Välkomsterbjudandets kod (ABCD-EFGH). */
   discountCode?: string
+  /** Presentkortets kod (bara med presentkort i planen). */
+  giftCardCode?: string
   /** Gästen kryssade i "skicka mig erbjudanden" (äldre backend). */
   marketingOptIn?: boolean
   /** Frivilligt samtycke till erbjudanden (shared/MarketingConsent.tsx). */

@@ -158,13 +158,12 @@ function applyBranding(config: SiteConfig): void {
     root.setProperty('--tenant-accent-ink-dark', liftForDark(color, 4.5))
   }
   if (branding.faviconUrl) {
-    let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]')
-    if (!link) {
-      link = document.createElement('link')
-      link.rel = 'icon'
-      document.head.appendChild(link)
-    }
+    // Restaurangens egen ikon ersätter både Booqys ljusa och mörka
+    document.querySelectorAll('link[rel="icon"]').forEach((l) => l.remove())
+    const link = document.createElement('link')
+    link.rel = 'icon'
     link.href = branding.faviconUrl
+    document.head.appendChild(link)
   }
 }
 

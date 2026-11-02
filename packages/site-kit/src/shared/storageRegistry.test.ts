@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { STORAGE_REGISTRY } from './storageRegistry'
+import { STORAGE_REGISTRY, TICKET_PURCHASE_KEY } from './storageRegistry'
 
 const SRC = join(__dirname, '..')
 
@@ -24,6 +24,18 @@ describe('storage registry', () => {
         expect(field.trim().length).toBeGreaterThan(0)
       }
     }
+  })
+
+  it('lists the ticket purchase key (events) as a necessary session entry', () => {
+    expect(TICKET_PURCHASE_KEY).toBe('booqy-ticket-purchase')
+    const entry = STORAGE_REGISTRY.find((e) => e.name === TICKET_PURCHASE_KEY)
+    expect(entry).toMatchObject({
+      kind: 'sessionStorage',
+      setBy: 'Webbplatsen',
+      category: 'nödvändig',
+      where: 'Evenemang',
+      lifetime: 'Tills köpet är klart eller fliken stängs',
+    })
   })
 
   it('every file that writes to browser storage takes its key names from the registry', () => {

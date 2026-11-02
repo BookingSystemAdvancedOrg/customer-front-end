@@ -35,6 +35,7 @@ export type {
   SitePrivacy,
   SpecialDay,
 } from './shared/site'
+export type { LocationWaitlist, SiteBuilderState, SiteFeatureKey, SiteSlotId } from './shared/contracts'
 
 /* --- API --------------------------------------------------------------- */
 export { ApiError, apiBaseUrl, apiDelete, apiGet, apiPost, isApiConfigured } from './shared/api'
@@ -104,6 +105,8 @@ export { OpeningHoursModal } from './shared/OpeningHoursModal'
 export { PhoneInput } from './shared/PhoneInput'
 export { editPhone, formatPhone, toE164 } from './shared/phone'
 export { ThemeToggle } from './shared/ThemeToggle'
+export { SoundToggle } from './shared/SoundToggle'
+export { installSound, setSound, soundOn, useSound } from './shared/sound'
 export { MoonIcon, SunIcon } from './shared/ThemeIcons'
 export { applyTheme, currentTheme, setTheme, storedTheme, systemTheme } from './shared/theme'
 export type { Theme } from './shared/theme'
@@ -125,6 +128,8 @@ export type { ConsentChoice } from './shared/MarketingConsent'
 export { default as PrivacyPolicy } from './features/juridik/PrivacyPage'
 export { default as CookiePolicy } from './features/juridik/CookiesPage'
 export { default as BookingTermsPage } from './features/juridik/TermsPage'
+export { sitePages } from './pages'
+export { SkelCard } from './shared/Skeleton'
 export { NoticeText, parseNotice } from './features/juridik/NoticeText'
 export {
   bookingTerms,
@@ -134,7 +139,7 @@ export {
   lateCancelApplies,
 } from './shared/bookingTerms'
 export type { TermsContext, TermsSection } from './shared/bookingTerms'
-export { STORAGE_REGISTRY, THEME_KEY } from './shared/storageRegistry'
+export { GIFT_CARD_PURCHASE_KEY, SOUND_KEY, STORAGE_REGISTRY, THEME_KEY, TICKET_PURCHASE_KEY, WAITLIST_TOKEN_PREFIX } from './shared/storageRegistry'
 export type { StorageCategory, StorageEntry, StorageKind } from './shared/storageRegistry'
 
 /* --- Besöksstatistik ------------------------------------------------------ */

@@ -1,0 +1,957 @@
+/* Booqys utseende på gästsajten: exakt samma rum som admin och Booqy
+   Console. Ett varmt, ljust rum (en suddig bakgrundsbild) med arbetet på
+   klara glasytor, vita kort med mjuka skuggor och mörka espressopiller.
+   Restaurangens egen färg används inte här: alla restauranger får samma
+   Booqy-look (bara i den här sajten; site-kit och site-template rörs inte).
+   Fyra typsnitt med en roll var, som i admin: Bricolage Grotesque för stora
+   rubriker och siffror, en bokstilsserif för överrubriker, Plus Jakarta Sans
+   för allt annat och Martian Mono för det som trycks (tider, belopp).
+   Laddas sist (main.tsx), så reglerna här vinner över site-kit och
+   site.css. Ljust är standard; mörkt är samma rum på kvällen. */
+
+@font-face {
+  font-family: 'Martian Mono';
+  src: url('./assets/fonts/martian-mono.woff2') format('woff2-variations');
+  font-weight: 100 800;
+  font-stretch: 75% 112.5%;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  src: url('./assets/fonts/bricolage-grotesque-800-latin-ext.woff2') format('woff2');
+  font-weight: 600 800;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  src: url('./assets/fonts/bricolage-grotesque-800-latin.woff2') format('woff2');
+  font-weight: 600 800;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Newsreader';
+  src: url('./assets/fonts/newsreader-400-latin-ext.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Newsreader';
+  src: url('./assets/fonts/newsreader-400-latin.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  src: url('./assets/fonts/plus-jakarta-sans-latin-ext.woff2') format('woff2');
+  font-weight: 400 800;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  src: url('./assets/fonts/plus-jakarta-sans-latin.woff2') format('woff2');
+  font-weight: 400 800;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* --- Tokens: admins värden ------------------------------------------------ */
+
+:root,
+:root[data-theme='light'] {
+  --paper: #ffffff;
+  --paper-2: #f6f1ea;
+  --paper-line: #e3d6c4;
+  --print: #1a120e;
+  --print-2: #4a4a46;
+  --ink-red: #9e1d26;
+  --steel: #a88462;
+  --steel-lo: #6b4a2e;
+  --table: transparent;
+  --table-2: rgba(58, 36, 24, 0.06);
+  --bg: #f6f1ea;
+  --surface: #ffffff;
+  --fill: #f6f1ea;
+  --surface-glass: rgba(255, 255, 255, 0.7);
+  --page-scrim: rgba(246, 241, 234, 0.9);
+  --border: #e3d6c4;
+  --line: #e3d6c4;
+  --ink: #1a120e;
+  --muted: #4a4a46;
+  --accent: #1a120e;
+  --accent-ink: #6b4a2e;
+  --accent-hover: #3a2418;
+  --accent-active: #3a2418;
+  --accent-soft: #f6f1ea;
+  --on-accent: #ffffff;
+  --focus: rgba(168, 132, 98, 0.45);
+  /* fälten, också Stripes (site-kit payment/appearance.ts läser dem) */
+  --field-bg: var(--surface);
+  --field-radius: 12px;
+  --field-border: 1px;
+  --tint-accent: rgba(168, 132, 98, 0.16);
+  --danger: #9e1d26;
+  --danger-ink: #9e1d26;
+  --success: #2c6a3f;
+  --warning: #8a5a00;
+  --scrim: rgba(26, 18, 14, 0.42);
+  --shadow: 0 1px 1px rgba(58, 36, 24, 0.05), 0 14px 30px -20px rgba(58, 36, 24, 0.4);
+  --shadow-lg: 0 2px 8px -3px rgba(58, 36, 24, 0.12), 0 30px 70px -40px rgba(58, 36, 24, 0.5);
+  --plate-shadow: 0 1px 2px rgba(58, 36, 24, 0.08), 0 8px 18px -12px rgba(58, 36, 24, 0.4);
+  --rail-shadow: none;
+  --font: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --display: 'Bricolage Grotesque', 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+  --serif-face: Athelas, Newsreader, Georgia, serif;
+  /* Hörnen: en skala i alla Booqys appar. Glasytor 28, kort och dialoger 22,
+     rutor i ett kort 14, knappar, flikar och chips som piller, runt är runt. */
+  --r-sm: var(--r-md);
+  --r-md: 14px;
+  --r-lg: 22px;
+  --r-pill: 9999px;
+  --r-nav: 9999px;
+  --r-panel: 28px;
+  /* den rivna kanten och railen finns inte i admin-looken */
+  --tooth-h: 0px;
+  --glass: rgba(255, 255, 255, 0.62);
+  --glass-hi: rgba(255, 255, 255, 0.74);
+  --rim: inset 0 1px 0 rgba(255, 255, 255, 0.9), inset 0 0 0 1px rgba(255, 255, 255, 0.55);
+  --rim-gloss: inset 0 1px 0 rgba(255, 255, 255, 0.95), inset 0 0 0 1px rgba(255, 255, 255, 0.6), inset 0 -1px 0 rgba(58, 36, 24, 0.06);
+  --card-shadow: 0 1px 2px rgba(58, 36, 24, 0.06), 0 14px 34px -22px rgba(58, 36, 24, 0.45);
+  --card-shadow-hi: 0 1px 2px rgba(58, 36, 24, 0.08), 0 22px 44px -24px rgba(58, 36, 24, 0.55);
+  --backdrop-veil: rgba(246, 241, 234, 0);
+  --wall-tint: rgba(58, 36, 24, 0.08);
+  --wall-tint-2: rgba(58, 36, 24, 0.14);
+  --pill-bg: linear-gradient(180deg, #3a2418, #1a120e);
+  font-family: var(--font);
+  font-stretch: 100%;
+  color-scheme: light;
+  accent-color: #1a120e;
+}
+
+:root[data-theme='dark'] {
+  --paper: #2a1d16;
+  --paper-2: #3a2418;
+  --paper-line: #4a3326;
+  --print: #f6f1ea;
+  --print-2: #d5c4ae;
+  --ink-red: #ee8a90;
+  --table: transparent;
+  --table-2: rgba(213, 196, 174, 0.08);
+  --bg: #1a120e;
+  --surface: #2a1d16;
+  --fill: #3a2418;
+  --surface-glass: rgba(26, 18, 14, 0.74);
+  --page-scrim: rgba(26, 18, 14, 0.9);
+  --border: #4a3326;
+  --line: #4a3326;
+  --ink: #f6f1ea;
+  --muted: #d5c4ae;
+  --accent: #f6f1ea;
+  --accent-ink: #d5c4ae;
+  --accent-hover: #ffffff;
+  --accent-active: #d5c4ae;
+  --accent-soft: #3a2418;
+  --on-accent: #1a120e;
+  --focus: rgba(238, 138, 144, 0.4);
+  --tint-accent: rgba(213, 196, 174, 0.14);
+  --danger: #ee8a90;
+  --danger-ink: #ee8a90;
+  --success: #7cc695;
+  --warning: #e0b35a;
+  --scrim: rgba(0, 0, 0, 0.62);
+  --shadow: 0 1px 1px rgba(0, 0, 0, 0.3), 0 14px 30px -20px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 2px 8px -3px rgba(0, 0, 0, 0.4), 0 40px 80px -40px rgba(0, 0, 0, 0.7);
+  --plate-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 8px 18px -12px rgba(0, 0, 0, 0.7);
+  --glass: rgba(26, 18, 14, 0.7);
+  --glass-hi: rgba(26, 18, 14, 0.8);
+  --rim: inset 0 1px 0 rgba(213, 196, 174, 0.18), inset 0 0 0 1px rgba(213, 196, 174, 0.1);
+  --rim-gloss: inset 0 1px 0 rgba(213, 196, 174, 0.24), inset 0 0 0 1px rgba(213, 196, 174, 0.1);
+  --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 14px 34px -22px rgba(0, 0, 0, 0.8);
+  --card-shadow-hi: 0 1px 2px rgba(0, 0, 0, 0.35), 0 22px 44px -24px rgba(0, 0, 0, 0.85);
+  --backdrop-veil: rgba(26, 18, 14, 0.86);
+  --wall-tint: rgba(213, 196, 174, 0.12);
+  --wall-tint-2: rgba(213, 196, 174, 0.2);
+  --pill-bg: linear-gradient(180deg, #ffffff, #efe7dc);
+  color-scheme: dark;
+  accent-color: #f6f1ea;
+}
+
+/* --- Rummet bakom allt ---------------------------------------------------- */
+
+body {
+  background: transparent;
+  font-family: var(--font);
+  color: var(--ink);
+}
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(var(--backdrop-veil), var(--backdrop-veil)), url('./assets/backdrop.webp') center / cover no-repeat, var(--bg);
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+
+/* Rubriker: Bricolage som i admin */
+.home-hero h1,
+.photo-hero h1,
+.page-hero h1,
+.page-head h1,
+.menu-section-title,
+.menu-content-title,
+.checkout-title,
+.catering-step-title,
+.booking-step h2,
+.footer-brand h2 {
+  font-family: var(--display);
+  font-stretch: 100%;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+.hero-kicker,
+.home-hero-tagline {
+  font-family: var(--serif-face);
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* --- Sidhuvudet: en svävande glaspill ------------------------------------- */
+
+.site .site-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  padding: 12px clamp(12px, 3vw, 24px) 0;
+  background: transparent;
+  color: var(--ink);
+  box-shadow: none;
+}
+.site .site-header-inner {
+  max-width: 1180px;
+  margin: 0 auto;
+  min-height: 64px;
+  padding: 8px 10px 8px 22px;
+  border-radius: var(--r-pill);
+  background: var(--glass-hi);
+  box-shadow: var(--rim), var(--shadow);
+  -webkit-backdrop-filter: blur(16px) saturate(1.6);
+  backdrop-filter: blur(16px) saturate(1.6);
+}
+.site .site-header-wordmark {
+  font: 800 1.35rem/1 var(--display);
+  letter-spacing: -0.03em;
+  color: var(--ink);
+}
+.site .site-header-brand img {
+  border-radius: var(--r-md);
+  background: transparent;
+}
+.site .site-header-nav a {
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: var(--r-pill);
+  font: 600 0.95rem/1 var(--font);
+  color: var(--muted);
+  transition: background-color 160ms var(--ease), color 160ms var(--ease);
+}
+.site .site-header-nav a:hover {
+  background: var(--wall-tint);
+  color: var(--ink);
+}
+.site .site-header-nav a[aria-current='page'] {
+  background: var(--pill-bg);
+  color: var(--on-accent);
+  box-shadow: 0 6px 14px -8px rgba(26, 18, 14, 0.6);
+}
+.site .open-chip {
+  min-height: 38px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--wall-tint);
+  color: var(--ink);
+  font: 600 0.72rem/1 var(--mono);
+}
+.site .open-chip:hover {
+  background: var(--wall-tint-2);
+  border-color: transparent;
+}
+.site .site-header-theme,
+.site .site-header-burger {
+  border-radius: var(--r-pill);
+  color: var(--ink);
+}
+.site .site-header-burger-line {
+  border-radius: var(--r-md);
+  background: var(--ink);
+}
+.site .location-picker select {
+  border-radius: var(--r-pill);
+  background-color: var(--wall-tint);
+  color: var(--ink);
+  font: 600 0.8rem/1 var(--font);
+}
+.mobile-drawer {
+  border-radius: var(--r-panel) 0 0 var(--r-panel);
+  background: var(--glass-hi);
+  -webkit-backdrop-filter: blur(18px) saturate(1.5);
+  backdrop-filter: blur(18px) saturate(1.5);
+  box-shadow: var(--rim), var(--shadow-lg);
+}
+.mobile-drawer-list a,
+.mobile-drawer-hours-trigger {
+  border-radius: var(--r-md);
+  font: 800 1.15rem/1 var(--display);
+  letter-spacing: -0.02em;
+  border-bottom: 1px solid var(--wall-tint);
+  color: var(--ink);
+}
+
+/* --- Startsidans hero: glas på rummet, inget färgband, ingen rail --------- */
+
+.home-hero {
+  max-width: 1180px;
+  margin: 14px auto 0;
+  padding: 0;
+  width: calc(100% - 2 * clamp(12px, 3vw, 24px));
+  border-radius: var(--r-panel);
+  background: var(--glass);
+  color: var(--ink);
+  box-shadow: var(--rim), var(--shadow-lg);
+  -webkit-backdrop-filter: blur(18px) saturate(1.5);
+  backdrop-filter: blur(18px) saturate(1.5);
+  overflow: hidden;
+}
+.home-hero::after {
+  display: none;
+}
+.home-hero-body {
+  padding: clamp(36px, 6vw, 72px) clamp(22px, 4vw, 56px);
+}
+.home-hero h1 {
+  font: 800 clamp(2.8rem, 2rem + 4vw, 5rem)/0.95 var(--display);
+  letter-spacing: -0.04em;
+  color: var(--ink);
+}
+.home-hero-tagline {
+  font-size: clamp(1.15rem, 1rem + 0.6vw, 1.5rem);
+  color: var(--muted);
+}
+.home-hero-status,
+.home-hero-address {
+  color: var(--muted);
+  font-family: var(--mono);
+}
+.home-hero--photo .home-hero-body,
+.home-hero--photo h1,
+.home-hero--photo .home-hero-tagline,
+.home-hero--photo .home-hero-status,
+.home-hero--photo .home-hero-address {
+  color: #ffffff;
+}
+
+/* knappar i heron och överallt: piller som i admin */
+.action {
+  min-height: 48px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: var(--r-pill);
+  font: 600 1rem/1 var(--font);
+  transition: background-color 180ms var(--ease), color 180ms var(--ease), translate 180ms var(--ease), box-shadow 180ms var(--ease);
+}
+.action--primary {
+  background: var(--pill-bg);
+  color: var(--on-accent);
+  box-shadow: 0 10px 24px -14px rgba(26, 18, 14, 0.7);
+}
+.action--primary:hover {
+  translate: 0 -2px;
+  box-shadow: 0 16px 30px -14px rgba(26, 18, 14, 0.75);
+}
+.action--secondary {
+  background: var(--glass-hi);
+  color: var(--ink);
+  box-shadow: var(--rim), inset 0 0 0 1px var(--wall-tint-2);
+}
+.action--secondary:hover {
+  translate: 0 -2px;
+  background: var(--surface);
+}
+
+/* --- Kort: vitt papper med mjuka skuggor, ingen rail och ingen riven kant -- */
+
+.menu,
+.order-menu,
+.order-cart,
+.booking-step,
+.booking-confirmation,
+.catering-details,
+.page-prose,
+.printing,
+.contact-form,
+.catering-request > section {
+  border: 0;
+  border-radius: var(--r-lg);
+  background: linear-gradient(180deg, var(--surface), color-mix(in srgb, var(--surface) 96%, #f6f1ea));
+  box-shadow: var(--rim-gloss), var(--card-shadow);
+}
+:root[data-theme='dark'] .menu,
+:root[data-theme='dark'] .order-menu,
+:root[data-theme='dark'] .order-cart,
+:root[data-theme='dark'] .booking-step,
+:root[data-theme='dark'] .booking-confirmation,
+:root[data-theme='dark'] .catering-details,
+:root[data-theme='dark'] .page-prose,
+:root[data-theme='dark'] .printing,
+:root[data-theme='dark'] .contact-form {
+  background: linear-gradient(180deg, #2a1d16, #22170f);
+}
+.menu::after,
+.order-menu::after,
+.order-cart::after,
+.booking-step::after,
+.booking-confirmation::after,
+.catering-details::after,
+.page-prose::after,
+.printing::after,
+.contact-form::after,
+.menu::before,
+.order-menu::before,
+.order-cart::before,
+.booking-step::before,
+.booking-confirmation::before,
+.catering-details::before,
+.page-prose::before {
+  display: none;
+}
+.page > .order-hint {
+  border: 0;
+  border-radius: var(--r-lg);
+  background: var(--glass-hi);
+  box-shadow: var(--rim), var(--shadow);
+}
+/* tips inne i ett kort (varukorg, bokningssteg, cateringofferten) är bara text;
+   bara sidans egna tips (.page > .order-hint) är ett glaspiller */
+.order-hint:not(.page > *) {
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  padding: 0;
+}
+
+/* rubriker inne i korten: admins små kapitäler */
+.menu-heading {
+  border-bottom: 1px solid var(--wall-tint);
+  font: 600 0.72rem/1.6 var(--mono);
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+.menu-section-title {
+  color: var(--ink);
+}
+
+/* --- Knappar --------------------------------------------------------------- */
+
+.btn-primary,
+.btn-secondary,
+.btn,
+.offer-submit,
+.add-btn,
+.link-button {
+  border-radius: var(--r-pill);
+  font-family: var(--font);
+  font-stretch: 100%;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+.btn-primary,
+.btn.primary,
+.offer-submit {
+  background: var(--pill-bg);
+  color: var(--on-accent);
+  box-shadow: 0 10px 24px -14px rgba(26, 18, 14, 0.7);
+}
+.btn-primary:hover:not(:disabled),
+.btn.primary:hover:not(:disabled),
+.offer-submit:hover:not(:disabled) {
+  background: var(--pill-bg);
+  transform: none;
+  translate: 0 -2px;
+  box-shadow: 0 16px 30px -14px rgba(26, 18, 14, 0.75);
+}
+.btn-primary:disabled,
+.btn.primary:disabled,
+.offer-submit:disabled {
+  background: var(--wall-tint);
+  color: var(--muted);
+  box-shadow: none;
+}
+.btn-secondary,
+.btn.ghost,
+.btn.small {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+.btn-secondary:hover:not(:disabled),
+.btn.ghost:hover:not(:disabled),
+.btn.small:hover:not(:disabled) {
+  translate: 0 -2px;
+  box-shadow: inset 0 0 0 1px var(--accent-ink), 0 10px 22px -16px rgba(58, 36, 24, 0.6);
+}
+
+/* lägg till / plus-knapparna i menyn */
+.add-btn {
+  background: var(--pill-bg);
+  color: var(--on-accent);
+  box-shadow: 0 8px 18px -12px rgba(26, 18, 14, 0.7);
+}
+
+/* --- Väljare: slank glasskena med espressopill (som glide i admin) -------- */
+
+.chip-rail {
+  background: transparent;
+  border-bottom: 1px solid var(--wall-tint);
+}
+.chip {
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--border);
+  font: 600 0.9rem/1 var(--font);
+  font-stretch: 100%;
+}
+.chip:hover {
+  box-shadow: inset 0 0 0 1px var(--accent-ink);
+}
+.chip.is-active {
+  background: var(--pill-bg);
+  color: var(--on-accent);
+  box-shadow: 0 6px 14px -8px rgba(26, 18, 14, 0.6);
+}
+.chip.is-active .chip-count {
+  color: color-mix(in srgb, var(--on-accent) 70%, transparent);
+}
+.filter-pill {
+  border-radius: var(--r-pill);
+}
+
+/* dag och tid i bokningen: rundade val, det valda i espresso */
+.date-tile,
+.booking-times button,
+.party-btn {
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--border);
+  font-family: var(--font);
+  font-stretch: 100%;
+}
+.party-btn {
+  border-radius: var(--r-pill);
+}
+.date-tile:hover,
+.booking-times button:hover:not(:disabled) {
+  box-shadow: inset 0 0 0 1px var(--accent-ink);
+}
+.date-tile[aria-pressed='true'],
+.date-tile.is-active,
+.booking-times button[aria-pressed='true'],
+.booking-times button.is-active {
+  background: var(--pill-bg);
+  color: var(--on-accent);
+  box-shadow: 0 8px 18px -10px rgba(26, 18, 14, 0.65);
+}
+
+/* --- Fält: som admins formulär -------------------------------------------- */
+
+.site input:not([type='checkbox']):not([type='radio']):not([type='range']),
+.site select,
+.site textarea {
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background-color: var(--surface);
+  color: var(--ink);
+  font-family: var(--font);
+  box-shadow: none;
+  transition: border-color 160ms var(--ease), box-shadow 160ms var(--ease);
+}
+.site input:not([type='checkbox']):not([type='radio']):not([type='range']):hover,
+.site select:hover,
+.site textarea:hover {
+  border-color: var(--accent-ink);
+}
+.site input:not([type='checkbox']):not([type='radio']):not([type='range']):focus,
+.site select:focus,
+.site textarea:focus {
+  outline: none;
+  border-color: var(--ink);
+  box-shadow: 0 0 0 3px var(--focus);
+}
+
+/* --- Rätter och tallrikar --------------------------------------------------- */
+
+.dish {
+  border-bottom: 1px solid var(--wall-tint);
+}
+.dish-name {
+  font-family: var(--font);
+  font-stretch: 100%;
+  font-weight: 700;
+}
+.dish-price,
+.cart-item-price,
+.cart-total {
+  font-family: var(--mono);
+}
+/* etiketten i sans (beloppet är det som trycks), så "Totalt inkl. moms" får
+   plats på en rad även på en smal telefon; raden under hänger inte upp i den */
+.cart-total > span:first-child {
+  font-family: var(--font);
+  font-weight: 700;
+}
+.cart-note {
+  margin-top: 2px;
+}
+.plate,
+.dish img,
+.dish .plate {
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+.dish-tag {
+  border-radius: var(--r-pill);
+}
+
+/* --- Kvitton i flödet: steg och sammanfattning --------------------------- */
+
+.flow-no,
+.step-no {
+  border-radius: var(--r-pill);
+}
+
+/* --- Sidfoten: en glasyta som allt annat --------------------------------- */
+
+.site .site-footer {
+  max-width: 1180px;
+  margin: clamp(28px, 5vw, 56px) auto 14px;
+  width: calc(100% - 2 * clamp(12px, 3vw, 24px));
+  border-radius: var(--r-panel);
+  background: var(--glass-hi);
+  color: var(--muted);
+  box-shadow: var(--rim), var(--shadow);
+  -webkit-backdrop-filter: blur(16px) saturate(1.6);
+  backdrop-filter: blur(16px) saturate(1.6);
+}
+.site .site-footer a {
+  color: var(--ink);
+}
+.site .footer-brand h2 {
+  color: var(--ink);
+  font-size: 1.6rem;
+}
+.site .site-footer h3 {
+  color: var(--muted);
+  font: 600 0.72rem/1.6 var(--mono);
+  letter-spacing: 0.08em;
+}
+.site .footer-hours li {
+  border-bottom: 1px solid var(--wall-tint);
+}
+.site .site-footer-main {
+  border-top: 1px solid var(--wall-tint);
+}
+.site .site-footer-sound {
+  border-radius: var(--r-pill);
+  background: var(--wall-tint);
+  color: var(--ink);
+}
+
+/* --- Notiser ---------------------------------------------------------------- */
+
+.notice,
+.guest-notice {
+  border-radius: var(--r-md);
+}
+
+/* --- Finputs ---------------------------------------------------------------- */
+
+/* luft mellan heron och menyn, som mellan admins glasytor */
+.home-hero + * {
+  margin-top: 14px;
+}
+.action--primary svg {
+  stroke: currentColor;
+}
+.site .site-footer-credit {
+  color: var(--muted);
+}
+.site .site-footer-booqy {
+  color: var(--ink);
+}
+
+/* telefon: namnet får plats; öppettiderna finns i heron och i menyn */
+@media (max-width: 520px) {
+  .site .site-header-inner > .open-chip,
+  .site .site-header-inner .open-chip {
+    display: none;
+  }
+}
+
+/* antal personer: en rund stegare som i admin */
+.party-stepper {
+  border-radius: var(--r-pill);
+  background: var(--wall-tint);
+  padding: 4px;
+}
+
+/* --- Väljare som glider (shared/glide.ts): samma slanka glasskena och
+   espressopill som i admin (kopierat från admin-front-end brand.css) ----- */
+[data-glide] {
+  position: relative;
+  isolation: isolate;
+}
+
+[data-glide='track'] {
+  flex-wrap: nowrap !important;
+  gap: 2px !important;
+  width: fit-content;
+  max-width: 100%;
+  padding: 3px !important;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border: 0 !important;
+  border-radius: var(--r-pill) !important;
+  /* nästan vit, så att skenan ser likadan ut på papper och på glas */
+  background: rgba(255, 255, 255, 0.9) !important;
+  -webkit-backdrop-filter: blur(10px) saturate(1.5);
+  backdrop-filter: blur(10px) saturate(1.5);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), inset 0 0 0 1px rgba(58, 36, 24, 0.12), 0 6px 16px -12px rgba(58, 36, 24, 0.35) !important;
+}
+
+.glass-refract [data-glide='track'] {
+  backdrop-filter: url(#booqy-glass) blur(10px) saturate(1.5);
+}
+
+[data-glide='track']::-webkit-scrollbar {
+  display: none;
+}
+
+[data-glide] > :is(button, a) {
+  position: relative;
+  flex: none;
+  border-color: transparent !important;
+  border-radius: var(--r-pill) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  translate: none !important;
+  white-space: nowrap;
+  transition: color 360ms var(--ease) 80ms, background-color 200ms var(--ease);
+}
+
+[data-glide='track'] > :is(button, a) {
+  min-height: 32px;
+  padding: 0 14px;
+  color: #3a2418 !important;
+  font-size: 14px;
+  font-weight: 550;
+}
+
+[data-glide] > :is(button, a):is(.active, .on, .is-active, [aria-pressed='true'], [aria-selected='true'], [aria-checked='true']) {
+  color: #ffffff !important;
+}
+
+[data-glide='bare'] {
+  gap: 2px !important;
+}
+
+[data-glide='bare'] > :is(button, a) {
+  padding-inline: 14px !important;
+  border-radius: var(--r-md) !important;
+}
+
+/* en lista med flera rader per val: pillen följer radernas hörn */
+[data-glide='bare']::before {
+  border-radius: var(--r-md) !important;
+}
+
+@media (hover: hover) {
+  [data-glide] > :is(button, a):not(.active, .on, .is-active, [aria-pressed='true'], [aria-selected='true'], [aria-checked='true'], :disabled):hover {
+    background: rgba(58, 36, 24, 0.08) !important;
+  }
+}
+
+/* pillen: espresso med en tänd överkant */
+[data-glide]::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  top: 0;
+  left: 0;
+  width: var(--glide-w, 0);
+  height: var(--glide-h, 0);
+  translate: var(--glide-x, 0) var(--glide-y, 0);
+  border-radius: var(--r-pill);
+  background: linear-gradient(180deg, #3a2418, #1a120e);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 4px 10px -6px rgba(26, 18, 14, 0.6);
+  opacity: 0;
+  pointer-events: none;
+  will-change: translate, width;
+}
+
+[data-glide][data-glide-on]::before {
+  opacity: 1;
+}
+
+[data-glide][data-glide-placed]::before {
+  transition:
+    translate 520ms cubic-bezier(0.22, 1, 0.36, 1),
+    width 520ms cubic-bezier(0.22, 1, 0.36, 1),
+    height 520ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 160ms var(--ease);
+}
+
+:root[data-theme='dark'] [data-glide='track'] {
+  background: rgba(255, 255, 255, 0.06) !important;
+  box-shadow: inset 0 1px 0 rgba(213, 196, 174, 0.22), inset 0 0 0 1px rgba(213, 196, 174, 0.12), 0 6px 16px -12px rgba(0, 0, 0, 0.6) !important;
+}
+
+:root[data-theme='dark'] [data-glide='track'] > :is(button, a) {
+  color: #d5c4ae !important;
+}
+
+:root[data-theme='dark'] [data-glide] > :is(button, a):is(.active, .on, .is-active, [aria-pressed='true'], [aria-selected='true'], [aria-checked='true']) {
+  color: #1a120e !important;
+}
+
+:root[data-theme='dark'] [data-glide]::before {
+  background: linear-gradient(180deg, #ffffff, #efe7dc);
+  box-shadow: inset 0 1px 0 #ffffff, 0 4px 10px -6px rgba(0, 0, 0, 0.6);
+}
+
+@media (hover: hover) {
+  :root[data-theme='dark'] [data-glide] > :is(button, a):not(.active, .on, .is-active, [aria-pressed='true'], [aria-selected='true'], [aria-checked='true'], :disabled):hover {
+    background: rgba(213, 196, 174, 0.12) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-glide][data-glide-placed]::before {
+    transition: translate 160ms linear, width 160ms linear, height 160ms linear;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  [data-glide='track'],
+  .glass-refract [data-glide='track'] {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: var(--surface) !important;
+  }
+}
+
+
+/* menyns kategorirad blir en skena; chipsen är knappar i den */
+.chip-rail[data-glide='track'] {
+  margin-inline: 0;
+  border-bottom: 0;
+}
+.chip-rail[data-glide] > .chip {
+  box-shadow: none;
+  background: transparent;
+}
+
+/* notiser och inre lådor: rundade och lugna, som admins kort-i-kort */
+.site .notice {
+  border: 0;
+  border-radius: var(--r-md);
+  background: var(--wall-tint);
+  padding: 12px 16px;
+  color: var(--ink);
+}
+.site .notice.error {
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  color: var(--danger-ink);
+}
+.site .catering-offer,
+.site .catering-documents,
+.site .booking-summary {
+  border: 0;
+  border-radius: var(--r-md);
+  background: var(--fill);
+  box-shadow: inset 0 0 0 1px var(--wall-tint);
+}
+.site .hero-kicker {
+  font-size: 1.05rem;
+  color: var(--accent-ink);
+}
+
+/* namnet till vänster, knapparna till höger, även när menyn är dold */
+.site .site-header-brand {
+  margin-right: auto;
+}
+.page > .order-hint {
+  border-radius: var(--r-lg);
+}
+
+/* kategoriraden stannar under sidhuvudet även som glidskena */
+.chip-rail[data-glide] {
+  position: sticky;
+}
+
+/* antal i varukorgen: en rund stegare som i admin */
+.site .stepper {
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--wall-tint);
+  box-shadow: none;
+  padding: 3px;
+}
+.site .stepper button {
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+.site .stepper > span {
+  font-family: var(--mono);
+}
+
+/* mobilens "Visa beställning": en espressopill som svävar över sidan */
+.site .order-mobile-bar {
+  border-radius: var(--r-pill);
+  background: var(--pill-bg);
+  color: var(--on-accent);
+  box-shadow: 0 18px 36px -16px rgba(26, 18, 14, 0.7);
+}
+.site .order-mobile-bar-count {
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+/* den fästa kategoriraden är frostat glas, så rätterna inte syns igenom */
+.chip-rail {
+  background: var(--glass-hi);
+  -webkit-backdrop-filter: blur(14px) saturate(1.5);
+  backdrop-filter: blur(14px) saturate(1.5);
+}

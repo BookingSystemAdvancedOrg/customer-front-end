@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
   OfferCard,
   OpeningHoursModal,
+  SkelCard,
+  SoundToggle,
   ThemeToggle,
   openStatus,
   trackPage,
@@ -41,6 +43,8 @@ export function CustomerLayout() {
     ...(tenant.features.reservations ? [{ to: '/boka-bord', label: 'Boka bord' }] : []),
     ...(tenant.features.ordering && current.ordering?.pickup ? [{ to: '/bestall', label: 'Beställ' }] : []),
     ...(tenant.features.catering && current.catering ? [{ to: '/catering', label: 'Catering' }] : []),
+    ...(tenant.features.giftCards ? [{ to: '/presentkort', label: 'Presentkort' }] : []),
+    ...(tenant.features.events ? [{ to: '/evenemang', label: 'Evenemang' }] : []),
   ]
   const RIGHT_NAV: NavItem[] = [
     ...(tenant.branding.about ? [{ to: '/om-oss', label: 'Om oss' }] : []),
@@ -212,7 +216,9 @@ export function CustomerLayout() {
 
       <main className="site-main">
         <div className="page" key={`${current.locationId}:${pathname}`}>
-          <Outlet />
+          <Suspense fallback={<SkelCard label="Hämtar sidan" />}>
+            <Outlet />
+          </Suspense>
         </div>
       </main>
 
@@ -252,6 +258,7 @@ export function CustomerLayout() {
             <Link to="/cookies">Cookies</Link>
             {tenant.features.reservations && <Link to="/bokningsvillkor">Bokningsvillkor</Link>}
           </nav>
+          <SoundToggle className="site-footer-sound" />
           <p className="site-footer-credit">Drivs av <BooqyWordmark className="site-footer-booqy" /></p>
         </div>
       </footer>
