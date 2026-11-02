@@ -16,6 +16,7 @@ import { meterTone } from './meterTone'
  *  nav       a navigation bar (top nav, sidebar) with the glide pill
  *  action    the submit or action bar under a form
  *  banner    a message shown as a bar (inline notice; Toast uses it)
+ *  live      a live indicator: a call in progress or a recording (pulsing dot)
  */
 export type Tone = 'info' | 'success' | 'warning' | 'danger'
 export type ChartTone = 'ink' | 'tan' | 'bronze' | 'danger'
@@ -121,7 +122,17 @@ export interface BannerBarProps extends Common {
   dismissLabel?: string
 }
 
-export type BarProps = ProgressBarProps | BusyBarProps | ChartBarProps | MeterBarProps | TabBarProps | NavBarProps | ActionBarProps | BannerBarProps
+export interface LiveBarProps extends Common {
+  variant: 'live'
+  /** call: a call in progress (green dot); recording: being recorded (red dot). */
+  kind?: 'call' | 'recording'
+  /** Status text, read out politely when it changes. Default "Pågående samtal" / "Spelas in". */
+  label?: string
+  /** Detail beside the label, such as the elapsed time ("03:12"); outside the live region so ticks are not read out. */
+  detail?: ReactNode
+}
+
+export type BarProps = ProgressBarProps | BusyBarProps | ChartBarProps | MeterBarProps | TabBarProps | NavBarProps | ActionBarProps | BannerBarProps | LiveBarProps
 
 const clamp01 = (v: number) => (Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 0)
 const cx = (...parts: (string | false | undefined)[]) => parts.filter(Boolean).join(' ')
@@ -145,6 +156,8 @@ export function Bar(props: BarProps) {
       return <ActionBar {...props} />
     case 'banner':
       return <BannerBar {...props} />
+    case 'live':
+      return <LiveBar {...props} />
   }
 }
 
@@ -320,6 +333,20 @@ function BannerBar({ tone = 'info', children, action, onDismiss, dismissLabel = 
           <span aria-hidden="true">×</span>
         </button>
       )}
+    </div>
+  )
+}
+
+const LIVE_LABEL = { call: 'Pågående samtal', recording: 'Spelas in' }
+
+function LiveBar({ kind = 'call', label = LIVE_LABEL[kind], detail, className, id }: LiveBarProps) {
+  return (
+    <div id={id} className={cx('bq-bar bq-bar--live', `bq-bar--live-${kind}`, className)}>
+      <span className="bq-bar__dot" aria-hidden="true" />
+      <span className="bq-bar__label" role="status" aria-live="polite">
+        {label}
+      </span>
+      {detail && <span className="bq-bar__value">{detail}</span>}
     </div>
   )
 }

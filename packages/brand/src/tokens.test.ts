@@ -40,7 +40,20 @@ describe('tokens', () => {
       const c = tokens.color[mode] as Record<string, string>
       expect(contrast(c[fg], c[bg])).toBeGreaterThanOrEqual(3)
     })
+    // Bar live (dot on its pill), Chip (every tone) and Card ticket (details and code on the surface; the perforation is decorative)
+    it.each([
+      ['success', 'surface-2', 3], ['danger', 'surface-2', 3], ['ink', 'surface-2', 4.5],
+      ['muted', 'surface-2', 4.5], ['info-ink', 'info-bg', 4.5], ['success-ink', 'success-bg', 4.5], ['warning-ink', 'warning-bg', 4.5], ['danger-ink', 'danger-bg', 4.5],
+      ['ink', 'surface', 4.5], ['muted', 'surface', 4.5],
+    ] as const)(`${mode}: live, chip and ticket: %s on %s reaches %s:1`, (fg, bg, min) => {
+      const c = tokens.color[mode] as Record<string, string>
+      expect(contrast(c[fg], c[bg])).toBeGreaterThanOrEqual(min)
+    })
   }
+
+  it('ticket QR: dark modules on the white plate in both modes (7:1)', () => {
+    expect(contrast(tokens.palette.espresso, tokens.palette.white)).toBeGreaterThanOrEqual(7)
+  })
 
   it('the restaurant theme falls back to the Booqy values', () => {
     expect(tokens.restaurant.light.accent).toBe(`var(--tenant-accent, ${tokens.color.light.accent})`)
