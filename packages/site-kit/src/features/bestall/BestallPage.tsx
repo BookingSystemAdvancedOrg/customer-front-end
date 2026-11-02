@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { isApiConfigured } from '../../shared/api'
 import { useSite } from '../../shared/SiteContext'
+import { Slot } from '../../shared/slots'
 import { useLocationInfo } from '../../shared/useLocationInfo'
 import { PhoneInput } from '../../shared/PhoneInput'
 import { normalizePhone, validEmail } from '../boka/bookingApi'
@@ -131,6 +132,7 @@ export default function BestallPage() {
   const [code, setCode] = useState<CodeTerms | null>(null)
   const [codeError, setCodeError] = useState<string | null>(null)
   const [codeBusy, setCodeBusy] = useState(false)
+  const [giftCardCode, setGiftCardCode] = useState('')
   const [codeOpen, setCodeOpen] = useState(() => Boolean(new URLSearchParams(search).get('kod')))
 
   useEffect(() => {
@@ -315,6 +317,7 @@ export default function BestallPage() {
         acceptTerms: true,
         ...(turnstileToken ? { turnstileToken } : {}),
         ...(applied ? { discountCode: applied.code } : {}),
+        ...(giftCardCode.trim() ? { giftCardCode: giftCardCode.trim() } : {}),
         ...consentFields(guest.consent, config.privacy, marketing),
         embedded: true,
       })
@@ -536,6 +539,7 @@ export default function BestallPage() {
                           jag pengarna tillbaka.
                         </span>
                       </label>
+                      <Slot id="bestall.checkout.giftcard" props={{ value: giftCardCode, onChange: setGiftCardCode, totalOre: total }} />
                       <MarketingConsent value={guest.consent} onChange={(consent) => setGuest({ ...guest, consent })} />
                       <details className="checkout-privacy">
                         <summary>

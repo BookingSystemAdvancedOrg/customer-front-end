@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useSite } from '../../shared/SiteContext'
+import { Slot } from '../../shared/slots'
 import { PhoneInput } from '../../shared/PhoneInput'
 import { useLocationInfo } from '../../shared/useLocationInfo'
 import AddToCalendar from '../../shared/AddToCalendar'
@@ -773,6 +774,7 @@ export default function BokaBordPage() {
                   Prova nästa dag
                 </button>
               )}
+              <Slot id="boka.full" props={{ locationId: location.locationId }} />
             </div>
           )}
           {slotNotice?.step === 'time' && <p className="notice" role="status">{slotNotice.text}</p>}

@@ -43,6 +43,7 @@ export function CustomerLayout() {
     ...(tenant.features.reservations ? [{ to: '/boka-bord', label: 'Boka bord' }] : []),
     ...(tenant.features.ordering && current.ordering?.pickup ? [{ to: '/bestall', label: 'Beställ' }] : []),
     ...(tenant.features.catering && current.catering ? [{ to: '/catering', label: 'Catering' }] : []),
+    ...(tenant.features.giftCards ? [{ to: '/presentkort', label: 'Presentkort' }] : []),
   ]
   const RIGHT_NAV: NavItem[] = [
     ...(tenant.branding.about ? [{ to: '/om-oss', label: 'Om oss' }] : []),

@@ -14,4 +14,9 @@ export const sitePages = {
   privacy: () => import('./features/juridik/PrivacyPage'),
   cookies: () => import('./features/juridik/CookiesPage'),
   bookingTerms: () => import('./features/juridik/TermsPage'),
+  presentkort: () => import('./features/presentkort/PresentkortPage'),
+  presentkortSaldo: () => import('./features/presentkort/SaldoPage'),
+  ko: () => import('./features/ko/KoPage'),
+  forhandsvisning: () => import('./features/site-builder/PreviewPage'),
+  builderPage: () => import('./features/site-builder/BuilderPage'),
 }

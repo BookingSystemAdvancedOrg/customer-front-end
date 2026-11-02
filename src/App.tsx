@@ -17,6 +17,11 @@ const CateringRequest = lazy(sitePages.cateringRequest)
 const PrivacyPolicy = lazy(sitePages.privacy)
 const CookiePolicy = lazy(sitePages.cookies)
 const BookingTermsPage = lazy(sitePages.bookingTerms)
+const GiftCards = lazy(sitePages.presentkort)
+const GiftCardBalance = lazy(sitePages.presentkortSaldo)
+const Queue = lazy(sitePages.ko)
+const SitePreview = lazy(sitePages.forhandsvisning)
+const BuilderPage = lazy(sitePages.builderPage)
 
 /**
  * Restaurangens publika webbplats - samma sajt för alla restauranger, med
@@ -29,12 +34,19 @@ const BookingTermsPage = lazy(sitePages.bookingTerms)
  * bokning/beställning (länkar i sms och mejl) finns alltid. Catering
  * (kalkyl -> offertförfrågan) med catering i planen; gästens sida för en
  * förfrågan (offert, BankID-signering, betalning) finns alltid.
+ * Presentkort, kö (när platsen tar emot kö på sajten) och förhandsvisning
+ * finns bara med funktionen i planen. En sajt från webbplatsbyggaren med en
+ * publicerad version ritar okända sökvägar som byggarens sidor.
  */
 function App() {
-  const { config } = useSite()
+  const { config, location } = useSite()
   const reservations = config.tenant.features.reservations
   const ordering = config.tenant.features.ordering
   const catering = config.tenant.features.catering
+  const giftCards = config.tenant.features.giftCards
+  const queue = config.tenant.features.waitlist && location.waitlist?.publicJoin
+  const siteBuilder = config.tenant.features.siteBuilder
+  const builder = siteBuilder && config.tenant.site?.mode === 'builder' && config.tenant.site.version > 0
   return (
     <Routes>
       <Route element={<CustomerLayout />}>
@@ -51,7 +63,11 @@ function App() {
         <Route path="kontakt" element={<KontaktPage />} />
         <Route path="integritetspolicy" element={<PrivacyPolicy />} />
         <Route path="cookies" element={<CookiePolicy />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        {giftCards && <Route path="presentkort" element={<GiftCards />} />}
+        {giftCards && <Route path="presentkort/saldo" element={<GiftCardBalance />} />}
+        {queue && <Route path="ko" element={<Queue />} />}
+        {siteBuilder && <Route path="forhandsvisning" element={<SitePreview />} />}
+        <Route path="*" element={builder ? <BuilderPage /> : <Navigate to="/" replace />} />
       </Route>
     </Routes>
   )

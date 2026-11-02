@@ -1,0 +1,18 @@
+.bq-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Tabular figures for anything that counts or lines up in columns. */
+.bq-count,
+.bq-bar__value,
+.bq-stat__value {
+  font-variant-numeric: tabular-nums;
+}

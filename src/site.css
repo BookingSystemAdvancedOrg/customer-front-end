@@ -673,7 +673,8 @@
 
 .site-footer-legal {
   display: flex;
-  gap: 16px;
+  flex-wrap: wrap;
+  gap: 8px 16px;
 }
 
 .site-footer-credit {
