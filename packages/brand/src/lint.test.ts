@@ -26,6 +26,7 @@ describe('brand-lint', () => {
     ].join('\n')
     expect(rules(tsx, 'Page.tsx')).toEqual(['duplicate', 'bar'])
     expect(rules('<div role="tablist">', 'Tabs.tsx')).toEqual(['bar'])
+    expect(rules('export const Chip = () => null', 'StatusChip.tsx')).toEqual(['duplicate'])
     expect(rules('export function installPress() {}', 'press.ts')).toEqual(['duplicate'])
   })
 

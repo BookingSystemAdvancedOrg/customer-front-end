@@ -15,6 +15,7 @@ import { Printing } from './components/Printing'
 import { SkelCard, Skeleton } from './components/Skeleton'
 import { BarChart, ColumnChart } from './components/Chart'
 import { Card } from './components/Card'
+import { Chip } from './components/Chip'
 import { CountUp } from './react/CountUp'
 
 describe('Bar', () => {
@@ -95,6 +96,22 @@ describe('Bar', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Kunde inte spara')
     await userEvent.click(screen.getByRole('button', { name: 'Stäng' }))
     expect(onDismiss).toHaveBeenCalled()
+  })
+
+  it('live: a polite status with the default Swedish text, the timer outside the live region', () => {
+    const { container, rerender } = render(<Bar variant="live" detail="03:12" />)
+    const root = container.firstElementChild!
+    expect(root).toHaveClass('bq-bar', 'bq-bar--live', 'bq-bar--live-call')
+    const status = screen.getByRole('status')
+    expect(status).toHaveAttribute('aria-live', 'polite')
+    expect(status).toHaveTextContent(/^Pågående samtal$/)
+    expect(root).toHaveTextContent('03:12')
+    expect(root.querySelector('.bq-bar__dot')).toHaveAttribute('aria-hidden', 'true')
+    rerender(<Bar variant="live" kind="recording" />)
+    expect(screen.getByRole('status')).toHaveTextContent('Spelas in')
+    expect(container.firstElementChild).toHaveClass('bq-bar--live-recording')
+    rerender(<Bar variant="live" kind="recording" label="Recording" />)
+    expect(screen.getByRole('status')).toHaveTextContent('Recording')
   })
 })
 
@@ -178,5 +195,34 @@ describe('components', () => {
     expect(screen.getByText('10 st')).toBeInTheDocument()
     expect(screen.getByText('Ingen data än')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Kort' }).closest('section')).toHaveClass('bq-card--receipt')
+  })
+
+  it('Chip: the status as text on its tone, the icon hidden', () => {
+    render(
+      <>
+        <Chip tone="success" icon={<svg data-testid="ok" />}>Insläppt</Chip>
+        <Chip>Avbokad</Chip>
+      </>,
+    )
+    expect(screen.getByText('Insläppt')).toHaveClass('bq-chip', 'bq-chip--success')
+    expect(screen.getByTestId('ok').parentElement).toHaveAttribute('aria-hidden', 'true')
+    expect(screen.getByText('Avbokad')).toHaveClass('bq-chip--neutral')
+  })
+
+  it('Card ticket: details, then the QR on its plate and the code in the stub', () => {
+    render(
+      <Card title="Jazzkväll" surface="ticket" qr={<svg aria-label="QR-kod" role="img" />} code="7K2F-91QA">
+        <p>Fre 14 nov 19:00</p>
+      </Card>,
+    )
+    const card = screen.getByRole('heading', { name: 'Jazzkväll' }).closest('section')!
+    expect(card).toHaveClass('bq-card--ticket')
+    expect(card.querySelector('.bq-card__main')).toHaveTextContent('Fre 14 nov 19:00')
+    expect(screen.getByRole('img', { name: 'QR-kod' }).parentElement).toHaveClass('bq-card__qr')
+    expect(screen.getByText('7K2F-91QA')).toHaveClass('bq-card__code')
+    expect(card.lastElementChild).toHaveClass('bq-card__stub')
+    const plain = render(<Card surface="ticket"><p>Utan kod</p></Card>).container.querySelector('section')!
+    expect(plain.querySelector('.bq-card__main')).toHaveTextContent('Utan kod')
+    expect(plain.querySelector('.bq-card__stub')).toBeNull()
   })
 })

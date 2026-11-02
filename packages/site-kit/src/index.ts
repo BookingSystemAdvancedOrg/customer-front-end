@@ -139,7 +139,7 @@ export {
   lateCancelApplies,
 } from './shared/bookingTerms'
 export type { TermsContext, TermsSection } from './shared/bookingTerms'
-export { GIFT_CARD_PURCHASE_KEY, SOUND_KEY, STORAGE_REGISTRY, THEME_KEY, WAITLIST_TOKEN_PREFIX } from './shared/storageRegistry'
+export { GIFT_CARD_PURCHASE_KEY, SOUND_KEY, STORAGE_REGISTRY, THEME_KEY, TICKET_PURCHASE_KEY, WAITLIST_TOKEN_PREFIX } from './shared/storageRegistry'
 export type { StorageCategory, StorageEntry, StorageKind } from './shared/storageRegistry'
 
 /* --- Besöksstatistik ------------------------------------------------------ */

@@ -136,3 +136,55 @@ describe('feature routes (gift cards, queue, site builder)', () => {
     expect(await screen.findByText('Den här sidan är på väg.')).toBeInTheDocument()
   })
 })
+
+describe('event routes (events and tickets)', () => {
+  const EVENT_PATHS = ['/evenemang', '/evenemang/01JEVENT', '/biljett', '/biljett/ta-emot']
+  const HEADINGS = /^(Evenemang|Dina biljetter|Ta emot biljett)$/
+
+  function renderAt(path: string, tenant: Parameters<typeof siteConfig>[0]) {
+    window.history.replaceState(null, '', '/?restaurang=testkrogen')
+    const config = siteConfig(tenant)
+    vi.stubGlobal('fetch', vi.fn(async (url: string) =>
+      url.includes('/site-config') ? json(config) : json({ items: [] })))
+    return render(
+      <MemoryRouter initialEntries={[path]}>
+        <SiteProvider>
+          <App />
+        </SiteProvider>
+      </MemoryRouter>,
+    )
+  }
+
+  it('routes and links nothing while events is off or missing: the paths fall back to the menu', async () => {
+    for (const features of [undefined, { reservations: true, events: false }]) {
+      for (const path of EVENT_PATHS) {
+        const { unmount } = renderAt(path, features ? { features } : {})
+        await screen.findByRole('link', { name: 'Testkrogen - startsida' })
+        expect(screen.queryByRole('heading', { name: HEADINGS })).not.toBeInTheDocument()
+        expect(screen.queryByRole('link', { name: 'Evenemang' })).not.toBeInTheDocument()
+        unmount()
+      }
+    }
+  })
+
+  it('routes the list, detail, tickets and receive pages and links Evenemang in the nav when on', async () => {
+    const expected = ['Evenemang', 'Evenemang', 'Dina biljetter', 'Ta emot biljett']
+    for (const [i, path] of EVENT_PATHS.entries()) {
+      const { unmount } = renderAt(path, { features: { reservations: true, events: true } })
+      expect(await screen.findByRole('heading', { name: expected[i] })).toBeInTheDocument()
+      expect(screen.getAllByRole('link', { name: 'Evenemang' }).length).toBeGreaterThan(0)
+      unmount()
+    }
+  })
+
+  it('is not shadowed by a published builder site', async () => {
+    const tenant = { features: { reservations: true, siteBuilder: true, events: true }, site: { mode: 'builder' as const, version: 2 } }
+    renderAt('/evenemang', tenant)
+    expect(await screen.findByRole('heading', { name: 'Evenemang' })).toBeInTheDocument()
+    expect(screen.queryByText('Den här sidan är på väg.')).not.toBeInTheDocument()
+    cleanup()
+    renderAt('/biljett/ta-emot', tenant)
+    expect(await screen.findByRole('heading', { name: 'Ta emot biljett' })).toBeInTheDocument()
+    expect(screen.queryByText('Den här sidan är på väg.')).not.toBeInTheDocument()
+  })
+})

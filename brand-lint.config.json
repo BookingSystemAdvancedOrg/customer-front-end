@@ -3,6 +3,7 @@
   "block": [
     "features/site-builder/**",
     "features/ko/**",
-    "features/presentkort/**"
+    "features/presentkort/**",
+    "features/evenemang/**"
   ]
 }

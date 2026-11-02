@@ -22,6 +22,10 @@ const GiftCardBalance = lazy(sitePages.presentkortSaldo)
 const Queue = lazy(sitePages.ko)
 const SitePreview = lazy(sitePages.forhandsvisning)
 const BuilderPage = lazy(sitePages.builderPage)
+const Events = lazy(sitePages.evenemang)
+const EventDetail = lazy(sitePages.evenemangDetalj)
+const Tickets = lazy(sitePages.biljett)
+const TicketReceive = lazy(sitePages.biljettTaEmot)
 
 /**
  * Restaurangens publika webbplats - samma sajt för alla restauranger, med
@@ -34,8 +38,8 @@ const BuilderPage = lazy(sitePages.builderPage)
  * bokning/beställning (länkar i sms och mejl) finns alltid. Catering
  * (kalkyl -> offertförfrågan) med catering i planen; gästens sida för en
  * förfrågan (offert, BankID-signering, betalning) finns alltid.
- * Presentkort, kö (när platsen tar emot kö på sajten) och förhandsvisning
- * finns bara med funktionen i planen. En sajt från webbplatsbyggaren med en
+ * Presentkort, kö (när platsen tar emot kö på sajten), förhandsvisning och
+ * evenemang (med biljettsidorna) finns bara med funktionen i planen. En sajt från webbplatsbyggaren med en
  * publicerad version ritar okända sökvägar som byggarens sidor.
  */
 function App() {
@@ -46,6 +50,7 @@ function App() {
   const giftCards = config.tenant.features.giftCards
   const queue = config.tenant.features.waitlist && location.waitlist?.publicJoin
   const siteBuilder = config.tenant.features.siteBuilder
+  const events = config.tenant.features.events
   const builder = siteBuilder && config.tenant.site?.mode === 'builder' && config.tenant.site.version > 0
   return (
     <Routes>
@@ -67,6 +72,10 @@ function App() {
         {giftCards && <Route path="presentkort/saldo" element={<GiftCardBalance />} />}
         {queue && <Route path="ko" element={<Queue />} />}
         {siteBuilder && <Route path="forhandsvisning" element={<SitePreview />} />}
+        {events && <Route path="evenemang" element={<Events />} />}
+        {events && <Route path="evenemang/:eventId" element={<EventDetail />} />}
+        {events && <Route path="biljett" element={<Tickets />} />}
+        {events && <Route path="biljett/ta-emot" element={<TicketReceive />} />}
         <Route path="*" element={builder ? <BuilderPage /> : <Navigate to="/" replace />} />
       </Route>
     </Routes>
