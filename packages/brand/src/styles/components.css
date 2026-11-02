@@ -161,6 +161,90 @@
   flex-wrap: wrap;
   gap: var(--bq-space-2);
 }
+/* ticket: an event ticket stub. Follows the theme; notches and a dashed
+   perforation part the details from the QR stub; the QR sits on white paper
+   in both modes so every scanner reads it. */
+.bq-card--ticket {
+  --bq-ticket-notch: 12px;
+  gap: 0;
+  padding: 0;
+  filter: var(--bq-shadow-drop);
+}
+.bq-card__main,
+.bq-card__stub {
+  padding: var(--bq-space-5);
+  background: var(--bq-surface);
+}
+.bq-card__main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--bq-space-4);
+  border-radius: var(--bq-radius-card) var(--bq-radius-card) 0 0;
+  -webkit-mask: radial-gradient(circle var(--bq-ticket-notch) at 0 100%, #0000 98%, #000) left / 51% 100% no-repeat, radial-gradient(circle var(--bq-ticket-notch) at 100% 100%, #0000 98%, #000) right / 51% 100% no-repeat;
+  mask: radial-gradient(circle var(--bq-ticket-notch) at 0 100%, #0000 98%, #000) left / 51% 100% no-repeat, radial-gradient(circle var(--bq-ticket-notch) at 100% 100%, #0000 98%, #000) right / 51% 100% no-repeat;
+}
+.bq-card__main:last-child {
+  border-radius: var(--bq-radius-card);
+  -webkit-mask: none;
+  mask: none;
+}
+.bq-card--ticket .bq-card__body {
+  font: 500 var(--bq-text-sm)/1.5 var(--bq-font-mono);
+}
+.bq-card__stub {
+  display: grid;
+  justify-items: center;
+  gap: var(--bq-space-3);
+  border-top: 2px dashed var(--bq-line-strong);
+  border-radius: 0 0 var(--bq-radius-card) var(--bq-radius-card);
+  -webkit-mask: radial-gradient(circle var(--bq-ticket-notch) at 0 0, #0000 98%, #000) left / 51% 100% no-repeat, radial-gradient(circle var(--bq-ticket-notch) at 100% 0, #0000 98%, #000) right / 51% 100% no-repeat;
+  mask: radial-gradient(circle var(--bq-ticket-notch) at 0 0, #0000 98%, #000) left / 51% 100% no-repeat, radial-gradient(circle var(--bq-ticket-notch) at 100% 0, #0000 98%, #000) right / 51% 100% no-repeat;
+}
+.bq-card__qr {
+  width: min(100%, 220px);
+  padding: var(--bq-space-3);
+  border-radius: var(--bq-radius-inner);
+  background: var(--bq-white);
+  color: var(--bq-espresso);
+  line-height: 0;
+}
+.bq-card__qr > :is(svg, img, canvas) {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.bq-card__code {
+  font: 600 var(--bq-text-sm)/1.3 var(--bq-font-mono);
+  letter-spacing: 0.12em;
+  color: var(--bq-muted);
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
+/* ---- Chip: a status as text on a tone pair ------------------------------ */
+.bq-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--bq-space-1);
+  width: fit-content;
+  padding: 3px var(--bq-space-3);
+  border-radius: var(--bq-radius-pill);
+  font: 600 var(--bq-text-xs)/1.4 var(--bq-font-sans);
+  white-space: nowrap;
+}
+.bq-chip--neutral { background: var(--bq-surface-2); color: var(--bq-muted); box-shadow: inset 0 0 0 1px var(--bq-line); }
+.bq-chip--info { background: var(--bq-info-bg); color: var(--bq-info-ink); box-shadow: inset 0 0 0 1px var(--bq-line); }
+.bq-chip--success { background: var(--bq-success-bg); color: var(--bq-success-ink); }
+.bq-chip--warning { background: var(--bq-warning-bg); color: var(--bq-warning-ink); }
+.bq-chip--danger { background: var(--bq-danger-bg); color: var(--bq-danger-ink); }
+.bq-chip__icon {
+  display: inline-flex;
+  flex: none;
+}
+.bq-chip__icon > svg {
+  width: 1em;
+  height: 1em;
+}
 
 /* ---- Modal (native dialog) ---------------------------------------------- */
 .bq-modal {

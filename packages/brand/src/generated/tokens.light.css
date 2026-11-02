@@ -112,4 +112,5 @@
   --bq-shadow-lg: 0 30px 70px -40px rgba(58, 36, 24, 0.5), 0 2px 8px -3px rgba(58, 36, 24, 0.12);
   --bq-shadow-pill: 0 10px 24px -14px rgba(26, 18, 14, 0.7);
   --bq-shadow-rim: inset 0 1px 0 rgba(255, 255, 255, 0.9), inset 0 0 0 1px rgba(255, 255, 255, 0.55);
+  --bq-shadow-drop: drop-shadow(0 1px 1px rgba(58, 36, 24, 0.08)) drop-shadow(0 12px 16px rgba(58, 36, 24, 0.16));
 }

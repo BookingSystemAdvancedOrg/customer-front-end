@@ -29,7 +29,7 @@ const SKIP_DIRS = new Set(['node_modules', 'dist', 'build', 'coverage', '.git', 
 const SKIP_FILE = /\.(test|spec)\.[jt]sx?$|\.d\.ts$|^vite\.config|^vitest\.config/
 
 const CATALOGUE = [
-  'Bar', 'BusyBar', 'Button', 'Card', 'Modal', 'Field', 'Select', 'Skeleton', 'SkelBlock', 'SkelLines', 'SkelCard', 'SkelPage',
+  'Bar', 'BusyBar', 'Button', 'Card', 'Chip', 'Modal', 'Field', 'Select', 'Skeleton', 'SkelBlock', 'SkelLines', 'SkelCard', 'SkelPage',
   'Toast', 'Toaster', 'Notice', 'StatTile', 'Printing', 'Loading', 'CountUp', 'Num', 'Ring', 'BarChart', 'ColumnChart', 'HBarChart', 'BarLineChart',
 ]
 const EFFECT_FILES = new Set(['press.ts', 'sound.ts', 'glide.ts', 'glassFilter.ts', 'theme.ts', 'busy.ts', 'countUp.ts', 'liquid.ts', 'useLiquidFill.ts'])

@@ -5,6 +5,23 @@ exported from `index.ts` or `styles.css` (a component, a Bar variant, a
 `--bq-*` variable or a `bq-` class), or changing a token's meaning, is a
 major version. A new token, variant or component is a minor version.
 
+## Unreleased (minor: next version 0.2.0)
+
+Run 0 addendum, task BRK1 (events and tickets, ADR-K; phone agent, ADR-L).
+
+- `Bar variant="live"`: a call in progress (`kind="call"`, green dot,
+  "Pågående samtal") or a recording (`kind="recording"`, red dot,
+  "Spelas in"); polite status text, optional `detail` (elapsed time) outside
+  the live region; reduced motion: static dot.
+- `Chip`: a status as text on a tone pair (`neutral/info/success/warning/danger`,
+  optional decorative `icon`), for ticket status and call outcome.
+- `Card surface="ticket"`: event ticket with mono details, notches and a
+  dashed perforation, and a stub with the QR on a white plate (`qr`) and the
+  typed code (`code`); follows the theme, the QR stays dark on white.
+- Token `--bq-shadow-drop` (a `filter` value per mode) for shapes cut by a
+  mask, such as the ticket.
+- `brand-lint`: `Chip` joins the catalogue (a local `Chip` is a duplicate).
+
 ## 0.1.0 (2026-11-01)
 
 First version (Booqy Run 0, step 8b). Nothing in the apps is migrated yet
