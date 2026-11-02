@@ -19,4 +19,8 @@ export const sitePages = {
   ko: () => import('./features/ko/KoPage'),
   forhandsvisning: () => import('./features/site-builder/PreviewPage'),
   builderPage: () => import('./features/site-builder/BuilderPage'),
+  evenemang: () => import('./features/evenemang/EvenemangPage'),
+  evenemangDetalj: () => import('./features/evenemang/EvenemangDetaljPage'),
+  biljett: () => import('./features/evenemang/BiljettPage'),
+  biljettTaEmot: () => import('./features/evenemang/TaEmotPage'),
 }
