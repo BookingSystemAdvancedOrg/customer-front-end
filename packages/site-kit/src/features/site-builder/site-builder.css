@@ -16,7 +16,7 @@
 .builder-site-blocks {
   display: flex;
   flex-direction: column;
-  gap: var(--bq-space-10);
+  gap: var(--bq-space-4);
 }
 .builder-site img {
   display: block;
@@ -51,7 +51,17 @@
   font-family: var(--bq-font-display);
 }
 
+.builder-preview-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--bq-space-3);
+  padding: var(--bq-space-4) 0 var(--bq-space-5);
+  border-bottom: 1px solid var(--bq-line);
+}
 .builder-preview-note {
+  margin: 0;
   text-align: center;
-  padding-top: var(--bq-space-4);
+  font-size: var(--bq-text-sm);
+  color: var(--bq-muted);
 }
