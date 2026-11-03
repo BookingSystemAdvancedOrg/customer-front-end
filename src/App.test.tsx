@@ -123,6 +123,21 @@ describe('feature routes (gift cards, queue, site builder)', () => {
     expect(await screen.findByRole('heading', { name: 'Kö' })).toBeInTheDocument()
   })
 
+  it('draws the start page as the builder start page for a published builder site, the menu otherwise', async () => {
+    renderAt('/', { features: ALL_ON, site: { mode: 'builder', version: 2 } })
+    expect(await screen.findByText('Den här sidan är på väg.')).toBeInTheDocument()
+    cleanup()
+    renderAt('/meny', { features: ALL_ON, site: { mode: 'builder', version: 2 } })
+    await screen.findByRole('link', { name: 'Testkrogen - startsida' })
+    expect(screen.queryByText('Den här sidan är på väg.')).not.toBeInTheDocument()
+    for (const site of [{ mode: 'builder' as const, version: 0 }, { mode: 'custom' as const, version: 3 }]) {
+      cleanup()
+      renderAt('/', { features: ALL_ON, site })
+      await screen.findByRole('link', { name: 'Testkrogen - startsida' })
+      expect(screen.queryByText('Den här sidan är på väg.')).not.toBeInTheDocument()
+    }
+  })
+
   it('draws unknown paths as builder pages only for a published builder site', async () => {
     renderAt('/en-sida', { features: ALL_ON, site: { mode: 'builder', version: 0 } })
     await screen.findByRole('link', { name: 'Testkrogen - startsida' })
