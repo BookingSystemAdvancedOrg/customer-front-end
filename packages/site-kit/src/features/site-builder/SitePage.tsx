@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react'
 import { accentPair } from '../../shared/SiteProvider'
 import type { SiteBlock, SiteDocument, SitePage as Page } from './siteSchema'
+import './site-builder.css'
 
 /**
  * One page of a site built in Webbplats, from the published (or draft)
@@ -85,7 +86,7 @@ function Block({ doc, block, imageBase, live }: { doc: SiteDocument; block: Site
       return (
         <section className="page-prose" data-block={block.id}>
           {block.heading ? <h2>{block.heading}</h2> : null}
-          <ul>{block.images.map((i) => <li key={i.image}>{imageBase ? <img src={img(i.image)} alt={i.alt} /> : i.alt}</li>)}</ul>
+          <ul className="builder-gallery">{block.images.map((i) => <li key={i.image}>{imageBase ? <img src={img(i.image)} alt={i.alt} /> : i.alt}</li>)}</ul>
         </section>
       )
     case 'menu':
@@ -125,21 +126,23 @@ function Block({ doc, block, imageBase, live }: { doc: SiteDocument; block: Site
 export function SitePage({ doc, page, imageBase, live }: SitePageProps) {
   return (
     <div className={`builder-site builder-font-${doc.theme.font}`} style={themeStyle(doc)}>
-      <nav aria-label="Webbplatsens sidor">
-        <ul>
+      {/* The brand nav Bar's markup (Bar variant="nav"): site-kit renders on the server too and does not import @booqy/brand. */}
+      <nav className="bq-bar bq-bar--nav bq-bar--horizontal builder-site-nav" aria-label="Webbplatsens sidor">
+        <ul className="bq-bar__items" data-bq-glide="bare">
           {doc.nav.map((n) => {
             const target = doc.pages.find((p) => p.id === n.pageId)
             return target ? (
               <li key={n.pageId}>
-                <a href={`/${target.slug}`} aria-current={target.id === page.id ? 'page' : undefined}>{target.title}</a>
+                <a className="bq-bar__item" href={`/${target.slug}`} aria-current={target.id === page.id ? 'page' : undefined}>{target.title}</a>
               </li>
             ) : null
           })}
         </ul>
       </nav>
-      <main>
+      {/* CustomerLayout already has the page's <main>. */}
+      <div className="builder-site-blocks">
         {page.blocks.map((block) => <Block key={block.id} doc={doc} block={block} imageBase={imageBase} live={live} />)}
-      </main>
+      </div>
       {doc.footer.text ? <footer className="page-prose"><p>{doc.footer.text}</p></footer> : null}
     </div>
   )

@@ -1,0 +1,57 @@
+/* A page from Webbplats (SitePage) and the preview around it. Brand tokens
+   only; the nav is the brand nav Bar (bq-bar--nav), the blocks reuse the
+   site's page-hero / page-prose. The restaurant's colour arrives through
+   themeStyle() as --tenant-accent on .builder-site. */
+.builder-site {
+  display: flex;
+  flex-direction: column;
+  gap: var(--bq-space-8);
+  padding-block: var(--bq-space-6) var(--bq-space-10);
+}
+.builder-site-nav,
+.builder-preview-pages {
+  align-self: center;
+  max-width: 100%;
+}
+.builder-site-blocks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--bq-space-10);
+}
+.builder-site img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--bq-radius-card);
+}
+.builder-site figcaption {
+  margin-top: var(--bq-space-2);
+  color: var(--bq-muted);
+  font-size: var(--bq-text-sm);
+}
+.builder-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr));
+  gap: var(--bq-space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.builder-site > footer {
+  padding-top: var(--bq-space-6);
+  border-top: 1px solid var(--bq-line);
+  color: var(--bq-muted);
+}
+
+/* theme.font of the document: the headings' family */
+.builder-font-serif :is(h1, h2, h3) {
+  font-family: var(--bq-font-serif);
+}
+.builder-font-sans :is(h1, h2, h3) {
+  font-family: var(--bq-font-display);
+}
+
+.builder-preview-note {
+  text-align: center;
+  padding-top: var(--bq-space-4);
+}

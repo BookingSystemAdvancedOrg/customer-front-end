@@ -43,12 +43,12 @@ export default function PreviewPage() {
         </section>
       ) : (
         <>
-          <p className="page-lede" role="status">Förhandsvisning av utkastet. Gästerna ser det först när det publiceras.</p>
-          <nav aria-label="Sidor i förhandsvisningen">
-            <ul>
+          <p className="page-lede builder-preview-note" role="status">Förhandsvisning av utkastet. Gästerna ser det först när det publiceras.</p>
+          <nav className="bq-bar bq-bar--nav bq-bar--horizontal builder-preview-pages" aria-label="Sidor i förhandsvisningen">
+            <ul className="bq-bar__items" data-bq-glide="bare">
               {doc.pages.map((p) => (
                 <li key={p.id}>
-                  <button type="button" className="btn btn-secondary btn-small" aria-pressed={p.id === page.id} onClick={() => setPageId(p.id)}>
+                  <button type="button" className="bq-bar__item" aria-current={p.id === page.id ? 'page' : undefined} onClick={() => setPageId(p.id)}>
                     {p.title}
                   </button>
                 </li>

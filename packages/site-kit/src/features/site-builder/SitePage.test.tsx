@@ -61,6 +61,15 @@ describe('SitePage', () => {
     expect(screen.getByText('Andra stycket.')).toBeInTheDocument()
   })
 
+  it('has no <main> of its own (the layout has it), the brand nav Bar and the font class', () => {
+    const { container } = render(<SitePage doc={doc} page={doc.pages[0]} imageBase="" />)
+    expect(container.querySelector('main')).toBeNull()
+    const nav = screen.getByRole('navigation', { name: 'Webbplatsens sidor' })
+    expect(nav).toHaveClass('bq-bar', 'bq-bar--nav')
+    expect(screen.getByRole('link', { name: 'Hem' })).toHaveClass('bq-bar__item')
+    expect(container.firstElementChild).toHaveClass('builder-site', 'builder-font-sans')
+  })
+
   it('finds pages by path and nudges the theme like the rest of the site', () => {
     expect(findPage(doc, '/')?.id).toBe('start')
     expect(findPage(doc, '/om-oss/')?.id).toBe('om-oss')
@@ -117,6 +126,19 @@ describe('PreviewPage', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Välkommen' })).toBeInTheDocument()
     expect(post).toHaveBeenCalledWith('/public/site-builder/preview', { tenantId: 't1', token: 'secret-token-from-the-link' })
     expect(document.querySelector('meta[name="robots"]')).toHaveAttribute('content', 'noindex')
+  })
+
+  it('switches between the draft pages from the brand nav Bar', async () => {
+    window.location.hash = '#secret-token-from-the-link'
+    post.mockResolvedValue({ doc })
+    render(wrap(<PreviewPage />, '/forhandsvisning'))
+    const pages = await screen.findByRole('navigation', { name: 'Sidor i förhandsvisningen' })
+    expect(pages).toHaveClass('bq-bar', 'bq-bar--nav')
+    expect(screen.getByRole('button', { name: 'Hem' })).toHaveAttribute('aria-current', 'page')
+    screen.getByRole('button', { name: 'Om oss' }).click()
+    expect(await screen.findByRole('heading', { name: 'Vår historia' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Om oss' })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('button', { name: 'Hem' })).not.toHaveAttribute('aria-current')
   })
 
   it('without a token nothing is asked', async () => {
