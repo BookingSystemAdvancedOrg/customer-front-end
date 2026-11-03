@@ -22,6 +22,11 @@ export interface SitePageProps {
   /** menu-image base URL (no trailing slash); images are left out when empty. */
   imageBase: string
   live?: LiveSlots
+  /**
+   * The draft preview: own-page links (nav and `page:` links) open the page
+   * inside the preview instead of leaving for /<slug> (the live site).
+   */
+  onOpenPage?: (pageId: string) => void
 }
 
 export function pageHref(doc: SiteDocument, pageId: string): string {
@@ -56,7 +61,7 @@ const CTA: Record<string, { href: string; label: string }> = {
   cateringCta: { href: '/catering', label: 'Catering' },
 }
 
-function Block({ doc, block, imageBase, live }: { doc: SiteDocument; block: SiteBlock; imageBase: string; live?: LiveSlots }) {
+function Block({ doc, block, imageBase, live, onOpenPage }: { doc: SiteDocument; block: SiteBlock; imageBase: string; live?: LiveSlots; onOpenPage?: (pageId: string) => void }) {
   const img = (key: string) => (imageBase ? `${imageBase}/${key}` : '')
   switch (block.type) {
     case 'hero':
@@ -65,7 +70,9 @@ function Block({ doc, block, imageBase, live }: { doc: SiteDocument; block: Site
           {block.image && imageBase ? <img src={img(block.image)} alt="" /> : null}
           <h1>{block.heading}</h1>
           {block.text ? <p className="page-lede">{block.text}</p> : null}
-          {block.cta ? <a className="btn btn-primary" href={linkHref(doc, block.cta.link)}>{block.cta.label}</a> : null}
+          {block.cta && onOpenPage && block.cta.link.startsWith('page:')
+            ? <button type="button" className="btn btn-primary" onClick={() => onOpenPage(block.cta!.link.slice(5))}>{block.cta.label}</button>
+            : block.cta ? <a className="btn btn-primary" href={linkHref(doc, block.cta.link)}>{block.cta.label}</a> : null}
         </section>
       )
     case 'text':
@@ -123,25 +130,30 @@ function Block({ doc, block, imageBase, live }: { doc: SiteDocument; block: Site
   }
 }
 
-export function SitePage({ doc, page, imageBase, live }: SitePageProps) {
+export function SitePage({ doc, page, imageBase, live, onOpenPage }: SitePageProps) {
   return (
     <div className={`builder-site builder-font-${doc.theme.font}`} style={themeStyle(doc)}>
-      {/* The brand nav Bar's markup (Bar variant="nav"): site-kit renders on the server too and does not import @booqy/brand. */}
+      {/* The brand nav Bar's markup (Bar variant="nav"): site-kit renders on the server too and does not import
+          @booqy/brand. Accepted exception for Run 1, docs/adr/DECISIONS.md 2026-11-03. */}
       <nav className="bq-bar bq-bar--nav bq-bar--horizontal builder-site-nav" aria-label="Webbplatsens sidor">
         <ul className="bq-bar__items" data-bq-glide="bare">
           {doc.nav.map((n) => {
             const target = doc.pages.find((p) => p.id === n.pageId)
-            return target ? (
+            if (!target) return null
+            const current = target.id === page.id ? 'page' : undefined
+            return (
               <li key={n.pageId}>
-                <a className="bq-bar__item" href={`/${target.slug}`} aria-current={target.id === page.id ? 'page' : undefined}>{target.title}</a>
+                {onOpenPage
+                  ? <button type="button" className="bq-bar__item" aria-current={current} onClick={() => onOpenPage(target.id)}>{target.title}</button>
+                  : <a className="bq-bar__item" href={`/${target.slug}`} aria-current={current}>{target.title}</a>}
               </li>
-            ) : null
+            )
           })}
         </ul>
       </nav>
       {/* CustomerLayout already has the page's <main>. */}
       <div className="builder-site-blocks">
-        {page.blocks.map((block) => <Block key={block.id} doc={doc} block={block} imageBase={imageBase} live={live} />)}
+        {page.blocks.map((block) => <Block key={block.id} doc={doc} block={block} imageBase={imageBase} live={live} onOpenPage={onOpenPage} />)}
       </div>
       {doc.footer.text ? <footer className="page-prose"><p>{doc.footer.text}</p></footer> : null}
     </div>

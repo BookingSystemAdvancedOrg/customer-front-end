@@ -32,6 +32,11 @@ export default function PreviewPage() {
     return () => { cancelled = true }
   }, [config.tenant.tenantId])
 
+  // The site's own nav opens draft pages here, never the live /<slug>.
+  const openPage = (id: string) => {
+    setPageId(id)
+    window.scrollTo?.({ top: 0 })
+  }
   const page = doc ? doc.pages.find((p) => p.id === pageId) ?? doc.pages.find((p) => p.slug === '') ?? doc.pages[0] : null
   return (
     <>
@@ -45,19 +50,8 @@ export default function PreviewPage() {
         <>
           <header className="builder-preview-head">
             <p className="page-lede builder-preview-note" role="status">Förhandsvisning av utkastet. Gästerna ser det först när det publiceras.</p>
-            <nav className="bq-bar bq-bar--nav bq-bar--horizontal builder-preview-pages" aria-label="Sidor i förhandsvisningen">
-              <ul className="bq-bar__items" data-bq-glide="bare">
-                {doc.pages.map((p) => (
-                  <li key={p.id}>
-                    <button type="button" className="bq-bar__item" aria-current={p.id === page.id ? 'page' : undefined} onClick={() => setPageId(p.id)}>
-                      {p.title}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </nav>
           </header>
-          <SitePage doc={doc} page={page} imageBase={siteKitConfig().menuImageBaseUrl ?? ''} live={{ menu: () => <Menu /> }} />
+          <SitePage doc={doc} page={page} imageBase={siteKitConfig().menuImageBaseUrl ?? ''} live={{ menu: () => <Menu /> }} onOpenPage={openPage} />
         </>
       )}
     </>

@@ -8,8 +8,7 @@
   gap: var(--bq-space-8);
   padding-block: var(--bq-space-6) var(--bq-space-10);
 }
-.builder-site-nav,
-.builder-preview-pages {
+.builder-site-nav {
   align-self: center;
   max-width: 100%;
 }

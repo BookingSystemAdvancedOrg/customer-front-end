@@ -70,6 +70,15 @@ describe('SitePage', () => {
     expect(container.firstElementChild).toHaveClass('builder-site', 'builder-font-sans')
   })
 
+  it('with onOpenPage, own-page links become buttons and other links stay links', () => {
+    const open = vi.fn()
+    render(<SitePage doc={doc} page={doc.pages[0]} imageBase="" onOpenPage={open} />)
+    screen.getByRole('button', { name: 'Hem' }).click()
+    expect(open).toHaveBeenCalledWith('start')
+    expect(screen.queryByRole('link', { name: 'Om oss' })).toBeNull()
+    expect(screen.getByRole('link', { name: 'Boka nu' })).toHaveAttribute('href', '/boka-bord')
+  })
+
   it('finds pages by path and nudges the theme like the rest of the site', () => {
     expect(findPage(doc, '/')?.id).toBe('start')
     expect(findPage(doc, '/om-oss/')?.id).toBe('om-oss')
@@ -128,17 +137,31 @@ describe('PreviewPage', () => {
     expect(document.querySelector('meta[name="robots"]')).toHaveAttribute('content', 'noindex')
   })
 
-  it('switches between the draft pages from the brand nav Bar', async () => {
+  it('shows one page bar (the site nav) and switches draft pages inside the preview', async () => {
     window.location.hash = '#secret-token-from-the-link'
     post.mockResolvedValue({ doc })
-    render(wrap(<PreviewPage />, '/forhandsvisning'))
-    const pages = await screen.findByRole('navigation', { name: 'Sidor i förhandsvisningen' })
+    const { container } = render(wrap(<PreviewPage />, '/forhandsvisning'))
+    const pages = await screen.findByRole('navigation', { name: 'Webbplatsens sidor' })
+    expect(screen.getAllByRole('navigation')).toHaveLength(1)
     expect(pages).toHaveClass('bq-bar', 'bq-bar--nav')
-    expect(screen.getByRole('button', { name: 'Hem' })).toHaveAttribute('aria-current', 'page')
-    screen.getByRole('button', { name: 'Om oss' }).click()
+    expect(screen.getAllByRole('button', { name: 'Hem' })[0]).toHaveAttribute('aria-current', 'page')
+    // no own-page link leaves the preview for the live /<slug>
+    expect(container.querySelector('a[href="/om-oss"], a[href="/"]')).toBeNull()
+    screen.getAllByRole('button', { name: 'Om oss' })[0].click()
     expect(await screen.findByRole('heading', { name: 'Vår historia' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Om oss' })).toHaveAttribute('aria-current', 'page')
     expect(screen.getByRole('button', { name: 'Hem' })).not.toHaveAttribute('aria-current')
+    expect(window.location.hash).toBe('#secret-token-from-the-link')
+  })
+
+  it('a page: link in a block opens the draft page in the preview too', async () => {
+    window.location.hash = '#secret-token-from-the-link'
+    post.mockResolvedValue({ doc })
+    render(wrap(<PreviewPage />, '/forhandsvisning'))
+    await screen.findByRole('heading', { level: 1, name: 'Välkommen' })
+    const cta = screen.getAllByRole('button', { name: 'Om oss' }).find((b) => b.classList.contains('btn'))!
+    cta.click()
+    expect(await screen.findByRole('heading', { name: 'Vår historia' })).toBeInTheDocument()
   })
 
   it('without a token nothing is asked', async () => {
