@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { Bar, Button } from '@booqy/brand'
+import './presentkort.css'
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js'
 import { useSite } from '../../shared/SiteContext'
 import { useTheme } from '../../shared/theme'
@@ -62,16 +63,16 @@ export default function PresentkortPage() {
   if (paid) return <ThankYou status={paid} />
   if (missing || !config.tenant.features?.giftCards) {
     return (
-      <section className="page-hero page-prose" data-bq-theme="restaurant">
+      <section className="page-hero page-prose presentkort-page" data-bq-theme="restaurant">
         <h1>Presentkort</h1>
         <p>{config.tenant.name} säljer inga presentkort på hemsidan just nu.</p>
       </section>
     )
   }
-  if (!offer) return <section className="page-hero page-prose" data-bq-theme="restaurant"><h1>Presentkort</h1><p className="cell-muted">Hämtar…</p></section>
+  if (!offer) return <section className="page-hero page-prose presentkort-page" data-bq-theme="restaurant"><h1>Presentkort</h1><p className="cell-muted">Hämtar…</p></section>
 
   return (
-    <section className="page-hero page-prose" data-bq-theme="restaurant">
+    <section className="page-hero page-prose presentkort-page" data-bq-theme="restaurant">
       <h1>Presentkort</h1>
       {returned.failed && !checkout ? (
         <Bar variant="banner" tone="danger">Betalningen gick inte igenom och inget har dragits. Försök igen, gärna med ett annat kort.</Bar>
@@ -237,7 +238,7 @@ function ThankYou({ status }: { status: Paid }) {
   const purchase = rememberedPurchase()
   useEffect(() => () => rememberPurchase(null), [])
   return (
-    <section className="page-hero page-prose" data-bq-theme="restaurant" aria-live="polite">
+    <section className="page-hero page-prose presentkort-page" data-bq-theme="restaurant" aria-live="polite">
       <h1>Tack för köpet!</h1>
       <p>
         {purchase ? `Presentkortet på ${kr(purchase.amountSek)} ` : 'Presentkortet '}

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { Bar, Button } from '@booqy/brand'
+import './presentkort.css'
 import { ApiError } from '../../shared/api'
 import { useSite } from '../../shared/SiteContext'
 import { TurnstileWidget } from '../boka/TurnstileWidget'
@@ -38,7 +39,7 @@ export default function SaldoPage() {
   }
 
   return (
-    <section className="page-hero page-prose" data-bq-theme="restaurant">
+    <section className="page-hero page-prose presentkort-page" data-bq-theme="restaurant">
       <h1>Saldo på presentkort</h1>
       <form onSubmit={submit} noValidate>
         <div className="booking-grid">

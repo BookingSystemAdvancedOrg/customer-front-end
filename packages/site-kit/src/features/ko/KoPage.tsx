@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Bar, Button } from '@booqy/brand'
+import './ko.css'
 import { ApiError } from '../../shared/api'
 import { PhoneInput } from '../../shared/PhoneInput'
 import { toE164 } from '../../shared/phone'
@@ -63,7 +64,7 @@ export default function KoPage() {
 
   if (!config.tenant.features?.waitlist || !location.waitlist?.publicJoin) {
     return (
-      <section className="page-hero page-prose" data-bq-theme="restaurant">
+      <section className="page-hero page-prose ko-page" data-bq-theme="restaurant">
         <h1>Kö</h1>
         <p>{location.name} har ingen kö via hemsidan just nu. <Link to="/boka-bord">Boka bord</Link> eller ring oss.</p>
       </section>
@@ -85,19 +86,13 @@ export default function KoPage() {
   if (token && status) {
     const offered = status.status === 'offered' && status.offer
     return (
-      <section className="page-hero page-prose" data-bq-theme="restaurant" aria-live="polite">
+      <section className="page-hero page-prose ko-page" data-bq-theme="restaurant" aria-live="polite">
         <h1>Din plats i kön</h1>
         {status.status === 'waiting' ? (
           <p>Du är nummer <strong>{status.position}</strong> i kön hos {status.locationName}. Vi sms:ar när ditt bord är klart.</p>
         ) : null}
         {offered ? (
-          <>
-            <Bar variant="banner" tone="success">Ditt bord är klart kl. {status.offer!.startTime}! Bekräfta senast {clock(status.offer!.expiresAt)}.</Bar>
-            <Button variant="primary" busy={busy} busyLabel="Skickar…"
-              onClick={() => void act(async () => { await acceptTable(token); setBooked(true); await refresh() }, 'Det gick inte att ta bordet.')}>
-              Ta bordet
-            </Button>
-          </>
+          <Bar variant="banner" tone="success">Ditt bord är klart kl. {status.offer!.startTime}! Bekräfta senast {clock(status.offer!.expiresAt)}.</Bar>
         ) : null}
         {status.status === 'booked' || booked ? <Bar variant="banner" tone="success">Bordet är ditt. Välkommen in!</Bar> : null}
         {status.status === 'seated' ? <p>Du har fått ett bord. Välkommen!</p> : null}
@@ -105,10 +100,18 @@ export default function KoPage() {
         {status.status === 'left' || status.status === 'removed' ? <p>Du står inte längre i kön.</p> : null}
         {error ? <Bar variant="banner" tone="danger">{error}</Bar> : null}
         {status.status === 'waiting' || offered ? (
-          <Button variant="secondary" size="sm" disabled={busy}
-            onClick={() => void act(async () => { await leaveQueue(token); await refresh() }, 'Det gick inte att lämna kön.')}>
-            Lämna kön
-          </Button>
+          <Bar variant="action" label="Din plats i kön">
+            {offered ? (
+              <Button variant="primary" busy={busy} busyLabel="Skickar…"
+                onClick={() => void act(async () => { await acceptTable(token); setBooked(true); await refresh() }, 'Det gick inte att ta bordet.')}>
+                Ta bordet
+              </Button>
+            ) : null}
+            <Button variant="secondary" disabled={busy}
+              onClick={() => void act(async () => { await leaveQueue(token); await refresh() }, 'Det gick inte att lämna kön.')}>
+              Lämna kön
+            </Button>
+          </Bar>
         ) : null}
       </section>
     )
@@ -148,7 +151,7 @@ function JoinForm({ onJoined }: { onJoined: (token: string) => void }) {
   }
 
   return (
-    <section className="page-hero page-prose" data-bq-theme="restaurant">
+    <section className="page-hero page-prose ko-page" data-bq-theme="restaurant">
       <h1>Kö</h1>
       <p>Alla bord hos {location.name} är upptagna just nu. Ställ dig i kö så sms:ar vi när ett bord blir ledigt i dag.</p>
       <form onSubmit={submit} noValidate>

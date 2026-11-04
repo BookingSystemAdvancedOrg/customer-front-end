@@ -1,0 +1,10 @@
+/* Presentkort och saldo: luft runt beloppsväljaren, meddelanden och knappar. Bara @booqy/brand-tokens. */
+.presentkort-page > .bq-bar,
+.presentkort-page form > .bq-bar,
+.presentkort-page form > .bq-btn {
+  margin-block: var(--bq-space-3);
+}
+.presentkort-page .bq-bar--tab {
+  max-width: 100%;
+  overflow-x: auto;
+}
