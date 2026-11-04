@@ -11,6 +11,7 @@
 
     /* Bundler mode */
     "moduleResolution": "bundler",
+    "customConditions": ["@booqy/source"],
     "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "verbatimModuleSyntax": true,

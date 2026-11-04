@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router-dom'
+import { Bar, Button } from '@booqy/brand'
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js'
 import { useSite } from '../../shared/SiteContext'
 import { useTheme } from '../../shared/theme'
@@ -21,6 +22,7 @@ import {
 } from './giftApi'
 
 type Paid = 'succeeded' | 'processing'
+const CUSTOM = 'custom'
 
 /**
  * Efter 3-D Secure skickar Stripe tillbaka hit med `redirect_status`
@@ -60,19 +62,19 @@ export default function PresentkortPage() {
   if (paid) return <ThankYou status={paid} />
   if (missing || !config.tenant.features?.giftCards) {
     return (
-      <section className="page-hero page-prose">
+      <section className="page-hero page-prose" data-bq-theme="restaurant">
         <h1>Presentkort</h1>
         <p>{config.tenant.name} säljer inga presentkort på hemsidan just nu.</p>
       </section>
     )
   }
-  if (!offer) return <section className="page-hero page-prose"><h1>Presentkort</h1><p className="cell-muted">Hämtar…</p></section>
+  if (!offer) return <section className="page-hero page-prose" data-bq-theme="restaurant"><h1>Presentkort</h1><p className="cell-muted">Hämtar…</p></section>
 
   return (
-    <section className="page-hero page-prose">
+    <section className="page-hero page-prose" data-bq-theme="restaurant">
       <h1>Presentkort</h1>
       {returned.failed && !checkout ? (
-        <p className="notice error" role="alert">Betalningen gick inte igenom och inget har dragits. Försök igen, gärna med ett annat kort.</p>
+        <Bar variant="banner" tone="danger">Betalningen gick inte igenom och inget har dragits. Försök igen, gärna med ett annat kort.</Bar>
       ) : null}
       <p>Ge bort en middag hos {config.tenant.name}. Presentkortet gäller i {offer.validityMonths} månader och kan
         användas både i restaurangen och när man beställer här på hemsidan.</p>
@@ -89,7 +91,8 @@ export default function PresentkortPage() {
 function Details({ offer, onCheckout }: { offer: Offer; onCheckout: (c: Checkout) => void }) {
   const { config, location } = useSite()
   const [purchaseId] = useState(newPurchaseId)
-  const [amount, setAmount] = useState<number>(offer.amountsSek[0] ?? offer.customMinSek)
+  // The chosen tab: one of the fixed amounts, or "custom" (the amount field below).
+  const [choice, setChoice] = useState<string>(offer.amountsSek.length ? String(offer.amountsSek[0]) : CUSTOM)
   const [custom, setCustom] = useState('')
   const [buyerEmail, setBuyerEmail] = useState('')
   const [recipientName, setRecipientName] = useState('')
@@ -100,7 +103,7 @@ function Details({ offer, onCheckout }: { offer: Offer; onCheckout: (c: Checkout
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const siteKey = config.turnstile?.siteKey ?? null
-  const chosen = custom ? Number(custom) : amount
+  const chosen = choice === CUSTOM ? Number(custom || 0) : Number(choice)
 
   async function submit(e: FormEvent) {
     e.preventDefault()
@@ -124,21 +127,17 @@ function Details({ offer, onCheckout }: { offer: Offer; onCheckout: (c: Checkout
     }
   }
 
-  const customOk = !custom || (chosen >= offer.customMinSek && chosen <= offer.customMaxSek && Number.isInteger(chosen))
+  const customOk = choice !== CUSTOM || (chosen >= offer.customMinSek && chosen <= offer.customMaxSek && Number.isInteger(chosen))
+  const amountTabs = [...offer.amountsSek.map((a) => ({ key: String(a), label: kr(a) })), { key: CUSTOM, label: 'Eget belopp' }]
   return (
     <form onSubmit={submit} noValidate>
-      <div className="booking-times" role="group" aria-label="Välj belopp">
-        {offer.amountsSek.map((a) => (
-          <button key={a} type="button" className={`filter-pill${!custom && a === amount ? ' active' : ''}`}
-            aria-pressed={!custom && a === amount} onClick={() => { setAmount(a); setCustom('') }}>
-            {kr(a)}
-          </button>
-        ))}
-      </div>
+      <Bar variant="tab" label="Välj belopp" items={amountTabs} value={choice}
+        onChange={(key) => { setChoice(key); if (key !== CUSTOM) setCustom('') }} />
       <div className="booking-grid">
         <label className="booking-field">
           <span>Eget belopp ({offer.customMinSek}-{offer.customMaxSek} kr)</span>
-          <input inputMode="numeric" value={custom} onChange={(e) => setCustom(e.target.value.replace(/\D/g, ''))} />
+          <input inputMode="numeric" value={custom}
+            onChange={(e) => { setCustom(e.target.value.replace(/\D/g, '')); setChoice(CUSTOM) }} />
         </label>
         <label className="booking-field">
           <span>Din e-post (kvitto{recipientEmail ? '' : ' och koden'})</span>
@@ -164,11 +163,11 @@ function Details({ offer, onCheckout }: { offer: Offer; onCheckout: (c: Checkout
         <Link to="/integritetspolicy" target="_blank" rel="noopener">Läs integritetspolicyn</Link>
       </p>
       {siteKey ? <TurnstileWidget siteKey={siteKey} resetKey={turnstileReset} onToken={setTurnstileToken} /> : null}
-      {error ? <p className="notice error" role="alert">{error}</p> : null}
-      <button type="submit" className="btn-primary" aria-busy={busy}
-        disabled={busy || !buyerEmail.trim() || !customOk || Boolean(siteKey && !turnstileToken)}>
-        {busy ? 'Startar…' : `Till betalning, ${kr(chosen || 0)}`}
-      </button>
+      {error ? <Bar variant="banner" tone="danger">{error}</Bar> : null}
+      <Button type="submit" variant="primary" busy={busy} busyLabel="Startar…"
+        disabled={!buyerEmail.trim() || !customOk || Boolean(siteKey && !turnstileToken)}>
+        {`Till betalning, ${kr(chosen || 0)}`}
+      </Button>
     </form>
   )
 }
@@ -184,7 +183,7 @@ function PayStep({ checkout, onPaid }: { checkout: Checkout; onPaid: (status: Pa
   const fonts = useMemo(() => paymentFonts(), [])
   const appearance = useMemo(() => paymentAppearance(theme), [theme])
   if (!stripePromise) {
-    return <p className="notice error" role="alert">Kortbetalningen är inte tillgänglig just nu.</p>
+    return <Bar variant="banner" tone="danger">Kortbetalningen är inte tillgänglig just nu.</Bar>
   }
   return (
     <>
@@ -226,10 +225,10 @@ function PayForm({ amountSek, onPaid }: { amountSek: number; onPaid: (status: Pa
   return (
     <form onSubmit={pay} aria-busy={busy || undefined}>
       <PaymentElement options={{ layout: { type: 'tabs' }, wallets: { link: 'never' } }} />
-      {error ? <p className="notice error" role="alert">{error}</p> : null}
-      <button type="submit" className="btn-primary" disabled={!stripe || busy}>
-        {busy ? 'Betalar…' : `Betala ${kr(amountSek)}`}
-      </button>
+      {error ? <Bar variant="banner" tone="danger">{error}</Bar> : null}
+      <Button type="submit" variant="primary" disabled={!stripe} busy={busy} busyLabel="Betalar…">
+        {`Betala ${kr(amountSek)}`}
+      </Button>
     </form>
   )
 }
@@ -238,7 +237,7 @@ function ThankYou({ status }: { status: Paid }) {
   const purchase = rememberedPurchase()
   useEffect(() => () => rememberPurchase(null), [])
   return (
-    <section className="page-hero page-prose" aria-live="polite">
+    <section className="page-hero page-prose" data-bq-theme="restaurant" aria-live="polite">
       <h1>Tack för köpet!</h1>
       <p>
         {purchase ? `Presentkortet på ${kr(purchase.amountSek)} ` : 'Presentkortet '}

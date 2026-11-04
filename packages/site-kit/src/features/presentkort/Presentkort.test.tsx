@@ -28,7 +28,8 @@ describe('PresentkortPage', () => {
   it('starts the checkout with the chosen amount and remembers the purchase', async () => {
     vi.mocked(api.startCheckout).mockResolvedValue({ clientSecret: 'pi_1_secret', amountSek: 500, expiresAt: '2028-11-04T12:00:00Z', stripeAccount: 'acct_1' })
     site(<PresentkortPage />)
-    fireEvent.click(await screen.findByRole('button', { name: '500 kr' }))
+    fireEvent.click(await screen.findByRole('tab', { name: '500 kr' }))
+    expect(screen.getByRole('tab', { name: '500 kr' })).toHaveAttribute('aria-selected', 'true')
     fireEvent.change(screen.getByLabelText(/Din e-post/), { target: { value: 'kopare@example.se' } })
     fireEvent.change(screen.getByLabelText(/Mottagarens e-post/), { target: { value: 'sara@example.se' } })
     fireEvent.click(screen.getByRole('button', { name: 'Till betalning, 500 kr' }))
@@ -43,7 +44,18 @@ describe('PresentkortPage', () => {
     site(<PresentkortPage />)
     fireEvent.change(await screen.findByLabelText(/Eget belopp/), { target: { value: '50' } })
     fireEvent.change(screen.getByLabelText(/Din e-post/), { target: { value: 'kopare@example.se' } })
+    expect(screen.getByRole('tab', { name: 'Eget belopp' })).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByRole('button', { name: 'Till betalning, 50 kr' })).toBeDisabled()
+  })
+
+  it('chooses the amount with the brand tab bar and the arrow keys', async () => {
+    site(<PresentkortPage />)
+    const first = await screen.findByRole('tab', { name: '250 kr' })
+    expect(screen.getByRole('tablist', { name: 'Välj belopp' })).toHaveClass('bq-bar--tab')
+    fireEvent.keyDown(first, { key: 'ArrowRight' })
+    expect(screen.getByRole('tab', { name: '500 kr' })).toHaveAttribute('aria-selected', 'true')
+    fireEvent.click(screen.getByRole('tab', { name: 'Eget belopp' }))
+    expect(screen.getByRole('button', { name: 'Till betalning, 0 kr' })).toBeDisabled()
   })
 
   it('shows the thank-you page after the 3-D Secure redirect', () => {
@@ -65,7 +77,7 @@ describe('PresentkortPage', () => {
   it('needs redirect_status, not just ?klart=1', async () => {
     window.history.replaceState(null, '', '/presentkort?klart=1')
     site(<PresentkortPage />)
-    expect(await screen.findByRole('button', { name: '250 kr' })).toBeInTheDocument()
+    expect(await screen.findByRole('tab', { name: '250 kr' })).toBeInTheDocument()
     expect(screen.queryByText('Tack för köpet!')).not.toBeInTheDocument()
   })
 
