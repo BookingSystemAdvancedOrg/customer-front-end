@@ -40,7 +40,7 @@ const TicketReceive = lazy(sitePages.biljettTaEmot)
  * förfrågan (offert, BankID-signering, betalning) finns alltid.
  * Presentkort, kö (när platsen tar emot kö på sajten), förhandsvisning och
  * evenemang (med biljettsidorna) finns bara med funktionen i planen. En sajt från webbplatsbyggaren med en
- * publicerad version ritar okända sökvägar som byggarens sidor.
+ * publicerad version ritar startsidan och okända sökvägar som byggarens sidor; /meny är kvar.
  */
 function App() {
   const { config, location } = useSite()
@@ -55,7 +55,7 @@ function App() {
   return (
     <Routes>
       <Route element={<CustomerLayout />}>
-        <Route index element={<MenyPage />} />
+        <Route index element={builder ? <BuilderPage /> : <MenyPage />} />
         <Route path="meny" element={<MenyPage />} />
         {reservations && <Route path="boka-bord" element={<BookingFlow />} />}
         {reservations && <Route path="bokningsvillkor" element={<BookingTermsPage />} />}
