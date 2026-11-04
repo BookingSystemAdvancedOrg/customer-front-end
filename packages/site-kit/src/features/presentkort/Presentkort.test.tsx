@@ -47,10 +47,32 @@ describe('PresentkortPage', () => {
   })
 
   it('shows the thank-you page after the 3-D Secure redirect', () => {
-    window.history.replaceState(null, '', '/presentkort?klart=1')
+    window.history.replaceState(null, '', '/presentkort?klart=1&payment_intent=pi_1&redirect_status=succeeded')
     window.sessionStorage.setItem('booqy-giftcard-purchase', JSON.stringify({ purchaseId: 'p', amountSek: 250, expiresAt: '2028-11-04T12:00:00Z' }))
     site(<PresentkortPage />)
     expect(screen.getByText(/Presentkortet på 250 kr/)).toBeInTheDocument()
+  })
+
+  it('never thanks for a payment Stripe reports as failed', async () => {
+    window.history.replaceState(null, '', '/presentkort?klart=1&payment_intent=pi_1&redirect_status=failed')
+    window.sessionStorage.setItem('booqy-giftcard-purchase', JSON.stringify({ purchaseId: 'p', amountSek: 250, expiresAt: '2028-11-04T12:00:00Z' }))
+    site(<PresentkortPage />)
+    expect(await screen.findByRole('alert')).toHaveTextContent('Betalningen gick inte igenom')
+    expect(screen.queryByText('Tack för köpet!')).not.toBeInTheDocument()
+    expect(window.location.search).toBe('')
+  })
+
+  it('needs redirect_status, not just ?klart=1', async () => {
+    window.history.replaceState(null, '', '/presentkort?klart=1')
+    site(<PresentkortPage />)
+    expect(await screen.findByRole('button', { name: '250 kr' })).toBeInTheDocument()
+    expect(screen.queryByText('Tack för köpet!')).not.toBeInTheDocument()
+  })
+
+  it('says the bank is still processing when Stripe says processing', () => {
+    window.history.replaceState(null, '', '/presentkort?klart=1&redirect_status=processing')
+    site(<PresentkortPage />)
+    expect(screen.getByText(/behandlas av banken/)).toBeInTheDocument()
   })
 
   it('says no gift cards are sold when the feature is off', async () => {

@@ -20,20 +20,44 @@ import {
   type Offer,
 } from './giftApi'
 
+type Paid = 'succeeded' | 'processing'
+
+/**
+ * Efter 3-D Secure skickar Stripe tillbaka hit med `redirect_status`
+ * (succeeded, processing eller failed). Tack-sidan visas bara när Stripe säger
+ * att betalningen gick igenom eller behandlas, aldrig bara för att `?klart=1` finns.
+ */
+function returnedFromStripe(): { paid: Paid | null; failed: boolean } {
+  if (typeof window === 'undefined') return { paid: null, failed: false }
+  const params = new URLSearchParams(window.location.search)
+  if (params.get('klart') !== '1') return { paid: null, failed: false }
+  const status = params.get('redirect_status')
+  if (status === 'succeeded' || status === 'processing') return { paid: status, failed: false }
+  return { paid: null, failed: true }
+}
+
 /** /presentkort: välj belopp, fyll i, betala. Koden kommer via e-post när Stripe har bekräftat betalningen. */
 export default function PresentkortPage() {
   const { config, location } = useSite()
   const [offer, setOffer] = useState<Offer | null>(null)
   const [missing, setMissing] = useState(false)
   const [checkout, setCheckout] = useState<Checkout | null>(null)
-  const done = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('klart') === '1'
-  const [paid, setPaid] = useState(done)
+  const [returned] = useState(returnedFromStripe)
+  const [paid, setPaid] = useState<Paid | null>(returned.paid)
 
   useEffect(() => {
-    getOffer(location.locationId).then(setOffer).catch(() => setMissing(true))
+    getOffer(location.locationId)
+      .then((o) => (Array.isArray(o?.amountsSek) ? setOffer(o) : setMissing(true)))
+      .catch(() => setMissing(true))
   }, [location.locationId])
 
-  if (paid) return <ThankYou />
+  useEffect(() => {
+    if (!returned.failed) return
+    // Ta bort Stripes parametrar så att en omladdning inte visar felet igen.
+    window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.hash}`)
+  }, [returned.failed])
+
+  if (paid) return <ThankYou status={paid} />
   if (missing || !config.tenant.features?.giftCards) {
     return (
       <section className="page-hero page-prose">
@@ -47,10 +71,13 @@ export default function PresentkortPage() {
   return (
     <section className="page-hero page-prose">
       <h1>Presentkort</h1>
+      {returned.failed && !checkout ? (
+        <p className="notice error" role="alert">Betalningen gick inte igenom och inget har dragits. Försök igen, gärna med ett annat kort.</p>
+      ) : null}
       <p>Ge bort en middag hos {config.tenant.name}. Presentkortet gäller i {offer.validityMonths} månader och kan
         användas både i restaurangen och när man beställer här på hemsidan.</p>
       {checkout ? (
-        <PayStep checkout={checkout} onPaid={() => setPaid(true)} />
+        <PayStep checkout={checkout} onPaid={setPaid} />
       ) : (
         <Details offer={offer} onCheckout={setCheckout} />
       )}
@@ -146,7 +173,7 @@ function Details({ offer, onCheckout }: { offer: Offer; onCheckout: (c: Checkout
   )
 }
 
-function PayStep({ checkout, onPaid }: { checkout: Checkout; onPaid: () => void }) {
+function PayStep({ checkout, onPaid }: { checkout: Checkout; onPaid: (status: Paid) => void }) {
   const { config } = useSite()
   const publishableKey = config.stripe?.publishableKey ?? null
   const stripePromise = useMemo(
@@ -169,7 +196,7 @@ function PayStep({ checkout, onPaid }: { checkout: Checkout; onPaid: () => void 
   )
 }
 
-function PayForm({ amountSek, onPaid }: { amountSek: number; onPaid: () => void }) {
+function PayForm({ amountSek, onPaid }: { amountSek: number; onPaid: (status: Paid) => void }) {
   const stripe = useStripe()
   const elements = useElements()
   const [busy, setBusy] = useState(false)
@@ -187,7 +214,13 @@ function PayForm({ amountSek, onPaid }: { amountSek: number; onPaid: () => void 
       setBusy(false)
       return
     }
-    onPaid()
+    const status = result.paymentIntent?.status
+    if (status === 'succeeded' || status === 'processing') {
+      onPaid(status)
+      return
+    }
+    setError('Betalningen gick inte igenom. Försök igen, gärna med ett annat kort.')
+    setBusy(false)
   }
 
   return (
@@ -201,7 +234,7 @@ function PayForm({ amountSek, onPaid }: { amountSek: number; onPaid: () => void 
   )
 }
 
-function ThankYou() {
+function ThankYou({ status }: { status: Paid }) {
   const purchase = rememberedPurchase()
   useEffect(() => () => rememberPurchase(null), [])
   return (
@@ -209,7 +242,7 @@ function ThankYou() {
       <h1>Tack för köpet!</h1>
       <p>
         {purchase ? `Presentkortet på ${kr(purchase.amountSek)} ` : 'Presentkortet '}
-        är betalt. Koden kommer via e-post inom några minuter
+        {status === 'processing' ? 'behandlas av banken. Koden kommer via e-post så snart betalningen är klar' : 'är betalt. Koden kommer via e-post inom några minuter'}
         {purchase ? ` och gäller till och med ${purchase.expiresAt.slice(0, 10)}` : ''}.
       </p>
       <p className="cell-muted">Hittar du inte mejlet? Titta i skräpposten. Den som har koden kan använda presentkortet.</p>
