@@ -1,0 +1,6 @@
+/* Kö: luft mellan meddelanden, formuläret och knapparna. Bara @booqy/brand-tokens. */
+.ko-page > .bq-bar,
+.ko-page form > .bq-bar,
+.ko-page form > .bq-btn {
+  margin-block: var(--bq-space-3);
+}

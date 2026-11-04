@@ -1,5 +1,5 @@
 /// <reference types="vitest/config" />
-import { defineConfig } from 'vite'
+import { defaultClientConditions, defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import pkg from './package.json' with { type: 'json' }
 
@@ -13,6 +13,8 @@ export default defineConfig(({ mode }) => ({
   // configureSiteKit.
   envPrefix: 'SITE_KIT_BUILD_',
   cacheDir: mode === 'test' ? 'node_modules/.vitest' : 'node_modules/.vite',
+  // @booqy/brand från källan i arbetsytan (som sajten själv), så att testerna inte kräver ett byggt paket.
+  resolve: { conditions: ['@booqy/source', ...defaultClientConditions] },
   build: {
     lib: {
       entry: { index: 'src/index.ts', testing: 'src/testing.ts', styles: 'src/styles.ts' },
