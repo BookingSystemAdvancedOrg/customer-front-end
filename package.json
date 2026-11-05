@@ -9,7 +9,9 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "npm test -w @booqy/brand && npm test -w @booqy/site-kit && vitest run",
-    "brand-lint": "node packages/brand/scripts/brand-lint.mjs --config brand-lint.config.json"
+    "brand-lint": "node packages/brand/scripts/brand-lint.mjs --config brand-lint.config.json",
+    "test:e2e": "playwright test",
+    "typecheck:e2e": "tsc -p e2e/tsconfig.json"
   },
   "dependencies": {
     "@booqy/brand": "0.1.0",
@@ -19,6 +21,7 @@
     "react-router-dom": "^7.18.2"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.7",
