@@ -1,0 +1,235 @@
+/* Evenemang, köp och biljetter på restaurangens sajt. Bara @booqy/brand-tokens. */
+.evenemang-page {
+  text-align: start;
+}
+.evenemang-page h1 {
+  overflow-wrap: anywhere;
+}
+.evenemang-page > .bq-bar,
+.evenemang-form > .bq-bar,
+.evenemang-form > .bq-btn,
+.evenemang-pay > .bq-btn {
+  margin-block: var(--bq-space-3);
+}
+.evenemang-description {
+  white-space: pre-line;
+}
+
+/* Listan */
+.evenemang-list,
+.evenemang-tickets,
+.evenemang-types {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--bq-space-4);
+}
+.evenemang-page .evenemang-list,
+.evenemang-page .evenemang-tickets,
+.evenemang-page .evenemang-types {
+  padding: 0;
+}
+.evenemang-page li + li {
+  margin-top: 0;
+}
+.evenemang-item {
+  position: relative;
+  display: grid;
+  gap: var(--bq-space-1);
+  padding: var(--bq-space-5);
+  border-radius: var(--bq-radius-card);
+  background: var(--bq-surface);
+  color: var(--bq-ink);
+  box-shadow: var(--bq-shadow-sm);
+}
+.evenemang-item:hover {
+  box-shadow: var(--bq-shadow-md);
+}
+.evenemang-page .evenemang-item__title {
+  margin: 0;
+  font: 700 var(--bq-text-xl)/1.2 var(--bq-font-display);
+  color: var(--bq-ink);
+}
+.evenemang-item__title a {
+  color: inherit;
+  text-decoration: none;
+}
+/* Hela kortet är klickbart, länken i rubriken bär fokus och namn. */
+.evenemang-item__title a::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--bq-radius-card);
+}
+.evenemang-item__title a:focus-visible {
+  outline: none;
+}
+.evenemang-item__title a:focus-visible::after {
+  box-shadow: 0 0 0 4px var(--bq-focus);
+}
+.evenemang-item__when,
+.evenemang-item__meta {
+  margin: 0;
+}
+.evenemang-item__when {
+  color: var(--bq-muted);
+}
+.evenemang-item__when::first-letter {
+  text-transform: uppercase;
+}
+.evenemang-item__meta {
+  font-weight: 600;
+}
+
+/* Köpet */
+.evenemang-form {
+  display: grid;
+  gap: var(--bq-space-4);
+  margin-top: var(--bq-space-6);
+}
+.evenemang-fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: grid;
+  gap: var(--bq-space-3);
+}
+.evenemang-fieldset legend {
+  padding: 0;
+  margin-bottom: var(--bq-space-2);
+  font: 700 var(--bq-text-lg)/1.3 var(--bq-font-display);
+  color: var(--bq-ink);
+}
+.evenemang-fieldset:disabled {
+  opacity: 0.6;
+}
+.evenemang-dates {
+  display: grid;
+  gap: var(--bq-space-2);
+}
+.evenemang-date {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  column-gap: var(--bq-space-3);
+  row-gap: var(--bq-space-1);
+  padding: var(--bq-space-3) var(--bq-space-4);
+  border-radius: var(--bq-radius-inner);
+  background: var(--bq-surface);
+  color: var(--bq-ink);
+  box-shadow: inset 0 0 0 1px var(--bq-line);
+  cursor: pointer;
+}
+.evenemang-date:has(input:checked) {
+  box-shadow: inset 0 0 0 2px var(--bq-accent-ink);
+}
+.evenemang-date:has(input:focus-visible) {
+  box-shadow: inset 0 0 0 2px var(--bq-accent-ink), 0 0 0 4px var(--bq-focus);
+}
+.evenemang-date.is-closed {
+  cursor: not-allowed;
+  color: var(--bq-muted);
+}
+.evenemang-date input {
+  grid-row: span 2;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--bq-accent-ink);
+}
+.evenemang-date__when::first-letter {
+  text-transform: uppercase;
+}
+.evenemang-date__when {
+  font-weight: 600;
+}
+.evenemang-date__left {
+  font-size: var(--bq-text-sm);
+  color: var(--bq-muted);
+}
+.evenemang-type {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--bq-space-3);
+  padding: var(--bq-space-3) var(--bq-space-4);
+  border-radius: var(--bq-radius-inner);
+  background: var(--bq-surface);
+  color: var(--bq-ink);
+  box-shadow: inset 0 0 0 1px var(--bq-line);
+}
+.evenemang-type__info {
+  display: grid;
+  gap: var(--bq-space-1);
+  min-width: 0;
+  justify-items: start;
+}
+.evenemang-type__name {
+  font-weight: 700;
+}
+.evenemang-type__price {
+  font-family: var(--bq-font-mono);
+  font-size: var(--bq-text-sm);
+}
+.evenemang-qty {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--bq-space-2);
+}
+.evenemang-qty .bq-btn {
+  min-width: 44px;
+  min-height: 44px;
+  font-size: var(--bq-text-lg);
+}
+.evenemang-qty__n {
+  min-width: 2ch;
+  text-align: center;
+  font: 700 var(--bq-text-lg)/1 var(--bq-font-mono);
+}
+.evenemang-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: var(--bq-space-3);
+}
+.evenemang-error:focus {
+  outline: none;
+}
+.evenemang-total {
+  margin: 0;
+  font: 700 var(--bq-text-xl)/1.2 var(--bq-font-display);
+}
+
+/* Biljetterna */
+.evenemang-ticket-head {
+  display: grid;
+  gap: var(--bq-space-1);
+}
+.evenemang-ticket-head span::first-letter {
+  text-transform: uppercase;
+}
+.evenemang-tickets {
+  margin-top: var(--bq-space-4);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  align-items: start;
+}
+.evenemang-ticket-line {
+  margin: 0;
+}
+.evenemang-gift {
+  display: grid;
+  gap: var(--bq-space-3);
+  justify-items: start;
+  font-family: var(--bq-font-sans);
+}
+.evenemang-gift .bq-field {
+  width: 100%;
+}
+.evenemang-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--bq-space-2);
+  margin: 0;
+}
