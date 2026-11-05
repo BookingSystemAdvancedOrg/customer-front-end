@@ -211,6 +211,7 @@
   text-transform: uppercase;
 }
 .evenemang-tickets {
+  margin-top: var(--bq-space-4);
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
   align-items: start;
 }

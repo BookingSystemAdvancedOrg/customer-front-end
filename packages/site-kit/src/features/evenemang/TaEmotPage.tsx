@@ -3,7 +3,7 @@ import type { FormEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Bar, Button, Field, Input } from '@booqy/brand'
 import './evenemang.css'
-import { acceptGift, errorCode, isNotFound, tokenFromHash } from './eventsApi'
+import { acceptGift, codeOf, isNotFound, tokenFromHash } from './eventsApi'
 
 /**
  * /biljett/ta-emot#<transferToken>: någon har gett bort en biljett. Gästen
@@ -29,7 +29,7 @@ export default function TaEmotPage() {
     } catch (err) {
       setError(isNotFound(err)
         ? 'Länken gäller inte längre. Biljetten kan redan ha tagits emot eller gåvan ha ångrats.'
-        : errorCode(err) === 'invalid_state'
+        : codeOf(err) === 'invalid_state'
           ? 'Biljetten kan inte tas emot: gåvan har ångrats eller biljetten har redan använts.'
           : 'Det gick inte att ta emot biljetten. Försök igen.')
       setBusy(false)

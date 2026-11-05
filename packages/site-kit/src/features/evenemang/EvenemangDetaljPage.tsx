@@ -12,7 +12,8 @@ import { stripeFor } from '../../shared/payment/stripe'
 import { TurnstileWidget } from '../boka/TurnstileWidget'
 import {
   checkout,
-  errorCode,
+  clampQty,
+  codeOf,
   eventsErrorMessage,
   getEvent,
   isNotFound,
@@ -132,7 +133,7 @@ function Purchase({ event, onPaid, onStale }: { event: PublicEvent; onPaid: (p: 
   const tz = location.timezone
   const firstOpen = event.occurrences.find(bookable)
   const [occurrenceId, setOccurrenceId] = useState(firstOpen?.occurrenceId ?? '')
-  const [qty, setQty] = useState<Record<string, number>>({})
+  const [chosen, setQty] = useState<Record<string, number>>({})
   const [buyerName, setBuyerName] = useState('')
   const [buyerEmail, setBuyerEmail] = useState('')
   const [buyerPhone, setBuyerPhone] = useState('')
@@ -146,6 +147,8 @@ function Purchase({ event, onPaid, onStale }: { event: PublicEvent; onPaid: (p: 
   const siteKey = config.turnstile?.siteKey ?? null
 
   const occurrence = event.occurrences.find((o) => o.occurrenceId === occurrenceId)
+  // Efter en omladdning (sold_out, changed_retry) kan färre platser finnas: valet hålls inom dem.
+  const qty = clampQty(chosen, event.ticketTypes, occurrence, event.perOrderMax)
   const total = Object.values(qty).reduce((a, b) => a + b, 0)
   const amountSek = event.ticketTypes.reduce((sum, t) => sum + (qty[t.typeId] ?? 0) * t.priceSek, 0)
   const lines = event.ticketTypes.filter((t) => (qty[t.typeId] ?? 0) > 0).map((t) => ({ typeId: t.typeId, qty: qty[t.typeId] }))
@@ -185,7 +188,7 @@ function Purchase({ event, onPaid, onStale }: { event: PublicEvent; onPaid: (p: 
     } catch (err) {
       setError(eventsErrorMessage(err, 'Det gick inte att starta köpet. Försök igen.'))
       setTurnstileReset((n) => n + 1)
-      const code = errorCode(err)
+      const code = codeOf(err)
       if (code && ['sold_out', 'type_sold_out', 'sales_closed', 'changed_retry'].includes(code)) {
         setOrderId(newId())
         onStale()
@@ -204,7 +207,11 @@ function Purchase({ event, onPaid, onStale }: { event: PublicEvent; onPaid: (p: 
           {`Platserna hålls till kl. ${time(held.expiresAt, tz)}.`}
         </p>
         <PayStep checkout={held} onPaid={onPaid} />
-        <Button variant="ghost" onClick={() => { setHeld(null); setOrderId(newId()); rememberPurchase(null) }}>
+        <Button variant="ghost" onClick={() => {
+          setHeld(null); setOrderId(newId()); rememberPurchase(null)
+          // En Turnstile-token gäller en gång: en ny kontroll innan nästa försök.
+          setTurnstileToken(null); setTurnstileReset((n) => n + 1)
+        }}>
           Ändra biljetterna
         </Button>
       </div>
@@ -331,19 +338,23 @@ function PayForm({ amountSek, onPaid }: { amountSek: number; onPaid: (status: Pa
     setBusy(true)
     setError(null)
     const returnUrl = `${window.location.origin}${window.location.pathname}?klart=1`
-    const result = await stripe.confirmPayment({ elements, redirect: 'if_required', confirmParams: { return_url: returnUrl } })
-    if (result.error) {
-      setError(result.error.message ?? 'Betalningen gick inte igenom. Försök igen.')
+    try {
+      const result = await stripe.confirmPayment({ elements, redirect: 'if_required', confirmParams: { return_url: returnUrl } })
+      if (result.error) {
+        setError(result.error.message ?? 'Betalningen gick inte igenom. Försök igen.')
+        return
+      }
+      const status = result.paymentIntent?.status
+      if (status === 'succeeded' || status === 'processing') {
+        onPaid(status)
+        return
+      }
+      setError('Betalningen gick inte igenom. Försök igen, gärna med ett annat kort.')
+    } catch {
+      setError('Betalningen gick inte att slutföra. Kontrollera anslutningen och försök igen.')
+    } finally {
       setBusy(false)
-      return
     }
-    const status = result.paymentIntent?.status
-    if (status === 'succeeded' || status === 'processing') {
-      onPaid(status)
-      return
-    }
-    setError('Betalningen gick inte igenom. Försök igen, gärna med ett annat kort.')
-    setBusy(false)
   }
 
   return (

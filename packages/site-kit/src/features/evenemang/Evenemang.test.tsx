@@ -17,13 +17,19 @@ vi.mock('./eventsApi', async (orig) => ({
   giveTicket: vi.fn(), cancelGift: vi.fn(), acceptGift: vi.fn(),
 }))
 vi.mock('../../shared/payment/stripe', () => ({ stripeFor: () => null }))
+// Turnstile-attrapp: visar sin resetKey och ger en token per återställning.
+vi.mock('../boka/TurnstileWidget', () => ({
+  TurnstileWidget: ({ resetKey, onToken }: { resetKey: number; onToken: (t: string) => void }) => (
+    <button type="button" onClick={() => onToken(`tok-${resetKey}`)}>{`turnstile ${resetKey}`}</button>
+  ),
+}))
 vi.mock('qrcode', () => ({ default: { toDataURL: vi.fn(async (data: string) => `data:image/png;base64,${btoa(data)}`) } }))
 
 const FEATURES = { reservations: true, ordering: false, catering: false, terminal: false, events: true }
 
-function site(path: string, routePath: string, ui: React.ReactNode) {
+function site(path: string, routePath: string, ui: React.ReactNode, config = siteConfig({ features: FEATURES })) {
   return render(
-    <WithSite config={siteConfig({ features: FEATURES })} path={path}>
+    <WithSite config={config} path={path}>
       <Routes>
         <Route path={routePath} element={ui} />
         <Route path="/biljett" element={<BiljettPage />} />
@@ -81,6 +87,15 @@ describe('EvenemangPage', () => {
     expect(screen.getByText('Från 350 kr')).toBeInTheDocument()
     expect(screen.getByText('Slutsålt')).toHaveClass('bq-chip')
     expect(screen.getByText(/fredag 20 november kl. 19:00/)).toBeInTheDocument()
+  })
+
+  it('shows Gratis, not Från 0 kr, for a free event', async () => {
+    vi.mocked(api.listEvents).mockResolvedValue({ events: [
+      { eventId: 'ev2abcdef', title: 'Quiz', nextOccurrence: '2026-11-21T18:00:00Z', fromPriceSek: 0, soldOut: false },
+    ] })
+    site('/evenemang', '/evenemang', <EvenemangPage />)
+    expect(await screen.findByText('Gratis')).toBeInTheDocument()
+    expect(screen.queryByText(/Från 0 kr/)).not.toBeInTheDocument()
   })
 
   it('shows nothing about events when the API answers 404 (feature off)', async () => {
@@ -159,6 +174,43 @@ describe('EvenemangDetaljPage', () => {
     await waitFor(() => expect(api.checkout).toHaveBeenCalledTimes(2))
     const ids = vi.mocked(api.checkout).mock.calls.map(([, b]) => b.orderId)
     expect(ids[0]).not.toBe(ids[1])
+  })
+
+  it('asks for a fresh Turnstile check after Ändra biljetterna', async () => {
+    const config = { ...siteConfig({ features: FEATURES }), turnstile: { siteKey: 'site-key' } }
+    vi.mocked(api.checkout).mockResolvedValue({ clientSecret: 's', amountSek: 450, expiresAt: '2026-11-05T12:15:00Z', stripeAccount: 'a' })
+    site('/evenemang/ev1abcdef', '/evenemang/:eventId', <EvenemangDetaljPage />, config)
+    fireEvent.click(await screen.findByRole('button', { name: 'En Vuxen till' }))
+    fillBuyer()
+    fireEvent.click(screen.getByRole('button', { name: 'turnstile 0' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Till betalning, 450 kr' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Ändra biljetterna' }))
+    // Den använda token är borta: knappen väntar på en ny kontroll.
+    expect(screen.getByRole('button', { name: 'Till betalning, 450 kr' })).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: 'turnstile 1' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Till betalning, 450 kr' }))
+    await waitFor(() => expect(api.checkout).toHaveBeenCalledTimes(2))
+    expect(vi.mocked(api.checkout).mock.calls.map(([, b]) => b.turnstileToken)).toEqual(['tok-0', 'tok-1'])
+  })
+
+  it('keeps the choice within the seats left after the event is reloaded on sold_out', async () => {
+    vi.mocked(api.checkout).mockRejectedValueOnce(new ApiError(409, 'sold_out', { error: 'sold_out', code: 'sold_out' }))
+    vi.mocked(api.getEvent).mockResolvedValueOnce(EVENT).mockResolvedValueOnce({
+      ...EVENT, occurrences: [{ ...EVENT.occurrences[0], left: 1 }, EVENT.occurrences[1]],
+    })
+    open()
+    const more = await screen.findByRole('button', { name: 'En Vuxen till' })
+    for (let i = 0; i < 3; i++) fireEvent.click(more)
+    fillBuyer()
+    fireEvent.click(screen.getByRole('button', { name: /^Till betalning, 1.350 kr$/ }))
+    expect(await screen.findByText(/Det finns inte så många platser kvar/)).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByLabelText('Antal Vuxen')).toHaveTextContent('1'))
+    expect(screen.getByText('Totalt 450 kr')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'En Vuxen till' })).toBeDisabled()
+    vi.mocked(api.checkout).mockResolvedValueOnce({ amountSek: 450, expiresAt: '2026-11-05T12:15:00Z', clientSecret: 's', stripeAccount: 'a' })
+    fireEvent.click(screen.getByRole('button', { name: 'Till betalning, 450 kr' }))
+    await waitFor(() => expect(api.checkout).toHaveBeenCalledTimes(2))
+    expect(vi.mocked(api.checkout).mock.calls[1][1].lines).toEqual([{ typeId: 'vuxen0001', qty: 1 }])
   })
 
   it('thanks after the 3-D Secure redirect only when Stripe says it succeeded', async () => {

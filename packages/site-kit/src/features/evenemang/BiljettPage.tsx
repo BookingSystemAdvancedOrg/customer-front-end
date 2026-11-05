@@ -93,7 +93,7 @@ function Tickets({ token, data, onChanged }: { token: string; data: TicketPageDa
       {cancelled ? (
         <Bar variant="banner" tone="warning">Tillfället är inställt. Restaurangen återbetalar biljetterna och skickar besked via e-post.</Bar>
       ) : (
-        <p className="cell-muted">Visa QR-koden i dörren. Skärmen kan behöva lysa starkt.</p>
+        <p className="cell-muted">Visa QR-koden i dörren. Skruva gärna upp skärmens ljusstyrka.</p>
       )}
       <ul className="evenemang-tickets">
         {data.tickets.map((t, i) => (

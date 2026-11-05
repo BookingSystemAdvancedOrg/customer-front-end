@@ -56,3 +56,16 @@ describe('eventsApi', () => {
     expect(when('nope')).toBe('')
   })
 })
+
+describe('clampQty and codeOf', () => {
+  it('keeps each type within what can be bought now, in order', async () => {
+    const { clampQty, codeOf } = await import('./eventsApi')
+    const occ: PublicOccurrence = { occurrenceId: 'o', startAt: 'x', left: 3, soldOut: false }
+    const a: PublicTicketType = { typeId: 'a', name: 'A', priceSek: 1, perOrderMax: 4, available: true }
+    const b: PublicTicketType = { typeId: 'b', name: 'B', priceSek: 1, perOrderMax: 4, available: true }
+    expect(clampQty({ a: 2, b: 2 }, [a, b], occ, 10)).toEqual({ a: 2, b: 1 })
+    expect(clampQty({ a: 2 }, [a], { ...occ, left: 0 }, 10)).toEqual({})
+    expect(codeOf(new ApiError(409, 'x', { error: 'sold_out' }))).toBe('sold_out')
+    expect(codeOf(new Error('x'))).toBeNull()
+  })
+})

@@ -46,7 +46,7 @@ export default function EvenemangPage() {
                 </h2>
                 <p className="evenemang-item__when">{when(ev.nextOccurrence, location.timezone)}</p>
                 <p className="evenemang-item__meta">
-                  {ev.soldOut ? <Chip tone="warning">Slutsålt</Chip> : <span>{`Från ${kr(ev.fromPriceSek)}`}</span>}
+                  {ev.soldOut ? <Chip tone="warning">Slutsålt</Chip> : <span>{ev.fromPriceSek > 0 ? `Från ${kr(ev.fromPriceSek)}` : 'Gratis'}</span>}
                 </p>
               </li>
             ))}

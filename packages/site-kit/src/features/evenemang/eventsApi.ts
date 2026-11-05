@@ -165,17 +165,15 @@ const ERRORS: Record<string, string> = {
   invalid_state: 'Biljetten kan inte ändras just nu. Ladda om sidan.',
 }
 
-/** API:ts felkod som en svensk mening; annars `fallback`. */
-export function eventsErrorMessage(err: unknown, fallback: string): string {
-  if (err instanceof ApiError) {
-    const code = String(err.body.code ?? err.body.error ?? '')
-    if (ERRORS[code]) return ERRORS[code]
-  }
-  return fallback
+/** API:ts felkod ({code} eller {error}), annars null. */
+export function codeOf(err: unknown): string | null {
+  return err instanceof ApiError ? String(err.body.code ?? err.body.error ?? '') || null : null
 }
 
-export function errorCode(err: unknown): string | null {
-  return err instanceof ApiError ? String(err.body.code ?? err.body.error ?? '') || null : null
+/** API:ts felkod som en svensk mening; annars `fallback`. */
+export function eventsErrorMessage(err: unknown, fallback: string): string {
+  const code = codeOf(err)
+  return (code && ERRORS[code]) || fallback
 }
 
 export const isNotFound = (err: unknown) => err instanceof ApiError && err.status === 404
@@ -223,6 +221,22 @@ export function isPublicEvent(value: unknown): value is PublicEvent {
 export function isTicketPage(value: unknown): value is TicketPageData {
   const v = value as TicketPageData | null
   return Boolean(v && v.event && v.occurrence && Array.isArray(v.tickets))
+}
+
+/**
+ * Valet inom det som går att köpa nu (t.ex. efter att evenemanget laddats om
+ * vid sold_out): typerna i tur och ordning, var och en högst maxFor.
+ */
+export function clampQty(qty: Record<string, number>, types: PublicTicketType[], occurrence: PublicOccurrence | undefined,
+  eventMax: number): Record<string, number> {
+  const out: Record<string, number> = {}
+  let sum = 0
+  for (const t of types) {
+    const n = Math.min(qty[t.typeId] ?? 0, maxFor(t, occurrence, eventMax, sum))
+    if (n > 0) out[t.typeId] = n
+    sum += n
+  }
+  return out
 }
 
 /** Hur många av en typ gästen högst kan välja just nu. */
