@@ -24,7 +24,7 @@ import {
   newId,
   rememberPurchase,
   rememberedPurchase,
-  RESALE_PER_ORDER,
+  resaleMax,
   time,
   when,
   type PublicEvent,
@@ -298,12 +298,12 @@ function Purchase({ event, onPaid, onStale }: { event: PublicEvent; onPaid: (p: 
           <p className="cell-muted evenemang-resale-intro">
             Gäster som fått förhinder säljer sina biljetter här, alltid till samma pris som de betalade. Du betalar till
             restaurangen som vanligt och får en egen biljett med QR-kod via e-post. Andrahandsbiljetter köps i en egen
-            beställning, högst {RESALE_PER_ORDER} åt gången.
+            beställning, högst {resaleMax(event)} åt gången.
           </p>
           <ul className="evenemang-types">
             {listings.map((r) => {
               const on = pickedIds.includes(r.transferId)
-              const full = !on && picked.length >= RESALE_PER_ORDER
+              const full = !on && picked.length >= resaleMax(event)
               return (
                 <li key={r.transferId} className={`evenemang-type evenemang-resale${on ? ' is-picked' : ''}`}>
                   <label className="evenemang-resale__pick">

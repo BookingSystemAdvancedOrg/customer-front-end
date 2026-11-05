@@ -273,6 +273,20 @@ describe('EvenemangDetaljPage', () => {
     expect(screen.getByRole('button', { name: 'Välj biljetter' })).toBeDisabled()
   })
 
+  it('caps the resale pick at min(perOrderMax, 4)', async () => {
+    const four = ['a', 'b', 'c', 'd', 'e'].map((id, i) => ({ ...LISTINGS[0], transferId: `rs${id}aaaaaaaa`, typeName: `Plats ${i + 1}` }))
+    vi.mocked(api.getEvent).mockResolvedValue({ ...WITH_RESALE, perOrderMax: 2, resale: four })
+    open()
+    fireEvent.click((await screen.findAllByRole('radio'))[1])
+    expect(screen.getByText(/högst 2 åt gången/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('checkbox', { name: /Plats 1/ }))
+    fireEvent.click(screen.getByRole('checkbox', { name: /Plats 2/ }))
+    expect(screen.getByRole('checkbox', { name: /Plats 3/ })).toBeDisabled()
+    vi.mocked(api.getEvent).mockResolvedValue({ ...WITH_RESALE, perOrderMax: 10, resale: four })
+    expect(api.resaleMax({ perOrderMax: 10 })).toBe(4)
+    expect(api.resaleMax({ perOrderMax: 2 })).toBe(2)
+  })
+
   it('shows no resale section when the restaurant has it off', async () => {
     open()
     await screen.findByRole('heading', { name: 'Vinprovning' })

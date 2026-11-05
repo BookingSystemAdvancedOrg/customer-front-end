@@ -62,6 +62,11 @@ export interface PublicEvent {
 /** Högst så många andrahandsbiljetter i en beställning (servern säger too_many_tickets över det). */
 export const RESALE_PER_ORDER = 4
 
+/** Hur många andrahandsbiljetter som får köpas åt gången: evenemangets max per köp, dock högst RESALE_PER_ORDER. */
+export function resaleMax(event: Pick<PublicEvent, 'perOrderMax'>): number {
+  return Math.max(1, Math.min(event.perOrderMax || RESALE_PER_ORDER, RESALE_PER_ORDER))
+}
+
 export interface TicketCheckout {
   clientSecret?: string
   amountSek: number
@@ -200,6 +205,8 @@ const ERRORS: Record<string, string> = {
   invalid_state: 'Biljetten kan inte ändras just nu. Ladda om sidan.',
   resale_taken: 'Biljetten är inte längre till salu. Någon annan hann före, eller så togs den tillbaka.',
   invalid_price: 'En gratisbiljett kan inte säljas, men du kan ge bort den.',
+  own_listing: 'Det är din egen biljett som är till salu. Ta bort den från försäljning på biljettsidan i stället.',
+  resale_limit: 'Biljetten har redan sålts vidare en gång och kan inte säljas igen, men du kan ge bort den.',
 }
 
 /** API:ts felkod ({code} eller {error}), annars null. */

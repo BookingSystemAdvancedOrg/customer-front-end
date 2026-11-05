@@ -220,7 +220,7 @@ function Transfer({ token, ticket, giftOpen, resaleOpen, onChanged }: {
       const paying = pending.status === 'claimed'
       return (
         <div className="evenemang-gift">
-          <p className="evenemang-ticket-line">
+          <p className="evenemang-ticket-line evenemang-ticket-line--mono">
             {paying
               ? `Någon håller på att betala för biljetten (${kr(pending.priceOre / 100)}). Den kan inte tas tillbaka just nu.`
               : `Biljetten är till salu för ${kr(pending.priceOre / 100)} på restaurangens evenemangssida. Den gäller här tills någon har köpt den; då får du pengarna tillbaka till kortet.`}

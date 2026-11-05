@@ -241,6 +241,10 @@
 .evenemang-ticket-line {
   margin: 0;
 }
+.evenemang-ticket-line--mono {
+  font-family: var(--bq-font-mono);
+  font-size: var(--bq-text-sm);
+}
 .evenemang-gift {
   display: grid;
   gap: var(--bq-space-3);
