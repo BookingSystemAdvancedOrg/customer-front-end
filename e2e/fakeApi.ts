@@ -50,6 +50,13 @@ export const EVENT = {
   ],
 }
 
+/** K16 med vidareförsäljning på: två biljetter från andra gäster till det slutsålda tillfället. */
+export const RESALE_LISTINGS = [
+  { transferId: 'rs00000000000000000000000000001', occurrenceId: OCC_2, typeId: 'VUXEN000001', typeName: 'Vinprovning', priceSek: 450, priceOre: 45000 },
+  { transferId: 'rs00000000000000000000000000002', occurrenceId: OCC_2, typeId: 'TIDIG000001', typeName: 'Tidig fågel', priceSek: 350, priceOre: 35000 },
+]
+export const EVENT_WITH_RESALE = { ...EVENT, resaleAllowed: true, resale: RESALE_LISTINGS }
+
 export const EVENTS = {
   events: [
     { eventId: EVENT_ID, title: EVENT.title, nextOccurrence: '2026-11-20T18:00:00Z', fromPriceSek: 350, soldOut: false },
@@ -58,20 +65,30 @@ export const EVENTS = {
   ],
 }
 
-export function ticketPage(pending = false) {
+export type Pending = false | 'gift' | 'resale'
+
+export function ticketPage(pending: Pending = false, resale = false) {
+  const first = { ticketId: '01JTICKET0000000000000001', typeId: 'VUXEN000001', typeName: 'Vinprovning', holderName: 'Sara Ek', status: 'valid',
+    qr: '01JTICKET0000000000000001.9f2c4e1a7b3d5c60', priceOre: 45000 }
+  const pendingFields = pending === 'gift'
+    ? { pendingTransferId: 'tr0000000000000000000000000000001', pendingTransfer: { transferId: 'tr0000000000000000000000000000001', kind: 'gift', status: 'pending', priceOre: 0 } }
+    : pending === 'resale'
+      ? { pendingTransferId: 'tr0000000000000000000000000000001', resale: 'listed', pendingTransfer: { transferId: 'tr0000000000000000000000000000001', kind: 'resale', status: 'pending', priceOre: 45000 } }
+      : {}
   return {
     event: { eventId: EVENT_ID, title: EVENT.title, description: EVENT.description, refundPolicy: EVENT.refundPolicy },
     occurrence: { occurrenceId: OCC_1, startAt: '2026-11-20T18:00:00Z', endAt: '2026-11-20T21:00:00Z', doorsAt: '2026-11-20T17:30:00Z', status: 'scheduled' },
     location: { locationId: LOCATION_ID, name: 'Testkrogen City' },
     tickets: [
-      { ticketId: '01JTICKET0000000000000001', typeId: 'VUXEN000001', typeName: 'Vinprovning', holderName: 'Sara Ek', status: 'valid',
-        qr: '01JTICKET0000000000000001.9f2c4e1a7b3d5c60', ...(pending ? { pendingTransferId: 'tr0000000000000000000000000000001' } : {}) },
+      { ...first, ...pendingFields },
       { ticketId: '01JTICKET0000000000000002', typeId: 'VUXEN000001', typeName: 'Vinprovning', holderName: 'Sara Ek', status: 'checked_in',
-        checkedInAt: '2026-11-20T17:41:00Z' },
+        checkedInAt: '2026-11-20T17:41:00Z', priceOre: 45000 },
+      ...(resale ? [{ ticketId: '01JTICKET0000000000000003', typeId: 'VUXEN000001', typeName: 'Vinprovning', holderName: 'Sara Ek', status: 'void',
+        resale: 'sold', priceOre: 45000 }] : []),
     ],
     wallet: { apple: false, google: false },
     transferAllowed: true,
-    resaleAllowed: false,
+    resaleAllowed: resale,
   }
 }
 
@@ -105,13 +122,14 @@ export interface FakeState {
   cancelled: string[]
   accepted: Record<string, unknown>[]
   eventCalls: number
-  pending: boolean
+  pending: Pending
 }
 
 const json = (route: Route, body: unknown, status = 200) =>
   route.fulfill({ status, contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(body) })
 
-export async function fakeApi(page: Page, { events = true, free = false } = {}): Promise<FakeState> {
+/** `resale`: restaurangen tillåter vidareförsäljning (K16 har utlagda biljetter, K18 säger resaleAllowed). */
+export async function fakeApi(page: Page, { events = true, free = false, resale = false } = {}): Promise<FakeState> {
   const state: FakeState = { checkouts: [], transfers: [], cancelled: [], accepted: [], eventCalls: 0, pending: false }
   await page.route('https://js.stripe.com/**', (route) =>
     route.fulfill({ status: 200, contentType: 'application/javascript', body: FAKE_STRIPE }))
@@ -130,22 +148,26 @@ export async function fakeApi(page: Page, { events = true, free = false } = {}):
     if (req.method() === 'GET' && path === loc) return json(route, EVENTS)
     if (req.method() === 'GET' && path === `${loc}/${EVENT_ID}`) {
       state.eventCalls += 1
-      return json(route, free ? { ...EVENT, ticketTypes: [{ typeId: 'FRI0000001', name: 'Fri entré', priceSek: 0, priceOre: 0, perOrderMax: 4, available: true }] } : EVENT)
+      if (free) return json(route, { ...EVENT, ticketTypes: [{ typeId: 'FRI0000001', name: 'Fri entré', priceSek: 0, priceOre: 0, perOrderMax: 4, available: true }] })
+      return json(route, resale ? EVENT_WITH_RESALE : EVENT)
     }
     if (req.method() === 'POST' && path === `${loc}/checkout`) {
       const body = req.postDataJSON() as Record<string, unknown>
       state.checkouts.push(body)
       if (free) return json(route, { amountSek: 0, expiresAt: '2026-11-05T15:15:00Z' })
-      const lines = body.lines as { typeId: string; qty: number }[]
-      const amountSek = lines.reduce((s, l) => s + l.qty * 450, 0)
+      const picked = (body.resaleTransferIds as string[] | undefined) ?? []
+      const amountSek = picked.length
+        ? RESALE_LISTINGS.filter((r) => picked.includes(r.transferId)).reduce((s, r) => s + r.priceSek, 0)
+        : (body.lines as { typeId: string; qty: number }[]).reduce((s, l) => s + l.qty * 450, 0)
       return json(route, { clientSecret: 'pi_e2e_secret_e2e', amountSek, expiresAt: '2026-11-05T15:15:00Z', stripeAccount: 'acct_e2e' })
     }
-    if (path === `/public/tickets/${TICKET_TOKEN}` && req.method() === 'GET') return json(route, ticketPage(state.pending))
+    if (path === `/public/tickets/${TICKET_TOKEN}` && req.method() === 'GET') return json(route, ticketPage(state.pending, resale))
     if (path === `/public/tickets/${TICKET_TOKEN}/transfers` && req.method() === 'POST') {
       const body = req.postDataJSON() as Record<string, unknown>
       state.transfers.push(body)
-      state.pending = true
-      return json(route, { transferId: body.transferId, ticketId: body.ticketId, kind: 'gift', status: 'pending' }, 201)
+      state.pending = body.kind === 'resale' ? 'resale' : 'gift'
+      return json(route, { transferId: body.transferId, ticketId: body.ticketId, kind: body.kind, status: 'pending',
+        priceOre: body.kind === 'resale' ? 45000 : 0 }, 201)
     }
     if (path.startsWith(`/public/tickets/${TICKET_TOKEN}/transfers/`) && req.method() === 'DELETE') {
       state.cancelled.push(path.split('/').pop() ?? '')

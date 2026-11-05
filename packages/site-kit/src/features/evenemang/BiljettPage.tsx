@@ -13,6 +13,8 @@ import {
   giveTicket,
   isNotFound,
   isTicketPage,
+  kr,
+  listForResale,
   newId,
   passUrl,
   time,
@@ -38,8 +40,12 @@ const STATUS: Record<TicketStatus, { label: string; tone: ChipTone }> = {
  * QR-koden och koden i text för dörren. Den som har länken kan visa
  * biljetterna. En giltig biljett kan ges bort till en e-postadress (K20)
  * fram till två timmar före start, och gåvan kan ångras tills mottagaren har
- * tagit emot den (K22). Andrahandsförsäljning och Wallet-pass är inte byggda
- * än: Wallet-länkarna visas bara när servern säger att de finns.
+ * tagit emot den (K22). Tillåter restaurangen det kan biljetten i stället
+ * läggas ut till försäljning på restaurangens evenemangssida, alltid till
+ * samma pris som den köptes för (K20 kind resale); den kan tas tillbaka tills
+ * någon betalar (K22). När den sålts är den gamla biljetten ogiltig och
+ * pengarna går tillbaka till säljarens kort. Wallet-pass är inte byggda än:
+ * Wallet-länkarna visas bara när servern säger att de finns.
  */
 export default function BiljettPage() {
   const { hash } = useLocation()
@@ -142,73 +148,128 @@ function TicketCard({ token, ticket, n, count, data, onChanged }: {
       {ticket.status === 'checked_in' ? <p className="evenemang-ticket-line">Biljetten har redan använts i dörren.</p> : null}
       {ticket.status === 'transferred' ? <p className="evenemang-ticket-line">Biljetten har getts bort och gäller inte längre här.</p> : null}
       {ticket.status === 'refunded' ? <p className="evenemang-ticket-line">Biljetten är återbetald och gäller inte längre.</p> : null}
-      {ticket.status === 'void' ? <p className="evenemang-ticket-line">Biljetten gäller inte.</p> : null}
+      {ticket.status === 'void' && ticket.resale === 'sold' ? (
+        <p className="evenemang-ticket-line">
+          Biljetten är såld vidare och gäller inte längre. Pengarna går tillbaka till kortet den betalades med inom några bankdagar.
+        </p>
+      ) : null}
+      {ticket.status === 'void' && ticket.resale !== 'sold' ? <p className="evenemang-ticket-line">Biljetten gäller inte.</p> : null}
       {ticket.status === 'valid' && (data.wallet.apple || data.wallet.google) ? (
         <p className="evenemang-actions">
           {data.wallet.apple ? <LinkButton size="sm" href={passUrl(token, ticket.ticketId, 'apple')}>Lägg till i Apple Wallet</LinkButton> : null}
           {data.wallet.google ? <LinkButton size="sm" href={passUrl(token, ticket.ticketId, 'google')}>Spara i Google Wallet</LinkButton> : null}
         </p>
       ) : null}
-      {ticket.status === 'valid' ? <Gift token={token} ticket={ticket} open={data.transferAllowed} onChanged={onChanged} /> : null}
+      {ticket.status === 'valid' ? (
+        <Transfer token={token} ticket={ticket} giftOpen={data.transferAllowed} resaleOpen={data.resaleAllowed} onChanged={onChanged} />
+      ) : null}
     </Card>
   )
 }
 
-/** Ge bort biljetten (K20) eller ångra en gåva som inte är mottagen (K22). */
-function Gift({ token, ticket, open, onChanged }: { token: string; ticket: TicketView; open: boolean; onChanged: () => void }) {
-  const [editing, setEditing] = useState(false)
+type Mode = 'idle' | 'gift' | 'resale'
+
+/**
+ * Ge bort biljetten (K20 gift), lägg ut den till försäljning till samma pris
+ * (K20 resale) eller ångra det ena eller andra (K22). Medan en köpare betalar
+ * för en utlagd biljett går den inte att ta tillbaka (servern svarar
+ * invalid_state); det släpper av sig självt om köpet inte blir av.
+ */
+function Transfer({ token, ticket, giftOpen, resaleOpen, onChanged }: {
+  token: string; ticket: TicketView; giftOpen: boolean; resaleOpen: boolean; onChanged: () => void
+}) {
+  const [mode, setMode] = useState<Mode>('idle')
   const [toEmail, setToEmail] = useState('')
   const [transferId, setTransferId] = useState(newId)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const price = ticket.priceOre ?? 0
+  const canSell = resaleOpen && price > 0
 
-  async function give(e: FormEvent) {
-    e.preventDefault()
+  async function run(action: () => Promise<unknown>, fallback: string) {
     if (busy) return
     setBusy(true)
     setError(null)
     try {
-      await giveTicket(token, { transferId, ticketId: ticket.ticketId, toEmail: toEmail.trim() })
-      setEditing(false)
+      await action()
+      setMode('idle')
       onChanged()
     } catch (err) {
-      setError(eventsErrorMessage(err, 'Det gick inte att ge bort biljetten. Försök igen.'))
+      setError(eventsErrorMessage(err, fallback))
       setTransferId(newId())
     } finally {
       setBusy(false)
     }
   }
 
-  async function undo() {
-    if (!ticket.pendingTransferId || busy) return
-    setBusy(true)
-    setError(null)
-    try {
-      await cancelGift(token, ticket.pendingTransferId)
-      onChanged()
-    } catch (err) {
-      setError(eventsErrorMessage(err, 'Det gick inte att ångra gåvan. Försök igen.'))
-    } finally {
-      setBusy(false)
-    }
+  const give = (e: FormEvent) => {
+    e.preventDefault()
+    void run(() => giveTicket(token, { transferId, ticketId: ticket.ticketId, toEmail: toEmail.trim() }),
+      'Det gick inte att ge bort biljetten. Försök igen.')
+  }
+  const sell = () => run(() => listForResale(token, { transferId, ticketId: ticket.ticketId }),
+    'Det gick inte att lägga ut biljetten. Försök igen.')
+  const undo = (fallback: string) => {
+    if (!ticket.pendingTransferId) return
+    void run(() => cancelGift(token, ticket.pendingTransferId as string), fallback)
   }
 
   if (ticket.pendingTransferId) {
+    const pending = ticket.pendingTransfer
+    if (pending?.kind === 'resale') {
+      const paying = pending.status === 'claimed'
+      return (
+        <div className="evenemang-gift">
+          <p className="evenemang-ticket-line">
+            {paying
+              ? `Någon håller på att betala för biljetten (${kr(pending.priceOre / 100)}). Den kan inte tas tillbaka just nu.`
+              : `Biljetten är till salu för ${kr(pending.priceOre / 100)} på restaurangens evenemangssida. Den gäller här tills någon har köpt den; då får du pengarna tillbaka till kortet.`}
+          </p>
+          {error ? <Bar variant="banner" tone="danger">{error}</Bar> : null}
+          <Button size="sm" busy={busy} busyLabel="Tar bort…" disabled={paying}
+            onClick={() => undo('Det gick inte att ta bort biljetten från försäljning. Försök igen.')}>
+            Ta bort från försäljning
+          </Button>
+        </div>
+      )
+    }
     return (
       <div className="evenemang-gift">
         <p className="evenemang-ticket-line">Biljetten är på väg till mottagaren. Den gäller här tills gåvan har tagits emot.</p>
         {error ? <Bar variant="banner" tone="danger">{error}</Bar> : null}
-        <Button size="sm" busy={busy} busyLabel="Ångrar…" onClick={undo}>Ångra gåvan</Button>
+        <Button size="sm" busy={busy} busyLabel="Ångrar…" onClick={() => undo('Det gick inte att ångra gåvan. Försök igen.')}>Ångra gåvan</Button>
       </div>
     )
   }
-  if (!open) {
-    return <p className="cell-muted evenemang-ticket-line">Biljetten kan inte ges bort (det går fram till två timmar före start, om restaurangen tillåter det).</p>
+  if (!giftOpen && !canSell) {
+    return (
+      <p className="cell-muted evenemang-ticket-line">
+        Biljetten kan inte ges bort eller säljas vidare (det går fram till två timmar före start, om restaurangen tillåter det).
+      </p>
+    )
   }
-  if (!editing) {
+  if (mode === 'idle') {
     return (
       <div className="evenemang-gift">
-        <Button size="sm" onClick={() => setEditing(true)}>Ge bort biljetten</Button>
+        {error ? <Bar variant="banner" tone="danger">{error}</Bar> : null}
+        <p className="evenemang-actions">
+          {giftOpen ? <Button size="sm" onClick={() => setMode('gift')}>Ge bort biljetten</Button> : null}
+          {canSell ? <Button size="sm" onClick={() => setMode('resale')}>Sälj vidare</Button> : null}
+        </p>
+      </div>
+    )
+  }
+  if (mode === 'resale') {
+    return (
+      <div className="evenemang-gift" role="group" aria-labelledby={`salj-${ticket.ticketId}`}>
+        <p className="evenemang-ticket-line" id={`salj-${ticket.ticketId}`}>
+          {`Biljetten läggs ut för ${kr(price / 100)}, samma pris som du betalade. Den syns på restaurangens evenemangssida och kan köpas av vem som helst. När någon betalar slutar din biljett gälla och ${kr(price / 100)} går tillbaka till kortet du betalade med.`}
+        </p>
+        {error ? <Bar variant="banner" tone="danger">{error}</Bar> : null}
+        <p className="evenemang-actions">
+          <Button size="sm" variant="primary" busy={busy} busyLabel="Lägger ut…" onClick={() => { void sell() }}>{`Lägg ut för ${kr(price / 100)}`}</Button>
+          <Button size="sm" variant="ghost" onClick={() => { setMode('idle'); setError(null) }}>Avbryt</Button>
+        </p>
       </div>
     )
   }
@@ -220,7 +281,7 @@ function Gift({ token, ticket, open, onChanged }: { token: string; ticket: Ticke
       {error ? <Bar variant="banner" tone="danger">{error}</Bar> : null}
       <p className="evenemang-actions">
         <Button type="submit" size="sm" variant="primary" busy={busy} busyLabel="Skickar…" disabled={!toEmail.trim()}>Skicka biljetten</Button>
-        <Button size="sm" variant="ghost" onClick={() => { setEditing(false); setError(null) }}>Avbryt</Button>
+        <Button size="sm" variant="ghost" onClick={() => { setMode('idle'); setError(null) }}>Avbryt</Button>
       </p>
     </form>
   )

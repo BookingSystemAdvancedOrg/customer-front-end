@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { EVENT, EVENT_ID, GIFT_TOKEN, LOCATION_ID, OCC_1, TICKET_TOKEN, fakeApi } from './fakeApi'
+import { EVENT, EVENT_ID, GIFT_TOKEN, LOCATION_ID, OCC_1, OCC_2, TICKET_TOKEN, fakeApi } from './fakeApi'
 
 test.describe('Evenemang och biljetter på restaurangens sajt', () => {
   test('a guest buys two tickets end to end: list, date, types, hold, pay, thank-you', async ({ page }) => {
@@ -92,6 +92,45 @@ test.describe('Evenemang och biljetter på restaurangens sajt', () => {
     expect(api.transfers[0]).toMatchObject({ kind: 'gift', ticketId: '01JTICKET0000000000000001', toEmail: 'van@example.se' })
     await page.getByRole('button', { name: 'Ångra gåvan' }).click()
     await expect(page.getByRole('button', { name: 'Ge bort biljetten' })).toBeVisible()
+    expect(api.cancelled).toEqual(['tr0000000000000000000000000000001'])
+  })
+
+  test('a guest buys a ticket from another guest on a sold-out date (face-value resale)', async ({ page }) => {
+    const api = await fakeApi(page, { resale: true })
+    await page.goto(`/evenemang/${EVENT_ID}`)
+    const soldOut = page.getByRole('radio').nth(1)
+    await expect(soldOut).toBeEnabled()
+    await expect(page.getByText('Slutsålt, 2 biljetter från andra gäster')).toBeVisible()
+    await soldOut.check()
+    await expect(page.getByRole('group', { name: 'Biljetter från andra gäster' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'En Vinprovning till' })).toBeDisabled()
+    await page.getByRole('checkbox', { name: 'Vinprovning, 450 kr' }).check()
+    await expect(page.getByText('Totalt 450 kr')).toBeVisible()
+    await page.getByLabel('Namn').fill('Kim Köpare')
+    await page.getByLabel('E-post').fill('kim@example.se')
+    await page.getByRole('button', { name: 'Till betalning, 450 kr' }).click()
+    await expect(page.getByText(/1 biljett från andra gäster/)).toBeVisible()
+    expect(api.checkouts[0]).toMatchObject({ occurrenceId: OCC_2, resaleTransferIds: ['rs00000000000000000000000000001'], buyerName: 'Kim Köpare' })
+    expect(api.checkouts[0].lines).toBeUndefined()
+    await page.getByRole('button', { name: 'Betala 450 kr' }).click()
+    await expect(page.getByRole('heading', { name: 'Tack för köpet!' })).toBeVisible()
+    await expect(page.getByText(/Biljetten till Vinprovning: Rhônedalen är betald \(450 kr\)/)).toBeVisible()
+  })
+
+  test('the ticket page lists a ticket for resale at the price paid and takes it back', async ({ page }) => {
+    const api = await fakeApi(page, { resale: true })
+    await page.goto(`/biljett#${TICKET_TOKEN}`)
+    await expect(page.getByText(/såld vidare och gäller inte längre/)).toBeVisible()
+    await page.getByRole('button', { name: 'Sälj vidare' }).click()
+    await expect(page.getByText(/läggs ut för 450 kr, samma pris som du betalade/)).toBeVisible()
+    await page.getByRole('button', { name: 'Lägg ut för 450 kr' }).click()
+    await expect(page.getByText(/till salu för 450 kr på restaurangens evenemangssida/)).toBeVisible()
+    expect(api.transfers[0]).toMatchObject({ kind: 'resale', ticketId: '01JTICKET0000000000000001' })
+    expect(api.transfers[0]).not.toHaveProperty('toEmail')
+    // the QR stays usable until someone buys it
+    await expect(page.getByRole('img', { name: 'QR-kod för Vinprovning (1 av 3)' })).toBeVisible()
+    await page.getByRole('button', { name: 'Ta bort från försäljning' }).click()
+    await expect(page.getByRole('button', { name: 'Sälj vidare' })).toBeVisible()
     expect(api.cancelled).toEqual(['tr0000000000000000000000000000001'])
   })
 

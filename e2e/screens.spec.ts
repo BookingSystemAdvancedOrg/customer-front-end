@@ -22,7 +22,25 @@ async function toPay(page: Page) {
   await page.getByLabel('E-post').fill('sara@example.se')
 }
 
-const SCREENS: { name: string; free?: boolean; go: (page: Page) => Promise<void> }[] = [
+const SCREENS: { name: string; free?: boolean; resale?: boolean; go: (page: Page) => Promise<void> }[] = [
+  { name: 'evenemang-andrahand', resale: true, go: async (p) => {
+    await p.goto(`/evenemang/${EVENT_ID}`)
+    await p.getByRole('radio').nth(1).check()
+    await p.getByRole('checkbox', { name: 'Vinprovning, 450 kr' }).check()
+    await p.getByLabel('Namn').fill('Kim Köpare')
+    await p.getByLabel('E-post').fill('kim@example.se')
+  } },
+  { name: 'biljett-salj-vidare', resale: true, go: async (p) => {
+    await p.goto(`/biljett#${TICKET_TOKEN}`)
+    await p.getByRole('button', { name: 'Sälj vidare' }).click()
+    await expect(p.getByText(/samma pris som du betalade/)).toBeVisible()
+  } },
+  { name: 'biljett-till-salu', resale: true, go: async (p) => {
+    await p.goto(`/biljett#${TICKET_TOKEN}`)
+    await p.getByRole('button', { name: 'Sälj vidare' }).click()
+    await p.getByRole('button', { name: 'Lägg ut för 450 kr' }).click()
+    await expect(p.getByText(/till salu för 450 kr/)).toBeVisible()
+  } },
   { name: 'evenemang', go: async (p) => { await p.goto('/evenemang'); await expect(p.getByText('Slutsålt')).toBeVisible() } },
   { name: 'evenemang-detalj', go: async (p) => { await toPay(p) } },
   { name: 'evenemang-betalning', go: async (p) => {
@@ -56,7 +74,7 @@ test.describe('skärmbilder', () => {
         test(`${screen.name} ${theme} ${size.device}`, async ({ page }) => {
           await page.setViewportSize({ width: size.width, height: size.height })
           await page.emulateMedia({ colorScheme: theme, reducedMotion: 'reduce' })
-          await fakeApi(page, { free: screen.free })
+          await fakeApi(page, { free: screen.free, resale: screen.resale })
           await screen.go(page)
           await page.evaluate(() => document.fonts.ready)
           // Överst, så att den fasta menyn inte hamnar mitt i helsidesbilden.

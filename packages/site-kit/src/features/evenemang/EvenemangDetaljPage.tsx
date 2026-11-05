@@ -19,10 +19,12 @@ import {
   isNotFound,
   isPublicEvent,
   kr,
+  listingsFor,
   maxFor,
   newId,
   rememberPurchase,
   rememberedPurchase,
+  RESALE_PER_ORDER,
   time,
   when,
   type PublicEvent,
@@ -54,6 +56,11 @@ function returnedFromStripe(): { paid: Paid | null; failed: boolean } {
  * betalning". Biljetterna utfärdas först när Stripe har bekräftat
  * betalningen (webhook), därför visar tack-sidan inga QR-koder: de finns på
  * biljettsidan som mejlet länkar till. Gratisbiljetter skickas direkt.
+ *
+ * Biljetter som andra gäster lagt ut (vidareförsäljning till samma pris, om
+ * restaurangen tillåter det) köps i en egen beställning med
+ * `resaleTransferIds`: samma betalning, men inga nya platser hålls. Ett
+ * slutsålt tillfälle går därför att välja när det finns sådana biljetter.
  */
 export default function EvenemangDetaljPage() {
   const { eventId = '' } = useParams()
@@ -120,8 +127,8 @@ function occurrenceText(o: PublicOccurrence, tz?: string | null): string {
   return `${when(o.startAt, tz)}${end}`
 }
 
-function occurrenceStatus(o: PublicOccurrence): string {
-  if (o.soldOut) return 'Slutsålt'
+function occurrenceStatus(o: PublicOccurrence, listed: number): string {
+  if (o.soldOut) return listed ? `Slutsålt, ${listed === 1 ? '1 biljett' : `${listed} biljetter`} från andra gäster` : 'Slutsålt'
   if (o.salesOpen === false) return 'Försäljningen är stängd'
   return o.left <= 10 ? `${o.left} platser kvar` : 'Biljetter finns'
 }
@@ -131,9 +138,12 @@ const bookable = (o: PublicOccurrence) => !o.soldOut && o.salesOpen !== false &&
 function Purchase({ event, onPaid, onStale }: { event: PublicEvent; onPaid: (p: Paid) => void; onStale: () => void }) {
   const { config, location } = useSite()
   const tz = location.timezone
-  const firstOpen = event.occurrences.find(bookable)
+  const listedFor = (o: PublicOccurrence) => listingsFor(event, o.occurrenceId).length
+  const selectable = (o: PublicOccurrence) => bookable(o) || listedFor(o) > 0
+  const firstOpen = event.occurrences.find(bookable) ?? event.occurrences.find(selectable)
   const [occurrenceId, setOccurrenceId] = useState(firstOpen?.occurrenceId ?? '')
   const [chosen, setQty] = useState<Record<string, number>>({})
+  const [pickedIds, setPicked] = useState<string[]>([])
   const [buyerName, setBuyerName] = useState('')
   const [buyerEmail, setBuyerEmail] = useState('')
   const [buyerPhone, setBuyerPhone] = useState('')
@@ -147,10 +157,14 @@ function Purchase({ event, onPaid, onStale }: { event: PublicEvent; onPaid: (p: 
   const siteKey = config.turnstile?.siteKey ?? null
 
   const occurrence = event.occurrences.find((o) => o.occurrenceId === occurrenceId)
-  // Efter en omladdning (sold_out, changed_retry) kan färre platser finnas: valet hålls inom dem.
-  const qty = clampQty(chosen, event.ticketTypes, occurrence, event.perOrderMax)
-  const total = Object.values(qty).reduce((a, b) => a + b, 0)
-  const amountSek = event.ticketTypes.reduce((sum, t) => sum + (qty[t.typeId] ?? 0) * t.priceSek, 0)
+  const listings = listingsFor(event, occurrenceId)
+  // Efter en omladdning (sold_out, resale_taken, changed_retry) kan färre finnas: valet hålls inom det som finns.
+  const picked = listings.filter((r) => pickedIds.includes(r.transferId))
+  const resaleSek = picked.reduce((sum, r) => sum + r.priceSek, 0)
+  const qty = picked.length ? {} : clampQty(chosen, event.ticketTypes, occurrence, event.perOrderMax)
+  const seats = Object.values(qty).reduce((a, b) => a + b, 0)
+  const total = picked.length || seats
+  const amountSek = picked.length ? resaleSek : event.ticketTypes.reduce((sum, t) => sum + (qty[t.typeId] ?? 0) * t.priceSek, 0)
   const lines = event.ticketTypes.filter((t) => (qty[t.typeId] ?? 0) > 0).map((t) => ({ typeId: t.typeId, qty: qty[t.typeId] }))
 
   // Ett nytt val är en ny beställning (servern svarar changed_retry på samma id med andra rader).
@@ -159,6 +173,12 @@ function Purchase({ event, onPaid, onStale }: { event: PublicEvent; onPaid: (p: 
     setOrderId(newId())
     setError(null)
   }
+  // Andrahandsbiljetter och nya platser är olika beställningar: det ena valet nollar det andra.
+  const pick = (transferId: string, on: boolean) => change(() => {
+    setQty({})
+    setPicked((ids) => (on ? [...ids.filter((i) => i !== transferId), transferId] : ids.filter((i) => i !== transferId)))
+  })
+  const chooseSeats = (fn: () => void) => change(() => { setPicked([]); fn() })
 
   useEffect(() => {
     if (error) errorRef.current?.focus()
@@ -170,12 +190,14 @@ function Purchase({ event, onPaid, onStale }: { event: PublicEvent; onPaid: (p: 
 
   async function submit(e: FormEvent) {
     e.preventDefault()
-    if (!occurrence || !lines.length || busy) return
+    if (!occurrence || (!lines.length && !picked.length) || busy) return
     setBusy(true)
     setError(null)
     try {
       const out = await checkout(location.locationId, {
-        orderId, occurrenceId, lines, buyerName: buyerName.trim(), buyerEmail: buyerEmail.trim(),
+        orderId, occurrenceId,
+        ...(picked.length ? { resaleTransferIds: picked.map((r) => r.transferId) } : { lines }),
+        buyerName: buyerName.trim(), buyerEmail: buyerEmail.trim(),
         ...(buyerPhone.trim() ? { buyerPhone: buyerPhone.trim() } : {}),
         ...(turnstileToken ? { turnstileToken } : {}),
       })
@@ -189,8 +211,9 @@ function Purchase({ event, onPaid, onStale }: { event: PublicEvent; onPaid: (p: 
       setError(eventsErrorMessage(err, 'Det gick inte att starta köpet. Försök igen.'))
       setTurnstileReset((n) => n + 1)
       const code = codeOf(err)
-      if (code && ['sold_out', 'type_sold_out', 'sales_closed', 'changed_retry'].includes(code)) {
+      if (code && ['sold_out', 'type_sold_out', 'sales_closed', 'changed_retry', 'resale_taken'].includes(code)) {
         setOrderId(newId())
+        if (code === 'resale_taken') setPicked([])
         onStale()
       }
     } finally {
@@ -203,8 +226,8 @@ function Purchase({ event, onPaid, onStale }: { event: PublicEvent; onPaid: (p: 
       <div className="evenemang-pay">
         <h2>Betala</h2>
         <p>
-          {`${total} ${total === 1 ? 'biljett' : 'biljetter'}, ${occurrence ? occurrenceText(occurrence, tz) : ''}. `}
-          {`Platserna hålls till kl. ${time(held.expiresAt, tz)}.`}
+          {`${total} ${total === 1 ? 'biljett' : 'biljetter'}${picked.length ? ' från andra gäster' : ''}, ${occurrence ? occurrenceText(occurrence, tz) : ''}. `}
+          {`${picked.length ? 'Biljetterna' : 'Platserna'} hålls till kl. ${time(held.expiresAt, tz)}.`}
         </p>
         <PayStep checkout={held} onPaid={onPaid} />
         <Button variant="ghost" onClick={() => {
@@ -218,22 +241,22 @@ function Purchase({ event, onPaid, onStale }: { event: PublicEvent; onPaid: (p: 
     )
   }
 
-  const canBuy = Boolean(occurrence && bookable(occurrence) && total > 0 && buyerName.trim() && buyerEmail.trim()
-    && (!siteKey || turnstileToken))
+  const canBuy = Boolean(occurrence && total > 0 && (picked.length ? occurrence.salesOpen !== false : bookable(occurrence))
+    && buyerName.trim() && buyerEmail.trim() && (!siteKey || turnstileToken))
   return (
     <form onSubmit={submit} noValidate className="evenemang-form">
       <fieldset className="evenemang-fieldset">
         <legend>{event.occurrences.length > 1 ? 'Välj datum' : 'Datum'}</legend>
         <div className="evenemang-dates">
           {event.occurrences.map((o) => {
-            const open = bookable(o)
+            const open = selectable(o)
             return (
               <label key={o.occurrenceId} className={`evenemang-date${open ? '' : ' is-closed'}`}>
                 <input type="radio" name="occurrence" value={o.occurrenceId} disabled={!open}
                   checked={occurrenceId === o.occurrenceId}
-                  onChange={() => change(() => { setOccurrenceId(o.occurrenceId); setQty({}) })} />
+                  onChange={() => change(() => { setOccurrenceId(o.occurrenceId); setQty({}); setPicked([]) })} />
                 <span className="evenemang-date__when">{occurrenceText(o, tz)}</span>
-                <span className="evenemang-date__left">{occurrenceStatus(o)}</span>
+                <span className="evenemang-date__left">{occurrenceStatus(o, listedFor(o))}</span>
               </label>
             )
           })}
@@ -245,7 +268,7 @@ function Purchase({ event, onPaid, onStale }: { event: PublicEvent; onPaid: (p: 
         <ul className="evenemang-types">
           {event.ticketTypes.map((t) => {
             const n = qty[t.typeId] ?? 0
-            const max = maxFor(t, occurrence, event.perOrderMax, total - n)
+            const max = maxFor(t, occurrence, event.perOrderMax, seats - n)
             const id = `typ-${t.typeId}`
             return (
               <li key={t.typeId} className="evenemang-type">
@@ -257,10 +280,10 @@ function Purchase({ event, onPaid, onStale }: { event: PublicEvent; onPaid: (p: 
                 </div>
                 <div className="evenemang-qty" role="group" aria-labelledby={`${id}-namn`}>
                   <Button size="sm" aria-label={`En ${t.name} färre`} disabled={n === 0}
-                    onClick={() => change(() => setQty((q) => ({ ...q, [t.typeId]: n - 1 })))}>−</Button>
+                    onClick={() => chooseSeats(() => setQty((q) => ({ ...q, [t.typeId]: n - 1 })))}>−</Button>
                   <output className="evenemang-qty__n" aria-live="polite" aria-label={`Antal ${t.name}`}>{n}</output>
                   <Button size="sm" aria-label={`En ${t.name} till`} disabled={n >= max}
-                    onClick={() => change(() => setQty((q) => ({ ...q, [t.typeId]: n + 1 })))}>+</Button>
+                    onClick={() => chooseSeats(() => setQty((q) => ({ ...q, [t.typeId]: n + 1 })))}>+</Button>
                 </div>
               </li>
             )
@@ -268,6 +291,36 @@ function Purchase({ event, onPaid, onStale }: { event: PublicEvent; onPaid: (p: 
         </ul>
         <p className="cell-muted">{`Högst ${event.perOrderMax} biljetter per beställning.`}</p>
       </fieldset>
+
+      {listings.length ? (
+        <fieldset className="evenemang-fieldset" disabled={!occurrence || occurrence.salesOpen === false}>
+          <legend>Biljetter från andra gäster</legend>
+          <p className="cell-muted evenemang-resale-intro">
+            Gäster som fått förhinder säljer sina biljetter här, alltid till samma pris som de betalade. Du betalar till
+            restaurangen som vanligt och får en egen biljett med QR-kod via e-post. Andrahandsbiljetter köps i en egen
+            beställning, högst {RESALE_PER_ORDER} åt gången.
+          </p>
+          <ul className="evenemang-types">
+            {listings.map((r) => {
+              const on = pickedIds.includes(r.transferId)
+              const full = !on && picked.length >= RESALE_PER_ORDER
+              return (
+                <li key={r.transferId} className={`evenemang-type evenemang-resale${on ? ' is-picked' : ''}`}>
+                  <label className="evenemang-resale__pick">
+                    <input type="checkbox" checked={on} disabled={full} aria-label={`${r.typeName}, ${kr(r.priceSek)}`}
+                      onChange={(e) => pick(r.transferId, e.target.checked)} />
+                    <span className="evenemang-type__info">
+                      <span className="evenemang-type__name">{r.typeName}</span>
+                      <span className="evenemang-type__price">{kr(r.priceSek)}</span>
+                    </span>
+                  </label>
+                  <Chip tone="info">Från en annan gäst</Chip>
+                </li>
+              )
+            })}
+          </ul>
+        </fieldset>
+      ) : null}
 
       <fieldset className="evenemang-fieldset">
         <legend>Dina uppgifter</legend>
@@ -295,7 +348,7 @@ function Purchase({ event, onPaid, onStale }: { event: PublicEvent; onPaid: (p: 
         {error ? <Bar variant="banner" tone="danger">{error}</Bar> : null}
       </div>
       <p className="evenemang-total" aria-live="polite">{`Totalt ${kr(amountSek)}`}</p>
-      <Button type="submit" variant="primary" busy={busy} busyLabel="Reserverar platser…" disabled={!canBuy}>
+      <Button type="submit" variant="primary" busy={busy} busyLabel={picked.length ? 'Reserverar biljetterna…' : 'Reserverar platser…'} disabled={!canBuy}>
         {total === 0 ? 'Välj biljetter' : amountSek === 0 ? 'Hämta biljetterna' : `Till betalning, ${kr(amountSek)}`}
       </Button>
     </form>
@@ -386,7 +439,7 @@ function ThankYou({ status }: { status: Paid }) {
           ? `${what} behandlas av banken. Biljetterna kommer via e-post så snart betalningen är klar.`
           : status === 'free'
             ? `${what} är bokade och kommer via e-post om en liten stund.`
-            : `${what} är betalda${purchase ? ` (${kr(purchase.amountSek)})` : ''}. Biljetterna kommer via e-post inom några minuter.`}
+            : `${what} är ${purchase?.qty === 1 ? 'betald' : 'betalda'}${purchase ? ` (${kr(purchase.amountSek)})` : ''}. Biljetterna kommer via e-post inom några minuter.`}
       </p>
       <p>Mejlet har en länk till biljettsidan med QR-koderna. Visa dem i dörren, på telefonen eller utskrivna.</p>
       <p className="cell-muted">Hittar du inte mejlet? Titta i skräpposten. Den som har länken kan visa biljetterna.</p>

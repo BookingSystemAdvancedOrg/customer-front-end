@@ -37,6 +37,16 @@ export interface PublicTicketType {
   available: boolean
 }
 
+/** En biljett som en annan gäst har lagt ut till samma pris som hen betalade (ADR-K 8). */
+export interface ResaleListing {
+  transferId: string
+  occurrenceId: string
+  typeId: string
+  typeName: string
+  priceSek: number
+  priceOre: number
+}
+
 export interface PublicEvent {
   eventId: string
   title: string
@@ -45,7 +55,12 @@ export interface PublicEvent {
   perOrderMax: number
   occurrences: PublicOccurrence[]
   ticketTypes: PublicTicketType[]
+  resaleAllowed?: boolean
+  resale?: ResaleListing[]
 }
+
+/** Högst så många andrahandsbiljetter i en beställning (servern säger too_many_tickets över det). */
+export const RESALE_PER_ORDER = 4
 
 export interface TicketCheckout {
   clientSecret?: string
@@ -56,6 +71,17 @@ export interface TicketCheckout {
 
 export type TicketStatus = 'valid' | 'checked_in' | 'transferred' | 'refunded' | 'void'
 
+/** listed = ute till försäljning, sold = såld vidare (ogiltig), bought = köpt i andra hand. */
+export type ResaleState = 'listed' | 'sold' | 'bought'
+
+export interface PendingTransfer {
+  transferId: string
+  kind: 'gift' | 'resale'
+  /** pending, eller claimed när en köpare håller på att betala för en utlagd biljett. */
+  status: string
+  priceOre: number
+}
+
 export interface TicketView {
   ticketId: string
   typeName: string
@@ -63,7 +89,10 @@ export interface TicketView {
   status: TicketStatus
   qr?: string
   checkedInAt?: string
+  priceOre?: number
   pendingTransferId?: string
+  pendingTransfer?: PendingTransfer
+  resale?: ResaleState
 }
 
 export interface TicketPageData {
@@ -76,10 +105,12 @@ export interface TicketPageData {
   resaleAllowed: boolean
 }
 
+/** Antingen `lines` (nya platser) eller `resaleTransferIds` (utlagda biljetter), aldrig båda. */
 export interface CheckoutBody {
   orderId: string
   occurrenceId: string
-  lines: { typeId: string; qty: number }[]
+  lines?: { typeId: string; qty: number }[]
+  resaleTransferIds?: string[]
   buyerName: string
   buyerEmail: string
   buyerPhone?: string
@@ -97,6 +128,10 @@ export const checkout = (locationId: string, body: CheckoutBody) =>
 export const getTickets = (token: string) => apiGet<TicketPageData>(tok(token))
 export const giveTicket = (token: string, body: { transferId: string; ticketId: string; toEmail: string }) =>
   apiPost<{ transferId: string; ticketId: string; status: string }>(`${tok(token)}/transfers`, { ...body, kind: 'gift' })
+/** Lägg ut biljetten till försäljning till samma pris som den köptes för (K20, kind resale). */
+export const listForResale = (token: string, body: { transferId: string; ticketId: string }) =>
+  apiPost<{ transferId: string; ticketId: string; status: string; priceOre: number }>(`${tok(token)}/transfers`, { ...body, kind: 'resale' })
+/** Ångra en gåva som inte tagits emot, eller ta bort en biljett från försäljning (K22). */
 export const cancelGift = (token: string, transferId: string) =>
   apiDelete<unknown>(`${tok(token)}/transfers/${encodeURIComponent(transferId)}`).catch((err: unknown) => {
     // 204 har ingen kropp: det är inte ett fel.
@@ -161,8 +196,10 @@ const ERRORS: Record<string, string> = {
   stripe_unavailable: 'Kortbetalningen svarar inte just nu. Försök igen om en stund.',
   no_stripe_account: 'Restaurangen kan inte ta emot kortbetalningar just nu.',
   too_many_requests: 'För många försök. Vänta en stund och försök igen.',
-  transfer_closed: 'Biljetten kan inte ges bort längre. Det går fram till två timmar före start.',
+  transfer_closed: 'Biljetten kan inte ges bort eller säljas längre. Det går fram till två timmar före start.',
   invalid_state: 'Biljetten kan inte ändras just nu. Ladda om sidan.',
+  resale_taken: 'Biljetten är inte längre till salu. Någon annan hann före, eller så togs den tillbaka.',
+  invalid_price: 'En gratisbiljett kan inte säljas, men du kan ge bort den.',
 }
 
 /** API:ts felkod ({code} eller {error}), annars null. */
@@ -237,6 +274,11 @@ export function clampQty(qty: Record<string, number>, types: PublicTicketType[],
     sum += n
   }
   return out
+}
+
+/** Utlagda biljetter till ett tillfälle (tomt när vidareförsäljning är av eller stängd). */
+export function listingsFor(event: PublicEvent, occurrenceId: string | undefined): ResaleListing[] {
+  return (event.resale ?? []).filter((r) => r.occurrenceId === occurrenceId)
 }
 
 /** Hur många av en typ gästen högst kan välja just nu. */
