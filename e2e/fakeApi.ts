@@ -13,6 +13,19 @@ export const OCC_1 = `${EVENT_ID}-2026-11-20T18:00:00Z`
 export const OCC_2 = `${EVENT_ID}-2026-11-27T18:00:00Z`
 export const TICKET_TOKEN = 'bzowMUpPUkRFUjAwMDAwMDAx.c2lnbmF0dXJlMDAwMDAw'
 export const GIFT_TOKEN = 'eDowMUpHSUZUMDAwMDAwMDAx.c2lnbmF0dXJlMDAwMDAx'
+/** Bild-CDN:en (VITE_MENU_IMAGE_BASE_URL i playwright.config.ts) och evenemangsbildens nyckel och alt-text. */
+export const CDN = 'https://cdn.e2e.test'
+export const IMAGE_KEY = 'menu-images/t-1/locations/loc-1/menu/0f8fad5b-d9cb-469f-a165-70867728950e.webp'
+export const IMAGE_ALT = 'Långbord dukat med vinglas och tända ljus'
+/** En påhittad bild (SVG) i stället för ett foto: vinglas och ljus på ett bord. */
+const PICTURE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900">
+<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a2418"/><stop offset="1" stop-color="#1a120e"/></linearGradient>
+<radialGradient id="l" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#ffd27a" stop-opacity=".9"/><stop offset="1" stop-color="#ffd27a" stop-opacity="0"/></radialGradient></defs>
+<rect width="1600" height="900" fill="url(#g)"/><rect y="600" width="1600" height="300" fill="#6b4a2e"/>
+<circle cx="420" cy="380" r="220" fill="url(#l)"/><circle cx="1180" cy="380" r="220" fill="url(#l)"/>
+<rect x="405" y="400" width="30" height="200" fill="#f6f1ea"/><rect x="1165" y="400" width="30" height="200" fill="#f6f1ea"/>
+<g fill="#350001" stroke="#d5c4ae" stroke-width="6"><path d="M700 380h120l-20 110a40 40 0 0 1-80 0z"/><path d="M880 380h120l-20 110a40 40 0 0 1-80 0z"/></g>
+<g stroke="#d5c4ae" stroke-width="8"><path d="M760 530v70M940 530v70M720 600h80M900 600h80"/></g></svg>`
 
 export function siteConfig(events = true) {
   return {
@@ -129,8 +142,10 @@ const json = (route: Route, body: unknown, status = 200) =>
   route.fulfill({ status, contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(body) })
 
 /** `resale`: restaurangen tillåter vidareförsäljning (K16 har utlagda biljetter, K18 säger resaleAllowed). */
-export async function fakeApi(page: Page, { events = true, free = false, resale = false } = {}): Promise<FakeState> {
+export async function fakeApi(page: Page, { events = true, free = false, resale = false, images = false, wallet = false } = {}): Promise<FakeState> {
   const state: FakeState = { checkouts: [], transfers: [], cancelled: [], accepted: [], eventCalls: 0, pending: false }
+  const pictured = images ? { imageKey: IMAGE_KEY, imageAlt: IMAGE_ALT } : {}
+  await page.route(`${CDN}/**`, (route) => route.fulfill({ status: 200, contentType: 'image/svg+xml', body: PICTURE }))
   await page.route('https://js.stripe.com/**', (route) =>
     route.fulfill({ status: 200, contentType: 'application/javascript', body: FAKE_STRIPE }))
   await page.route('https://m.stripe.network/**', (route) => route.abort())
@@ -145,11 +160,13 @@ export async function fakeApi(page: Page, { events = true, free = false, resale 
     if (path === '/site-config') return json(route, siteConfig(events))
     if (path.startsWith('/public/') && !events) return notFound()
     const loc = `/public/locations/${LOCATION_ID}/events`
-    if (req.method() === 'GET' && path === loc) return json(route, EVENTS)
+    if (req.method() === 'GET' && path === loc) {
+      return json(route, { events: EVENTS.events.map((e, i) => (i === 0 ? { ...e, ...pictured } : e)) })
+    }
     if (req.method() === 'GET' && path === `${loc}/${EVENT_ID}`) {
       state.eventCalls += 1
-      if (free) return json(route, { ...EVENT, ticketTypes: [{ typeId: 'FRI0000001', name: 'Fri entré', priceSek: 0, priceOre: 0, perOrderMax: 4, available: true }] })
-      return json(route, resale ? EVENT_WITH_RESALE : EVENT)
+      if (free) return json(route, { ...EVENT, ticketTypes: [{ typeId: 'FRI0000001', name: 'Fri entré', priceSek: 0, priceOre: 0, perOrderMax: 4, available: true }], ...pictured })
+      return json(route, { ...(resale ? EVENT_WITH_RESALE : EVENT), ...pictured })
     }
     if (req.method() === 'POST' && path === `${loc}/checkout`) {
       const body = req.postDataJSON() as Record<string, unknown>
@@ -161,7 +178,9 @@ export async function fakeApi(page: Page, { events = true, free = false, resale 
         : (body.lines as { typeId: string; qty: number }[]).reduce((s, l) => s + l.qty * 450, 0)
       return json(route, { clientSecret: 'pi_e2e_secret_e2e', amountSek, expiresAt: '2026-11-05T15:15:00Z', stripeAccount: 'acct_e2e' })
     }
-    if (path === `/public/tickets/${TICKET_TOKEN}` && req.method() === 'GET') return json(route, ticketPage(state.pending, resale))
+    if (path === `/public/tickets/${TICKET_TOKEN}` && req.method() === 'GET') {
+      return json(route, { ...ticketPage(state.pending, resale), ...(wallet ? { wallet: { apple: true, google: true } } : {}) })
+    }
     if (path === `/public/tickets/${TICKET_TOKEN}/transfers` && req.method() === 'POST') {
       const body = req.postDataJSON() as Record<string, unknown>
       state.transfers.push(body)
