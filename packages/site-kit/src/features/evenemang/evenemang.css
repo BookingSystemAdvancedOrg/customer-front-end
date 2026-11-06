@@ -179,6 +179,29 @@
   align-items: center;
   gap: var(--bq-space-2);
 }
+/* Biljetter från andra gäster (vidareförsäljning till samma pris) */
+.evenemang-resale-intro {
+  margin: 0;
+}
+.evenemang-resale.is-picked {
+  box-shadow: inset 0 0 0 2px var(--bq-accent-ink);
+}
+.evenemang-resale:has(input:focus-visible) {
+  box-shadow: inset 0 0 0 2px var(--bq-accent-ink), 0 0 0 4px var(--bq-focus);
+}
+.evenemang-resale__pick {
+  display: flex;
+  align-items: center;
+  gap: var(--bq-space-3);
+  min-height: 44px;
+  cursor: pointer;
+}
+.evenemang-resale__pick input {
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  accent-color: var(--bq-accent-ink);
+}
 .evenemang-qty .bq-btn {
   min-width: 44px;
   min-height: 44px;
@@ -217,6 +240,10 @@
 }
 .evenemang-ticket-line {
   margin: 0;
+}
+.evenemang-ticket-line--mono {
+  font-family: var(--bq-font-mono);
+  font-size: var(--bq-text-sm);
 }
 .evenemang-gift {
   display: grid;

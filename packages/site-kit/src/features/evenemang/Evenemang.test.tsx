@@ -14,7 +14,7 @@ import type { PublicEvent, TicketPageData } from './eventsApi'
 vi.mock('./eventsApi', async (orig) => ({
   ...(await orig<typeof import('./eventsApi')>()),
   listEvents: vi.fn(), getEvent: vi.fn(), checkout: vi.fn(), getTickets: vi.fn(),
-  giveTicket: vi.fn(), cancelGift: vi.fn(), acceptGift: vi.fn(),
+  giveTicket: vi.fn(), cancelGift: vi.fn(), acceptGift: vi.fn(), listForResale: vi.fn(),
 }))
 vi.mock('../../shared/payment/stripe', () => ({ stripeFor: () => null }))
 // Turnstile-attrapp: visar sin resetKey och ger en token per återställning.
@@ -56,13 +56,19 @@ const TICKETS: TicketPageData = {
   occurrence: { occurrenceId: 'ev1abcdef-2026-11-20T18:00:00Z', startAt: '2026-11-20T18:00:00Z', doorsAt: '2026-11-20T17:30:00Z', status: 'scheduled' },
   location: { locationId: 'loc-1', name: 'Testkrogen City' },
   tickets: [
-    { ticketId: 'tk1aaaaaaaa', typeName: 'Vuxen', holderName: 'Sara Ek', status: 'valid', qr: 'tk1aaaaaaaa.0123456789abcdef' },
-    { ticketId: 'tk2aaaaaaaa', typeName: 'Vuxen', holderName: 'Sara Ek', status: 'checked_in' },
+    { ticketId: 'tk1aaaaaaaa', typeName: 'Vuxen', holderName: 'Sara Ek', status: 'valid', qr: 'tk1aaaaaaaa.0123456789abcdef', priceOre: 45000 },
+    { ticketId: 'tk2aaaaaaaa', typeName: 'Vuxen', holderName: 'Sara Ek', status: 'checked_in', priceOre: 45000 },
   ],
   wallet: { apple: false, google: false },
   transferAllowed: true,
   resaleAllowed: false,
 }
+
+const LISTINGS = [
+  { transferId: 'rs1aaaaaaaa', occurrenceId: EVENT.occurrences[1].occurrenceId, typeId: 'vuxen0001', typeName: 'Vuxen', priceSek: 450, priceOre: 45000 },
+  { transferId: 'rs2aaaaaaaa', occurrenceId: EVENT.occurrences[1].occurrenceId, typeId: 'tidig0001', typeName: 'Tidig fågel', priceSek: 350, priceOre: 35000 },
+]
+const WITH_RESALE: PublicEvent = { ...EVENT, resaleAllowed: true, resale: LISTINGS }
 
 const fillBuyer = () => {
   fireEvent.change(screen.getByLabelText(/^Namn/), { target: { value: 'Sara Ek' } })
@@ -213,6 +219,81 @@ describe('EvenemangDetaljPage', () => {
     expect(vi.mocked(api.checkout).mock.calls[1][1].lines).toEqual([{ typeId: 'vuxen0001', qty: 1 }])
   })
 
+  it('offers listed tickets on a sold-out date and buys them in a resale order', async () => {
+    vi.mocked(api.getEvent).mockResolvedValue(WITH_RESALE)
+    vi.mocked(api.checkout).mockResolvedValue({ clientSecret: 'pi_2_secret', amountSek: 800, expiresAt: '2026-11-05T12:15:00Z', stripeAccount: 'acct_1' })
+    open()
+    const radios = await screen.findAllByRole('radio')
+    expect(radios[1]).toBeEnabled()
+    expect(screen.getByText('Slutsålt, 2 biljetter från andra gäster')).toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: 'Biljetter från andra gäster' })).not.toBeInTheDocument()  // other date
+    fireEvent.click(radios[1])
+    expect(screen.getByRole('group', { name: 'Biljetter från andra gäster' })).toBeInTheDocument()
+    expect(screen.getByText(/samma pris som de betalade/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'En Vuxen till' })).toBeDisabled()  // no new seats on a sold-out date
+    fireEvent.click(screen.getByRole('checkbox', { name: /Vuxen, 450 kr/ }))
+    fireEvent.click(screen.getByRole('checkbox', { name: /Tidig fågel, 350 kr/ }))
+    expect(screen.getByText('Totalt 800 kr')).toBeInTheDocument()
+    fillBuyer()
+    fireEvent.click(screen.getByRole('button', { name: 'Till betalning, 800 kr' }))
+    await waitFor(() => expect(api.checkout).toHaveBeenCalled())
+    const body = vi.mocked(api.checkout).mock.calls[0][1]
+    expect(body).toMatchObject({ occurrenceId: EVENT.occurrences[1].occurrenceId, resaleTransferIds: ['rs1aaaaaaaa', 'rs2aaaaaaaa'] })
+    expect(body.lines).toBeUndefined()
+    expect(await screen.findByText(/2 biljetter från andra gäster/)).toBeInTheDocument()
+    expect(screen.getByText(/Biljetterna hålls till kl. 13:15/)).toBeInTheDocument()
+  })
+
+  it('never mixes listed tickets with new seats: picking one clears the other', async () => {
+    vi.mocked(api.getEvent).mockResolvedValue({
+      ...WITH_RESALE, resale: [{ ...LISTINGS[0], occurrenceId: EVENT.occurrences[0].occurrenceId }],
+    })
+    open()
+    fireEvent.click(await screen.findByRole('button', { name: 'En Vuxen till' }))
+    expect(screen.getByText('Totalt 450 kr')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('checkbox', { name: /Vuxen, 450 kr/ }))
+    expect(screen.getByLabelText('Antal Vuxen')).toHaveTextContent('0')
+    expect(screen.getByText('Totalt 450 kr')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'En Vuxen till' }))
+    expect(screen.getByRole('checkbox', { name: /Vuxen, 450 kr/ })).not.toBeChecked()
+    expect(screen.getByLabelText('Antal Vuxen')).toHaveTextContent('1')
+  })
+
+  it('explains resale_taken, reloads and drops the pick', async () => {
+    vi.mocked(api.getEvent).mockResolvedValue(WITH_RESALE)
+    vi.mocked(api.checkout).mockRejectedValueOnce(new ApiError(409, 'resale_taken', { error: 'resale_taken', code: 'resale_taken' }))
+    open()
+    fireEvent.click((await screen.findAllByRole('radio'))[1])
+    fireEvent.click(screen.getByRole('checkbox', { name: /Vuxen, 450 kr/ }))
+    fillBuyer()
+    fireEvent.click(screen.getByRole('button', { name: 'Till betalning, 450 kr' }))
+    expect(await screen.findByText(/Biljetten är inte längre till salu/)).toBeInTheDocument()
+    await waitFor(() => expect(api.getEvent).toHaveBeenCalledTimes(2))
+    expect(screen.getByRole('checkbox', { name: /Vuxen, 450 kr/ })).not.toBeChecked()
+    expect(screen.getByRole('button', { name: 'Välj biljetter' })).toBeDisabled()
+  })
+
+  it('caps the resale pick at min(perOrderMax, 4)', async () => {
+    const four = ['a', 'b', 'c', 'd', 'e'].map((id, i) => ({ ...LISTINGS[0], transferId: `rs${id}aaaaaaaa`, typeName: `Plats ${i + 1}` }))
+    vi.mocked(api.getEvent).mockResolvedValue({ ...WITH_RESALE, perOrderMax: 2, resale: four })
+    open()
+    fireEvent.click((await screen.findAllByRole('radio'))[1])
+    expect(screen.getByText(/högst 2 åt gången/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('checkbox', { name: /Plats 1/ }))
+    fireEvent.click(screen.getByRole('checkbox', { name: /Plats 2/ }))
+    expect(screen.getByRole('checkbox', { name: /Plats 3/ })).toBeDisabled()
+    vi.mocked(api.getEvent).mockResolvedValue({ ...WITH_RESALE, perOrderMax: 10, resale: four })
+    expect(api.resaleMax({ perOrderMax: 10 })).toBe(4)
+    expect(api.resaleMax({ perOrderMax: 2 })).toBe(2)
+  })
+
+  it('shows no resale section when the restaurant has it off', async () => {
+    open()
+    await screen.findByRole('heading', { name: 'Vinprovning' })
+    expect(screen.queryByText(/från andra gäster/)).not.toBeInTheDocument()
+    expect(screen.getAllByRole('radio')[1]).toBeDisabled()
+  })
+
   it('thanks after the 3-D Secure redirect only when Stripe says it succeeded', async () => {
     window.history.replaceState(null, '', '/evenemang/ev1abcdef?klart=1&redirect_status=succeeded')
     window.sessionStorage.setItem('booqy-ticket-purchase', JSON.stringify({ orderId: 'o', eventId: 'ev1abcdef', title: 'Vinprovning', amountSek: 900, qty: 2 }))
@@ -276,8 +357,51 @@ describe('BiljettPage', () => {
     vi.mocked(api.getTickets).mockResolvedValue({ ...TICKETS, transferAllowed: false })
     site('/biljett#abc.def', '/x', <span />)
     const card = (await screen.findByRole('img', { name: /QR-kod/ })).closest('section') as HTMLElement
-    expect(within(card).getByText(/kan inte ges bort/)).toBeInTheDocument()
+    expect(within(card).getByText(/kan inte ges bort eller säljas vidare/)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Ge bort biljetten' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Sälj vidare' })).not.toBeInTheDocument()
+  })
+
+  it('lists a ticket for resale at the price paid and can take it back while nobody pays', async () => {
+    vi.mocked(api.getTickets).mockResolvedValueOnce({ ...TICKETS, resaleAllowed: true })
+    vi.mocked(api.listForResale).mockResolvedValue({ transferId: 't', ticketId: 'tk1aaaaaaaa', status: 'pending', priceOre: 45000 })
+    vi.mocked(api.getTickets).mockResolvedValueOnce({ ...TICKETS, resaleAllowed: true, tickets: [{
+      ...TICKETS.tickets[0], pendingTransferId: 'rs1aaaaaaaa', resale: 'listed',
+      pendingTransfer: { transferId: 'rs1aaaaaaaa', kind: 'resale', status: 'pending', priceOre: 45000 },
+    }] })
+    site('/biljett#abc.def', '/x', <span />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Sälj vidare' }))
+    expect(screen.getByText(/läggs ut för 450 kr, samma pris som du betalade/)).toBeInTheDocument()
+    expect(api.listForResale).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Lägg ut för 450 kr' }))
+    await waitFor(() => expect(api.listForResale).toHaveBeenCalled())
+    expect(vi.mocked(api.listForResale).mock.calls[0][1]).toMatchObject({ ticketId: 'tk1aaaaaaaa' })
+    expect(vi.mocked(api.listForResale).mock.calls[0][1].transferId).toMatch(/^[0-9a-f]{32}$/)
+    expect(await screen.findByText(/till salu för 450 kr på restaurangens evenemangssida/)).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: /QR-kod/ })).toBeInTheDocument()  // still usable until sold
+    vi.mocked(api.cancelGift).mockResolvedValue(null)
+    fireEvent.click(screen.getByRole('button', { name: 'Ta bort från försäljning' }))
+    await waitFor(() => expect(api.cancelGift).toHaveBeenCalledWith('abc.def', 'rs1aaaaaaaa'))
+  })
+
+  it('cannot take a listing back while a buyer is paying, and explains a sold ticket', async () => {
+    vi.mocked(api.getTickets).mockResolvedValue({ ...TICKETS, resaleAllowed: true, tickets: [
+      { ...TICKETS.tickets[0], pendingTransferId: 'rs1aaaaaaaa', resale: 'listed',
+        pendingTransfer: { transferId: 'rs1aaaaaaaa', kind: 'resale', status: 'claimed', priceOre: 45000 } },
+      { ticketId: 'tk3aaaaaaaa', typeName: 'Vuxen', holderName: 'Sara Ek', status: 'void', resale: 'sold', priceOre: 45000 },
+    ] })
+    site('/biljett#abc.def', '/x', <span />)
+    expect(await screen.findByText(/Någon håller på att betala för biljetten \(450 kr\)/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Ta bort från försäljning' })).toBeDisabled()
+    expect(screen.getByText(/såld vidare och gäller inte längre/)).toBeInTheDocument()
+    expect(screen.getAllByText('Ogiltig')).toHaveLength(1)
+  })
+
+  it('offers only the gift for a free ticket even when resale is on', async () => {
+    vi.mocked(api.getTickets).mockResolvedValue({ ...TICKETS, resaleAllowed: true, tickets: [{ ...TICKETS.tickets[0], priceOre: 0 }] })
+    site('/biljett#abc.def', '/x', <span />)
+    expect(await screen.findByRole('button', { name: 'Ge bort biljetten' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Sälj vidare' })).not.toBeInTheDocument()
   })
 })
 
