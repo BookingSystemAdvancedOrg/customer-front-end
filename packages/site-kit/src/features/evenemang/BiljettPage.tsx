@@ -158,12 +158,12 @@ function TicketCard({ token, ticket, n, count, data, onChanged }: {
       {ticket.status === 'valid' && (data.wallet.apple || data.wallet.google) ? (
         <p className="evenemang-actions">
           {data.wallet.apple ? (
-            <LinkButton size="sm" href={passUrl(token, ticket.ticketId, 'apple')} aria-label={`Lägg till ${title} i Apple Wallet`}>
+            <LinkButton size="sm" href={passUrl(token, ticket.ticketId, 'apple')} aria-label={`Lägg till i Apple Wallet: ${title}`}>
               Lägg till i Apple Wallet
             </LinkButton>
           ) : null}
           {data.wallet.google ? (
-            <LinkButton size="sm" href={passUrl(token, ticket.ticketId, 'google')} aria-label={`Lägg till ${title} i Google Wallet`}>
+            <LinkButton size="sm" href={passUrl(token, ticket.ticketId, 'google')} aria-label={`Lägg till i Google Wallet: ${title}`}>
               Lägg till i Google Wallet
             </LinkButton>
           ) : null}

@@ -39,8 +39,8 @@ test.describe('Evenemangsbilder och Wallet', () => {
 
     await fakeApi(page, { wallet: true })
     await page.reload()
-    const apple = page.getByRole('link', { name: 'Lägg till Vinprovning (1 av 2) i Apple Wallet' })
-    const google = page.getByRole('link', { name: 'Lägg till Vinprovning (1 av 2) i Google Wallet' })
+    const apple = page.getByRole('link', { name: 'Lägg till i Apple Wallet: Vinprovning (1 av 2)' })
+    const google = page.getByRole('link', { name: 'Lägg till i Google Wallet: Vinprovning (1 av 2)' })
     await expect(apple).toBeVisible()
     await expect(google).toBeVisible()
     expect(await apple.getAttribute('href')).toBe(`${API}/public/tickets/${TICKET_TOKEN}/pass?ticketId=01JTICKET0000000000000001&kind=apple`)

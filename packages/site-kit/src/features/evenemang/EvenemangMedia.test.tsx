@@ -94,10 +94,10 @@ describe('Wallet buttons', () => {
   it('links each valid ticket to its own Apple and Google pass when the API says Wallet is available', async () => {
     vi.mocked(api.getTickets).mockResolvedValue(TICKETS)
     site('/biljett#abc.def', '/biljett', <BiljettPage />)
-    const apple = await screen.findByRole('link', { name: 'Lägg till Vuxen (1 av 2) i Apple Wallet' })
+    const apple = await screen.findByRole('link', { name: 'Lägg till i Apple Wallet: Vuxen (1 av 2)' })
     expect(apple).toHaveTextContent('Lägg till i Apple Wallet')
     expect(apple).toHaveAttribute('href', 'https://api.example/public/tickets/abc.def/pass?ticketId=tk1aaaaaaaa&kind=apple')
-    expect(screen.getByRole('link', { name: 'Lägg till Vuxen (1 av 2) i Google Wallet' }))
+    expect(screen.getByRole('link', { name: 'Lägg till i Google Wallet: Vuxen (1 av 2)' }))
       .toHaveAttribute('href', 'https://api.example/public/tickets/abc.def/pass?ticketId=tk1aaaaaaaa&kind=google')
     // the refunded ticket gets no pass
     expect(screen.getAllByRole('link', { name: /Wallet/ })).toHaveLength(2)
