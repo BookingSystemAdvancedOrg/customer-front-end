@@ -14,6 +14,7 @@ import {
   checkout,
   clampQty,
   codeOf,
+  eventImage,
   eventsErrorMessage,
   getEvent,
   isNotFound,
@@ -103,10 +104,12 @@ export default function EvenemangDetaljPage() {
     )
   }
   const ev = load.event
+  const image = eventImage(ev)
   return (
     <section className="page-hero page-prose evenemang-page" data-bq-theme="restaurant">
       <p className="hero-kicker"><Link to="/evenemang">Alla evenemang</Link></p>
       <h1>{ev.title}</h1>
+      {image ? <img className="evenemang-hero-img" src={image.src} alt={image.alt} width={1200} height={675} /> : null}
       {ev.description ? <p className="evenemang-description">{ev.description}</p> : null}
       {returned.failed ? (
         <Bar variant="banner" tone="danger">Betalningen gick inte igenom och inget har dragits. Försök igen, gärna med ett annat kort.</Bar>

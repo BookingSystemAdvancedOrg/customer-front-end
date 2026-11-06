@@ -1,5 +1,6 @@
 import { ApiError, apiBaseUrl, apiDelete, apiGet, apiPost } from '../../shared/api'
 import { TICKET_PURCHASE_KEY } from '../../shared/storageRegistry'
+import { menuImageUrl } from '../meny/menuApi'
 
 /**
  * Evenemang och biljetter på restaurangens sajt (CONTRACTS.md 6.K K15-K22,
@@ -11,7 +12,9 @@ import { TICKET_PURCHASE_KEY } from '../../shared/storageRegistry'
 export interface PublicEventSummary {
   eventId: string
   title: string
-  imageUrl?: string
+  /** Bilden laddas upp som menybilderna: S3-nyckeln, URL:en byggs med sajtens bild-CDN. */
+  imageKey?: string
+  imageAlt?: string
   nextOccurrence: string
   fromPriceSek: number
   soldOut: boolean
@@ -51,6 +54,8 @@ export interface PublicEvent {
   eventId: string
   title: string
   description?: string
+  imageKey?: string
+  imageAlt?: string
   refundPolicy?: string | null
   perOrderMax: number
   occurrences: PublicOccurrence[]
@@ -145,6 +150,12 @@ export const cancelGift = (token: string, transferId: string) =>
   })
 export const acceptGift = (transferToken: string, name: string) =>
   apiPost<{ ticketToken: string }>(`/public/ticket-transfers/${encodeURIComponent(transferToken)}/accept`, { name })
+
+/** Evenemangets bild, eller null utan bild eller utan bild-CDN (då visas ingen bild). */
+export function eventImage(ev: { imageKey?: string; imageAlt?: string }): { src: string; alt: string } | null {
+  const src = ev.imageKey ? menuImageUrl(ev.imageKey) : null
+  return src ? { src, alt: ev.imageAlt ?? '' } : null
+}
 
 /** Länk till ett Wallet-pass (K19); visas bara när servern säger att Wallet finns. */
 export function passUrl(token: string, ticketId: string, kind: 'apple' | 'google'): string {

@@ -44,8 +44,9 @@ const STATUS: Record<TicketStatus, { label: string; tone: ChipTone }> = {
  * läggas ut till försäljning på restaurangens evenemangssida, alltid till
  * samma pris som den köptes för (K20 kind resale); den kan tas tillbaka tills
  * någon betalar (K22). När den sålts är den gamla biljetten ogiltig och
- * pengarna går tillbaka till säljarens kort. Wallet-pass är inte byggda än:
- * Wallet-länkarna visas bara när servern säger att de finns.
+ * pengarna går tillbaka till säljarens kort. Wallet-knapparna (K19) visas per
+ * giltig biljett bara när servern säger att Apple respektive Google Wallet
+ * finns (av som standard).
  */
 export default function BiljettPage() {
   const { hash } = useLocation()
@@ -156,8 +157,16 @@ function TicketCard({ token, ticket, n, count, data, onChanged }: {
       {ticket.status === 'void' && ticket.resale !== 'sold' ? <p className="evenemang-ticket-line">Biljetten gäller inte.</p> : null}
       {ticket.status === 'valid' && (data.wallet.apple || data.wallet.google) ? (
         <p className="evenemang-actions">
-          {data.wallet.apple ? <LinkButton size="sm" href={passUrl(token, ticket.ticketId, 'apple')}>Lägg till i Apple Wallet</LinkButton> : null}
-          {data.wallet.google ? <LinkButton size="sm" href={passUrl(token, ticket.ticketId, 'google')}>Spara i Google Wallet</LinkButton> : null}
+          {data.wallet.apple ? (
+            <LinkButton size="sm" href={passUrl(token, ticket.ticketId, 'apple')} aria-label={`Lägg till i Apple Wallet: ${title}`}>
+              Lägg till i Apple Wallet
+            </LinkButton>
+          ) : null}
+          {data.wallet.google ? (
+            <LinkButton size="sm" href={passUrl(token, ticket.ticketId, 'google')} aria-label={`Lägg till i Google Wallet: ${title}`}>
+              Lägg till i Google Wallet
+            </LinkButton>
+          ) : null}
         </p>
       ) : null}
       {ticket.status === 'valid' ? (
