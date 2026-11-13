@@ -74,9 +74,6 @@
   font: inherit;
   font-size: 0.92rem;
   color: var(--ink);
-  /* The form sits on the grey page background, so fields are off-white
-     (surface) with a hairline instead of the grey fill used inside cards. */
-  background-color: var(--surface);
   border: 0;
   box-shadow: inset 0 0 0 1px var(--border);
   border-radius: var(--r-md);
@@ -106,7 +103,6 @@
 
 .contact-form-field select option {
   color: var(--ink);
-  background: var(--surface);
 }
 
 .contact-form-field input:focus,
@@ -144,9 +140,7 @@
   position: sticky;
   top: 0;
   z-index: 40;
-  background: var(--accent);
   color: var(--on-accent);
-  box-shadow: 0 1px 0 color-mix(in srgb, var(--ink) 12%, transparent), 0 8px 20px -14px rgba(0, 0, 0, 0.5);
 }
 
 .site-header-inner {
@@ -367,8 +361,6 @@
   z-index: 50;
   width: min(86vw, 340px);
   padding: 76px 16px 24px;
-  background: var(--surface);
-  box-shadow: var(--shadow-lg);
   transform: translateX(100%);
   visibility: hidden;
   transition: transform 320ms var(--spring), visibility 0s linear 320ms;
@@ -407,7 +399,7 @@
 
 .mobile-drawer-list a:hover,
 .mobile-drawer-hours-trigger:hover {
-  background: var(--fill);
+  background: var(--wall-tint);
 }
 
 /* --- Startsidans hero ---------------------------------------------------------- */
@@ -416,8 +408,6 @@
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  background: var(--accent);
-  color: var(--on-accent);
 }
 
 .home-hero-body {
@@ -515,12 +505,6 @@
   stroke-linejoin: round;
 }
 
-.action--primary {
-  background: var(--surface);
-  color: var(--ink);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.12), 0 14px 26px -12px rgba(0, 0, 0, 0.5);
-}
-
 .action--primary svg {
   stroke: var(--accent-ink);
 }
@@ -564,7 +548,6 @@
   border-radius: var(--r-md);
   padding: 8px 14px;
   border-radius: var(--r-pill);
-  background: var(--surface);
   color: var(--muted);
   font-size: 0.92rem;
   box-shadow: 0 0 0 1px var(--line);
@@ -588,7 +571,6 @@
   padding: 12px 16px;
   border: 0;
   border-radius: var(--r-md);
-  background: var(--fill);
   box-shadow: inset 0 0 0 1px var(--line);
   color: var(--ink);
   font: 400 1.05rem/1.4 var(--font);
@@ -605,8 +587,7 @@
 /* --- Footer ------------------------------------------------------------------------- */
 
 .site-footer {
-  background: color-mix(in srgb, var(--ink) 94%, var(--accent));
-  color: color-mix(in srgb, var(--bq-snow) 78%, transparent);
+  color: var(--muted);
   padding: clamp(40px, 6vw, 64px) 0 28px;
   font-size: 0.95rem;
 }
@@ -831,13 +812,6 @@
   border-radius: 0;
 }
 
-.mobile-drawer {
-  border-radius: 0;
-  padding: 84px 20px 24px;
-  background: var(--surface);
-  box-shadow: -14px 0 18px rgba(0, 0, 0, 0.22);
-}
-
 .mobile-drawer-list a,
 .mobile-drawer-hours-trigger {
   border-radius: var(--r-md);
@@ -855,22 +829,6 @@
 
 .home-hero {
   padding-bottom: 22px;
-}
-
-.home-hero::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 2;
-  height: 22px;
-  background: linear-gradient(var(--steel) 0 14px, var(--steel-lo) 14px 16px, var(--steel) 16px);
-  box-shadow: var(--rail-shadow);
-}
-
-.home-hero--photo::after {
-  opacity: 1;
 }
 
 .home-hero-body {
@@ -916,22 +874,6 @@
   stroke-width: 2.2;
 }
 
-.action--primary {
-  background: var(--paper);
-  color: var(--print);
-  box-shadow: 0 2px 6px -2px rgba(0, 0, 0, 0.35);
-}
-
-.action--primary svg {
-  stroke: var(--print);
-}
-
-.action--primary:hover {
-  background: var(--bq-snow);
-  transform: translateY(-1px);
-  box-shadow: 0 6px 14px -6px rgba(0, 0, 0, 0.5);
-}
-
 .action--secondary {
   box-shadow: inset 0 0 0 2px color-mix(in srgb, currentColor 60%, transparent);
 }
@@ -960,11 +902,10 @@
   padding: 10px 14px;
   border: 1.5px solid var(--paper-line);
   border-radius: var(--r-md);
-  background: var(--fill);
   box-shadow: none;
   color: var(--ink);
   font: 400 1rem/1.4 var(--font);
-  transition: border-color 160ms var(--ease), background-color 160ms var(--ease);
+  transition: border-color 160ms var(--ease);
 }
 
 .contact-form-field input:hover,
@@ -976,7 +917,6 @@
 .contact-form-field select:focus,
 .contact-form-field textarea:focus {
   outline: none;
-  background: var(--surface);
   border-color: var(--ink);
   box-shadow: none;
 }
@@ -984,8 +924,6 @@
 .page > .order-hint {
   border-radius: var(--r-lg);
   border: 1.5px dashed var(--paper-line);
-  background: var(--surface);
-  box-shadow: none;
   text-align: left;
 }
 
@@ -1018,20 +956,7 @@
   max-width: 34rem;
   margin: 0 auto clamp(28px, 4vw, 48px);
   padding: clamp(20px, 3vw, 28px) clamp(20px, 3vw, 28px) calc(24px + var(--tooth-h));
-  background: var(--surface);
-  box-shadow: var(--shadow);
   animation: drop 640ms var(--ease) both;
-}
-
-.contact-form::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: var(--tooth-h);
-  background: conic-gradient(from -45deg at 50% 100%, var(--table) 0deg, transparent 1deg 89deg, var(--table) 90deg) 0 100% / var(--tooth) var(--tooth-h) repeat-x;
-  pointer-events: none;
 }
 
 .contact-form-field label {
@@ -1041,8 +966,6 @@
 /* --- Footer: tryckfärgsvart, pappersvit text ---------------------------- */
 
 .site-footer {
-  background: var(--print);
-  color: color-mix(in srgb, var(--paper) 72%, transparent);
   font-size: 0.95rem;
 }
 

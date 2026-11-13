@@ -122,9 +122,6 @@
   --r-panel: 28px;
   /* den rivna kanten och railen finns inte i admin-looken */
   --tooth-h: 0px;
-  --glass: rgb(var(--bq-snow-rgb) / 0.62);
-  --glass-hi: rgb(var(--bq-snow-rgb) / 0.74);
-  --rim: inset 0 1px 0 rgb(var(--bq-snow-rgb) / 0.9), inset 0 0 0 1px rgb(var(--bq-snow-rgb) / 0.55);
   --rim-gloss: inset 0 1px 0 rgb(var(--bq-snow-rgb) / 0.95), inset 0 0 0 1px rgb(var(--bq-snow-rgb) / 0.6), inset 0 -1px 0 rgba(58, 36, 24, 0.06);
   --card-shadow: 0 1px 2px rgba(58, 36, 24, 0.06), 0 14px 34px -22px rgba(58, 36, 24, 0.45);
   --card-shadow-hi: 0 1px 2px rgba(58, 36, 24, 0.08), 0 22px 44px -24px rgba(58, 36, 24, 0.55);
@@ -138,6 +135,9 @@
   --glass-blur: 18px;
   --glass-highlight: rgb(var(--bq-snow-rgb) / 0.85);
   --glass-text-bg: rgb(var(--bq-snow-rgb) / 0.8);
+  /* inre ytor i ett glaskort (rutor, listor, fält): bara en tunn ton, ingen egen oskärpa */
+  --glass-fill: rgb(var(--bq-snow-rgb) / 0.45);
+  --glass-field: rgb(var(--bq-snow-rgb) / 0.68);
   --glass-edge: inset 0 1px 0 var(--glass-highlight), inset 0 0 0 1px var(--glass-border);
   --backdrop-blobs:
     radial-gradient(48% 42% at 12% 16%, rgba(53, 0, 1, 0.16), transparent 70%),
@@ -183,9 +183,6 @@
   --shadow: 0 1px 1px rgba(0, 0, 0, 0.3), 0 14px 30px -20px rgba(0, 0, 0, 0.6);
   --shadow-lg: 0 2px 8px -3px rgba(0, 0, 0, 0.4), 0 40px 80px -40px rgba(0, 0, 0, 0.7);
   --plate-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 8px 18px -12px rgba(0, 0, 0, 0.7);
-  --glass: rgba(26, 18, 14, 0.7);
-  --glass-hi: rgba(26, 18, 14, 0.8);
-  --rim: inset 0 1px 0 rgba(213, 196, 174, 0.18), inset 0 0 0 1px rgba(213, 196, 174, 0.1);
   --rim-gloss: inset 0 1px 0 rgba(213, 196, 174, 0.24), inset 0 0 0 1px rgba(213, 196, 174, 0.1);
   --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 14px 34px -22px rgba(0, 0, 0, 0.8);
   --card-shadow-hi: 0 1px 2px rgba(0, 0, 0, 0.35), 0 22px 44px -24px rgba(0, 0, 0, 0.85);
@@ -197,6 +194,8 @@
   --glass-border: rgba(213, 196, 174, 0.14);
   --glass-highlight: rgba(213, 196, 174, 0.22);
   --glass-text-bg: rgba(26, 18, 14, 0.82);
+  --glass-fill: rgba(213, 196, 174, 0.07);
+  --glass-field: rgba(26, 18, 14, 0.5);
   color-scheme: dark;
   accent-color: #f6f1ea;
 }
@@ -263,10 +262,10 @@ body::before {
   min-height: 64px;
   padding: 8px 10px 8px 22px;
   border-radius: var(--r-pill);
-  background: var(--glass-hi);
-  box-shadow: var(--rim), var(--shadow);
-  -webkit-backdrop-filter: blur(16px) saturate(1.6);
-  backdrop-filter: blur(16px) saturate(1.6);
+  background: var(--glass-bg);
+  box-shadow: var(--glass-edge), var(--shadow);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.6);
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.6);
 }
 .site .site-header-wordmark {
   font: 800 1.35rem/1 var(--display);
@@ -323,11 +322,12 @@ body::before {
   font: 600 0.8rem/1 var(--font);
 }
 .mobile-drawer {
+  padding: 84px 20px 24px;
   border-radius: var(--r-panel) 0 0 var(--r-panel);
-  background: var(--glass-hi);
-  -webkit-backdrop-filter: blur(18px) saturate(1.5);
-  backdrop-filter: blur(18px) saturate(1.5);
-  box-shadow: var(--rim), var(--shadow-lg);
+  background: var(--glass-text-bg);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.5);
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.5);
+  box-shadow: var(--glass-edge), var(--shadow-lg);
 }
 .mobile-drawer-list a,
 .mobile-drawer-hours-trigger {
@@ -346,15 +346,12 @@ body::before {
   padding: 0;
   width: calc(100% - 2 * clamp(12px, 3vw, 24px));
   border-radius: var(--r-panel);
-  background: var(--glass);
+  background: var(--glass-bg);
   color: var(--ink);
-  box-shadow: var(--rim), var(--shadow-lg);
-  -webkit-backdrop-filter: blur(18px) saturate(1.5);
-  backdrop-filter: blur(18px) saturate(1.5);
+  box-shadow: var(--glass-edge), var(--shadow-lg);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.5);
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.5);
   overflow: hidden;
-}
-.home-hero::after {
-  display: none;
 }
 .home-hero-body {
   padding: clamp(36px, 6vw, 72px) clamp(22px, 4vw, 56px);
@@ -400,16 +397,17 @@ body::before {
   box-shadow: 0 16px 30px -14px rgba(26, 18, 14, 0.75);
 }
 .action--secondary {
-  background: var(--glass-hi);
+  background: var(--glass-fill);
   color: var(--ink);
-  box-shadow: var(--rim), inset 0 0 0 1px var(--wall-tint-2);
+  box-shadow: var(--glass-edge), inset 0 0 0 1px var(--wall-tint-2);
 }
 .action--secondary:hover {
   translate: 0 -2px;
-  background: var(--surface);
+  background: var(--glass-field);
 }
 
-/* --- Kort: vitt papper med mjuka skuggor, ingen rail och ingen riven kant -- */
+/* --- Kort: frostat glas (oskärpan på ::before, se längre ned); utskriften
+   (laddningen) är ett kvitto och behåller sitt papper ---------------------- */
 
 .menu,
 .order-menu,
@@ -418,24 +416,17 @@ body::before {
 .booking-confirmation,
 .catering-details,
 .page-prose,
-.printing,
 .contact-form,
+.checkout,
 .catering-request > section {
   border: 0;
   border-radius: var(--r-lg);
-  background: linear-gradient(180deg, var(--surface), color-mix(in srgb, var(--surface) 96%, #f6f1ea));
-  box-shadow: var(--rim-gloss), var(--card-shadow);
 }
-:root[data-theme='dark'] .menu,
-:root[data-theme='dark'] .order-menu,
-:root[data-theme='dark'] .order-cart,
-:root[data-theme='dark'] .booking-step,
-:root[data-theme='dark'] .booking-confirmation,
-:root[data-theme='dark'] .catering-details,
-:root[data-theme='dark'] .page-prose,
-:root[data-theme='dark'] .printing,
-:root[data-theme='dark'] .contact-form {
-  background: linear-gradient(180deg, #2a1d16, #22170f);
+.printing {
+  border: 0;
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--rim-gloss), var(--card-shadow);
 }
 .menu::after,
 .order-menu::after,
@@ -446,20 +437,16 @@ body::before {
 .page-prose::after,
 .printing::after,
 .contact-form::after,
-.menu::before,
-.order-menu::before,
-.order-cart::before,
-.booking-step::before,
-.booking-confirmation::before,
-.catering-details::before,
-.page-prose::before {
+.checkout::after {
   display: none;
 }
 .page > .order-hint {
   border: 0;
   border-radius: var(--r-lg);
-  background: var(--glass-hi);
-  box-shadow: var(--rim), var(--shadow);
+  background: var(--glass-text-bg);
+  box-shadow: var(--glass-edge), var(--shadow);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.5);
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.5);
 }
 /* tips inne i ett kort (varukorg, bokningssteg, cateringofferten) är bara text;
    bara sidans egna tips (.page > .order-hint) är ett glaspiller */
@@ -521,7 +508,7 @@ body::before {
 .btn-secondary,
 .btn.ghost,
 .btn.small {
-  background: var(--surface);
+  background: var(--glass-field);
   color: var(--ink);
   box-shadow: inset 0 0 0 1px var(--border);
 }
@@ -549,7 +536,7 @@ body::before {
   min-height: 36px;
   padding: 0 14px;
   border-radius: var(--r-pill);
-  background: var(--surface);
+  background: var(--glass-field);
   color: var(--ink);
   box-shadow: inset 0 0 0 1px var(--border);
   font: 600 0.9rem/1 var(--font);
@@ -575,7 +562,7 @@ body::before {
 .booking-times button,
 .party-btn {
   border-radius: var(--r-md);
-  background: var(--surface);
+  background: var(--glass-field);
   color: var(--ink);
   box-shadow: inset 0 0 0 1px var(--border);
   font-family: var(--font);
@@ -604,7 +591,7 @@ body::before {
 .site textarea {
   border: 1px solid var(--border);
   border-radius: var(--r-md);
-  background-color: var(--surface);
+  background-color: var(--glass-field);
   color: var(--ink);
   font-family: var(--font);
   box-shadow: none;
@@ -671,11 +658,11 @@ body::before {
   margin: clamp(28px, 5vw, 56px) auto 14px;
   width: calc(100% - 2 * clamp(12px, 3vw, 24px));
   border-radius: var(--r-panel);
-  background: var(--glass-hi);
+  background: var(--glass-text-bg);
   color: var(--muted);
-  box-shadow: var(--rim), var(--shadow);
-  -webkit-backdrop-filter: blur(16px) saturate(1.6);
-  backdrop-filter: blur(16px) saturate(1.6);
+  box-shadow: var(--glass-edge), var(--shadow);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.6);
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.6);
 }
 .site .site-footer a {
   color: var(--ink);
@@ -912,7 +899,7 @@ body::before {
 .site .booking-summary {
   border: 0;
   border-radius: var(--r-md);
-  background: var(--fill);
+  background: var(--glass-fill);
   box-shadow: inset 0 0 0 1px var(--wall-tint);
 }
 .site .hero-kicker {
@@ -923,9 +910,6 @@ body::before {
 /* namnet till vänster, knapparna till höger, även när menyn är dold */
 .site .site-header-brand {
   margin-right: auto;
-}
-.page > .order-hint {
-  border-radius: var(--r-lg);
 }
 
 /* kategoriraden stannar under sidhuvudet även som glidskena */
@@ -943,7 +927,7 @@ body::before {
 }
 .site .stepper button {
   border-radius: var(--r-pill);
-  background: var(--surface);
+  background: var(--glass-field);
   color: var(--ink);
   box-shadow: inset 0 0 0 1px var(--border);
 }
@@ -966,9 +950,9 @@ body::before {
 
 /* den fästa kategoriraden är frostat glas, så rätterna inte syns igenom */
 .chip-rail {
-  background: var(--glass-hi);
-  -webkit-backdrop-filter: blur(14px) saturate(1.5);
-  backdrop-filter: blur(14px) saturate(1.5);
+  background: var(--glass-text-bg);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.5);
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.5);
 }
 
 /* ============================================================================
@@ -978,17 +962,11 @@ body::before {
    som ligger direkt på rummet, aldrig mer än tre lager, och animeras aldrig.
    ========================================================================== */
 
-.site .site-header-inner {
-  background: var(--glass-bg);
-  box-shadow: var(--glass-edge), var(--shadow);
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.6);
-  backdrop-filter: blur(var(--glass-blur)) saturate(1.6);
-}
-
 /* Korten: oskärpan ligger på ett eget lager (::before) och inte på kortet,
-   så att fasta element inuti (datumkalendern, mobilens beställningsrad)
-   fortfarande räknas från fönstret. Korten är redan position: relative
-   (brickan sticky) i site-kit; cateringens sektioner får det här. */
+   så att fasta element inuti (datumkalendern, mobilens beställningsrad och
+   kassans knapp) fortfarande räknas från fönstret. Korten är redan
+   position: relative (brickan sticky) i site-kit; cateringens sektioner får
+   det här. */
 .catering-request > section {
   position: relative;
 }
@@ -1000,16 +978,8 @@ body::before {
 .catering-details,
 .page-prose,
 .contact-form,
-.catering-request > section,
-:root[data-theme='dark'] .menu,
-:root[data-theme='dark'] .order-menu,
-:root[data-theme='dark'] .order-cart,
-:root[data-theme='dark'] .booking-step,
-:root[data-theme='dark'] .booking-confirmation,
-:root[data-theme='dark'] .catering-details,
-:root[data-theme='dark'] .page-prose,
-:root[data-theme='dark'] .contact-form,
-:root[data-theme='dark'] .catering-request > section {
+.checkout,
+.catering-request > section {
   isolation: isolate;
   background: transparent;
   box-shadow: var(--glass-edge), var(--card-shadow);
@@ -1022,6 +992,7 @@ body::before {
 .catering-details::before,
 .page-prose::before,
 .contact-form::before,
+.checkout::before,
 .catering-request > section::before {
   content: '';
   display: block;
@@ -1035,24 +1006,101 @@ body::before {
   backdrop-filter: blur(var(--glass-blur)) saturate(1.5);
 }
 
-.action--secondary {
-  background: var(--glass-bg);
-  box-shadow: var(--glass-edge);
-  -webkit-backdrop-filter: blur(12px) saturate(1.5);
-  backdrop-filter: blur(12px) saturate(1.5);
+/* Ytor utan fasta barn bär oskärpan själva: dialogen, kalendern, brickans
+   panel och hållbannern (sidhuvud, meny, hero, tips och sidfot ovan). */
+.opening-hours-modal-panel,
+.date-cal,
+.cart-panel,
+.hold-banner {
+  border: 0;
+  background: var(--glass-text-bg);
+  box-shadow: var(--glass-edge), var(--shadow-lg);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.5);
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.5);
+}
+.opening-hours-modal-panel {
+  border-radius: var(--r-lg);
+  -webkit-mask: none;
+  mask: none;
+}
+.hold-banner {
+  border-top: 4px solid var(--ok);
 }
 
+/* Inre rutor och listor i ett glaskort: en tunn ton, ingen egen oskärpa. */
+.site .catering-offer,
+.site .catering-documents,
+.site .booking-summary,
+.booking-summary-line,
+.checkout-card,
+.checkout-peek,
+.guarantee-notice,
+.segmented,
+.bankid-box,
+.hold-bar,
+.next-up,
+.catering-dishes li,
+.consent-option,
+.glass-panel,
+.glass-quote,
+.parking-card,
+.floor-wrap,
+.floor-svg-frame,
+.f3d-scene,
+.floor-view-toggle,
+.order-only-table,
+.equipment-return .booking-check,
+.guest-notice,
+.site .evenemang-item,
+.site .evenemang-date,
+.site .evenemang-type {
+  background: var(--glass-fill);
+}
+.site .evenemang-item,
+.site .evenemang-date,
+.site .evenemang-type {
+  box-shadow: var(--glass-edge);
+}
+.site .notice.error,
+.notice.error {
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+}
+.site-boot {
+  background: transparent;
+}
+
+/* Fält i glaset: ljusare ton, ingen oskärpa. */
+.segmented label.on,
+.cart-code-row input,
+.opening-hours-modal-close,
+.site .booking-field textarea,
+.checkout-card .booking-field textarea,
+.offer-field input {
+  background: var(--glass-field);
+}
+
+/* Utan backdrop-filter, eller när besökaren vill ha mindre genomskinlighet:
+   tätt papper, och inga fläckar bakom. */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .site .site-header-inner,
-.menu::before,
-.order-menu::before,
-.order-cart::before,
-.booking-step::before,
-.booking-confirmation::before,
-.catering-details::before,
-.page-prose::before,
-.contact-form::before,
-.catering-request > section::before {
+  .mobile-drawer,
+  .home-hero,
+  .page > .order-hint,
+  .site .site-footer,
+  .opening-hours-modal-panel,
+  .date-cal,
+  .cart-panel,
+  .hold-banner,
+  .menu::before,
+  .order-menu::before,
+  .order-cart::before,
+  .booking-step::before,
+  .booking-confirmation::before,
+  .catering-details::before,
+  .page-prose::before,
+  .contact-form::before,
+  .checkout::before,
+  .catering-request > section::before {
     background: var(--surface);
   }
 }
@@ -1062,18 +1110,75 @@ body::before {
     background: var(--bg);
   }
   .site .site-header-inner,
-  .action--secondary,
-.menu::before,
-.order-menu::before,
-.order-cart::before,
-.booking-step::before,
-.booking-confirmation::before,
-.catering-details::before,
-.page-prose::before,
-.contact-form::before,
-.catering-request > section::before {
+  .mobile-drawer,
+  .home-hero,
+  .page > .order-hint,
+  .site .site-footer,
+  .opening-hours-modal-panel,
+  .date-cal,
+  .cart-panel,
+  .hold-banner,
+  .menu::before,
+  .order-menu::before,
+  .order-cart::before,
+  .booking-step::before,
+  .booking-confirmation::before,
+  .catering-details::before,
+  .page-prose::before,
+  .contact-form::before,
+  .checkout::before,
+  .catering-request > section::before,
+  .chip-rail {
     background: var(--surface);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
+  }
+  .site .catering-offer,
+  .site .catering-documents,
+  .site .booking-summary,
+  .booking-summary-line,
+  .checkout-card,
+  .checkout-peek,
+  .guarantee-notice,
+  .segmented,
+  .bankid-box,
+  .hold-bar,
+  .next-up,
+  .catering-dishes li,
+  .consent-option,
+  .glass-panel,
+  .glass-quote,
+  .parking-card,
+  .floor-wrap,
+  .floor-svg-frame,
+  .f3d-scene,
+  .floor-view-toggle,
+  .order-only-table,
+  .equipment-return .booking-check,
+  .guest-notice,
+  .site .evenemang-item,
+  .site .evenemang-date,
+  .site .evenemang-type,
+  .action--secondary {
+    background: var(--fill);
+  }
+  .segmented label.on,
+  .cart-code-row input,
+  .opening-hours-modal-close,
+  .site .booking-field textarea,
+  .checkout-card .booking-field textarea,
+  .offer-field input,
+  .site input:not([type='checkbox']):not([type='radio']):not([type='range']),
+  .site select,
+  .site textarea,
+  .chip,
+  .date-tile,
+  .booking-times button,
+  .party-btn,
+  .btn-secondary,
+  .btn.ghost,
+  .btn.small,
+  .site .stepper button {
+    background-color: var(--surface);
   }
 }
