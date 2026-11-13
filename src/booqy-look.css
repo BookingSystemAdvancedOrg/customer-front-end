@@ -132,6 +132,17 @@
   --wall-tint: rgba(58, 36, 24, 0.08);
   --wall-tint-2: rgba(58, 36, 24, 0.14);
   --pill-bg: linear-gradient(180deg, #3a2418, #1a120e);
+  /* Glasets gemensamma tokens (samma namn i admin, console och booqy.se). */
+  --glass-bg: rgb(var(--bq-snow-rgb) / 0.5);
+  --glass-border: rgb(var(--bq-snow-rgb) / 0.42);
+  --glass-blur: 18px;
+  --glass-highlight: rgb(var(--bq-snow-rgb) / 0.85);
+  --glass-text-bg: rgb(var(--bq-snow-rgb) / 0.8);
+  --glass-edge: inset 0 1px 0 var(--glass-highlight), inset 0 0 0 1px var(--glass-border);
+  --backdrop-blobs:
+    radial-gradient(48% 42% at 12% 16%, rgba(53, 0, 1, 0.16), transparent 70%),
+    radial-gradient(42% 46% at 88% 84%, rgba(107, 74, 46, 0.22), transparent 70%),
+    radial-gradient(36% 34% at 78% 12%, rgba(168, 132, 98, 0.2), transparent 70%);
   font-family: var(--font);
   font-stretch: 100%;
   color-scheme: light;
@@ -182,6 +193,10 @@
   --wall-tint: rgba(213, 196, 174, 0.12);
   --wall-tint-2: rgba(213, 196, 174, 0.2);
   --pill-bg: linear-gradient(180deg, var(--bq-snow), #efe7dc);
+  --glass-bg: rgba(26, 18, 14, 0.56);
+  --glass-border: rgba(213, 196, 174, 0.14);
+  --glass-highlight: rgba(213, 196, 174, 0.22);
+  --glass-text-bg: rgba(26, 18, 14, 0.82);
   color-scheme: dark;
   accent-color: #f6f1ea;
 }
@@ -199,7 +214,7 @@ body::before {
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background: linear-gradient(var(--backdrop-veil), var(--backdrop-veil)), url('./assets/backdrop.webp') center / cover no-repeat, var(--bg);
+  background: linear-gradient(var(--backdrop-veil), var(--backdrop-veil)), var(--backdrop-blobs), url('./assets/backdrop.webp') center / cover no-repeat, var(--bg);
 }
 
 :focus-visible {
@@ -954,4 +969,111 @@ body::before {
   background: var(--glass-hi);
   -webkit-backdrop-filter: blur(14px) saturate(1.5);
   backdrop-filter: blur(14px) saturate(1.5);
+}
+
+/* ============================================================================
+   Genomskinligt glas (2026-11-13): sidhuvudet och korten är frostat glas över
+   rummet (foto och mjuka bruna och vinröda fläckar). Korten har den tätare
+   tonen bakom brödtext och tabeller (WCAG AA). Oskärpan ligger bara på ytor
+   som ligger direkt på rummet, aldrig mer än tre lager, och animeras aldrig.
+   ========================================================================== */
+
+.site .site-header-inner {
+  background: var(--glass-bg);
+  box-shadow: var(--glass-edge), var(--shadow);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.6);
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.6);
+}
+
+/* Korten: oskärpan ligger på ett eget lager (::before) och inte på kortet,
+   så att fasta element inuti (datumkalendern, mobilens beställningsrad)
+   fortfarande räknas från fönstret. Korten är redan position: relative
+   (brickan sticky) i site-kit; cateringens sektioner får det här. */
+.catering-request > section {
+  position: relative;
+}
+.menu,
+.order-menu,
+.order-cart,
+.booking-step,
+.booking-confirmation,
+.catering-details,
+.page-prose,
+.contact-form,
+.catering-request > section,
+:root[data-theme='dark'] .menu,
+:root[data-theme='dark'] .order-menu,
+:root[data-theme='dark'] .order-cart,
+:root[data-theme='dark'] .booking-step,
+:root[data-theme='dark'] .booking-confirmation,
+:root[data-theme='dark'] .catering-details,
+:root[data-theme='dark'] .page-prose,
+:root[data-theme='dark'] .contact-form,
+:root[data-theme='dark'] .catering-request > section {
+  isolation: isolate;
+  background: transparent;
+  box-shadow: var(--glass-edge), var(--card-shadow);
+}
+.menu::before,
+.order-menu::before,
+.order-cart::before,
+.booking-step::before,
+.booking-confirmation::before,
+.catering-details::before,
+.page-prose::before,
+.contact-form::before,
+.catering-request > section::before {
+  content: '';
+  display: block;
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--glass-text-bg);
+  pointer-events: none;
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.5);
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.5);
+}
+
+.action--secondary {
+  background: var(--glass-bg);
+  box-shadow: var(--glass-edge);
+  -webkit-backdrop-filter: blur(12px) saturate(1.5);
+  backdrop-filter: blur(12px) saturate(1.5);
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .site .site-header-inner,
+.menu::before,
+.order-menu::before,
+.order-cart::before,
+.booking-step::before,
+.booking-confirmation::before,
+.catering-details::before,
+.page-prose::before,
+.contact-form::before,
+.catering-request > section::before {
+    background: var(--surface);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  body::before {
+    background: var(--bg);
+  }
+  .site .site-header-inner,
+  .action--secondary,
+.menu::before,
+.order-menu::before,
+.order-cart::before,
+.booking-step::before,
+.booking-confirmation::before,
+.catering-details::before,
+.page-prose::before,
+.contact-form::before,
+.catering-request > section::before {
+    background: var(--surface);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
 }
