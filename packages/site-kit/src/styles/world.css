@@ -1094,7 +1094,7 @@ svg {
 
 .floor-svg-pick .floor-svg-table.is-selected ~ .floor-svg-table-label,
 .floor-svg-pick .floor-svg-table.is-selected ~ .floor-svg-table-seats {
-  fill: #ffffff;
+  fill: #fdfaf6;
 }
 
 .floor-svg-pick,
@@ -1257,7 +1257,7 @@ body {
 
 ::selection {
   background: var(--ink-red);
-  color: #fff;
+  color: #fdfaf6;
 }
 
 html {
@@ -3104,7 +3104,7 @@ h1, h2, h3, h4 {
   --seat-pick: #2c6a3f;
   --seat-pick-line: #1f4d2d;
   --seat-pick-side: #245735;
-  --seat-pick-ink: #ffffff;
+  --seat-pick-ink: #fdfaf6;
   --seat-taken: #ecc9cb;
   --seat-taken-line: #9e1d26;
   --seat-taken-side: #d9a9ad;
@@ -3175,7 +3175,7 @@ h1, h2, h3, h4 {
   --seat-pick: #2f7a48;
   --seat-pick-line: #7cc695;
   --seat-pick-side: #245735;
-  --seat-pick-ink: #ffffff;
+  --seat-pick-ink: #fdfaf6;
   --seat-taken: #6a3236;
   --seat-taken-line: #ee8a90;
   --seat-taken-side: #4e2528;

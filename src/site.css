@@ -74,7 +74,7 @@
   font: inherit;
   font-size: 0.92rem;
   color: var(--ink);
-  /* The form sits on the grey page background, so fields are white
+  /* The form sits on the grey page background, so fields are off-white
      (surface) with a hairline instead of the grey fill used inside cards. */
   background-color: var(--surface);
   border: 0;
@@ -271,7 +271,7 @@
   border: 0;
   border-radius: var(--r-pill);
   background: color-mix(in srgb, var(--on-accent) 14%, transparent)
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fdfaf6' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")
     no-repeat right 12px center / 14px;
   color: var(--on-accent);
   font: 600 0.92rem var(--font);
@@ -451,7 +451,7 @@
 }
 
 .home-hero--photo .home-hero-body {
-  color: #fff;
+  color: var(--bq-snow);
 }
 
 .home-hero h1 {
@@ -606,13 +606,13 @@
 
 .site-footer {
   background: color-mix(in srgb, var(--ink) 94%, var(--accent));
-  color: color-mix(in srgb, #fff 78%, transparent);
+  color: color-mix(in srgb, var(--bq-snow) 78%, transparent);
   padding: clamp(40px, 6vw, 64px) 0 28px;
   font-size: 0.95rem;
 }
 
 .site-footer a {
-  color: #fff;
+  color: var(--bq-snow);
 }
 
 .footer-cols,
@@ -628,7 +628,7 @@
 }
 
 .footer-brand h2 {
-  color: #fff;
+  color: var(--bq-snow);
   font-weight: 850;
   font-size: 1.5rem;
 }
@@ -638,7 +638,7 @@
 }
 
 .site-footer h3 {
-  color: #fff;
+  color: var(--bq-snow);
   font-size: 0.95rem;
   font-weight: 750;
   margin-bottom: 10px;
@@ -667,7 +667,7 @@
   gap: 8px 24px;
   margin-top: 36px;
   padding-top: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  border-top: 1px solid rgb(var(--bq-snow-rgb) / 0.12);
   font-size: 0.86rem;
 }
 
@@ -679,7 +679,7 @@
 
 .site-footer-credit {
   margin-left: auto;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgb(var(--bq-snow-rgb) / 0.5);
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -687,7 +687,7 @@
 
 .site-footer-booqy {
   display: block;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgb(var(--bq-snow-rgb) / 0.85);
 }
 
 /* Klickljudet av och på, som på booqy.se: en liten textknapp bland länkarna */
@@ -697,10 +697,10 @@
   gap: 6px;
   min-height: 32px;
   padding: 0 12px 0 10px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  border: 1px solid rgb(var(--bq-snow-rgb) / 0.18);
   border-radius: var(--r-pill);
   background: transparent;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgb(var(--bq-snow-rgb) / 0.85);
   font: inherit;
   cursor: default;
   transition: background-color 160ms var(--ease), border-color 160ms var(--ease);
@@ -713,8 +713,8 @@
 
 @media (hover: hover) and (pointer: fine) {
   .site-footer-sound:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.32);
+    background: rgb(var(--bq-snow-rgb) / 0.08);
+    border-color: rgb(var(--bq-snow-rgb) / 0.32);
   }
 }
 
@@ -927,7 +927,7 @@
 }
 
 .action--primary:hover {
-  background: #fff;
+  background: var(--bq-snow);
   transform: translateY(-1px);
   box-shadow: 0 6px 14px -6px rgba(0, 0, 0, 0.5);
 }

@@ -31,7 +31,7 @@ describe('brand-lint', () => {
   })
 
   it('ignores comments, links and data URIs', () => {
-    expect(rules('// #fff is the paper\n<a href="#top">Upp</a>\n.x { background: url("data:image/svg+xml,%23fff") }', 'a.tsx')).toEqual([])
+    expect(rules('// #fdfaf6 is the paper\n<a href="#top">Upp</a>\n.x { background: url("data:image/svg+xml,%23fdfaf6") }', 'a.tsx')).toEqual([])
   })
 
   it('globs: ** spans folders, * stays in one name', () => {
@@ -43,7 +43,7 @@ describe('brand-lint', () => {
     const dir = mkdtempSync(join(tmpdir(), 'brand-lint-'))
     mkdirSync(join(dir, 'src/features/new'), { recursive: true })
     mkdirSync(join(dir, 'src/old'), { recursive: true })
-    writeFileSync(join(dir, 'src/old/a.css'), '.a { color: #fff; }\n')
+    writeFileSync(join(dir, 'src/old/a.css'), '.a { color: #fdfaf6; }\n')
     writeFileSync(join(dir, 'src/features/new/b.css'), '.b { padding: var(--bq-space-2); }\n')
     expect(run({ paths: [join(dir, 'src')] }).blocking).toEqual([])
     expect(run({ paths: [join(dir, 'src')], block: ['features/new/**'] }).blocking).toEqual([])

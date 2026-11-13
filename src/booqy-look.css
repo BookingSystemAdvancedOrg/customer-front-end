@@ -69,7 +69,7 @@
 
 :root,
 :root[data-theme='light'] {
-  --paper: #ffffff;
+  --paper: var(--bq-snow);
   --paper-2: #f6f1ea;
   --paper-line: #e3d6c4;
   --print: #1a120e;
@@ -80,9 +80,9 @@
   --table: transparent;
   --table-2: rgba(58, 36, 24, 0.06);
   --bg: #f6f1ea;
-  --surface: #ffffff;
+  --surface: var(--bq-snow);
   --fill: #f6f1ea;
-  --surface-glass: rgba(255, 255, 255, 0.7);
+  --surface-glass: rgb(var(--bq-snow-rgb) / 0.7);
   --page-scrim: rgba(246, 241, 234, 0.9);
   --border: #e3d6c4;
   --line: #e3d6c4;
@@ -93,7 +93,7 @@
   --accent-hover: #3a2418;
   --accent-active: #3a2418;
   --accent-soft: #f6f1ea;
-  --on-accent: #ffffff;
+  --on-accent: var(--bq-snow);
   --focus: rgba(168, 132, 98, 0.45);
   /* fälten, också Stripes (site-kit payment/appearance.ts läser dem) */
   --field-bg: var(--surface);
@@ -122,10 +122,10 @@
   --r-panel: 28px;
   /* den rivna kanten och railen finns inte i admin-looken */
   --tooth-h: 0px;
-  --glass: rgba(255, 255, 255, 0.62);
-  --glass-hi: rgba(255, 255, 255, 0.74);
-  --rim: inset 0 1px 0 rgba(255, 255, 255, 0.9), inset 0 0 0 1px rgba(255, 255, 255, 0.55);
-  --rim-gloss: inset 0 1px 0 rgba(255, 255, 255, 0.95), inset 0 0 0 1px rgba(255, 255, 255, 0.6), inset 0 -1px 0 rgba(58, 36, 24, 0.06);
+  --glass: rgb(var(--bq-snow-rgb) / 0.62);
+  --glass-hi: rgb(var(--bq-snow-rgb) / 0.74);
+  --rim: inset 0 1px 0 rgb(var(--bq-snow-rgb) / 0.9), inset 0 0 0 1px rgb(var(--bq-snow-rgb) / 0.55);
+  --rim-gloss: inset 0 1px 0 rgb(var(--bq-snow-rgb) / 0.95), inset 0 0 0 1px rgb(var(--bq-snow-rgb) / 0.6), inset 0 -1px 0 rgba(58, 36, 24, 0.06);
   --card-shadow: 0 1px 2px rgba(58, 36, 24, 0.06), 0 14px 34px -22px rgba(58, 36, 24, 0.45);
   --card-shadow-hi: 0 1px 2px rgba(58, 36, 24, 0.08), 0 22px 44px -24px rgba(58, 36, 24, 0.55);
   --backdrop-veil: rgba(246, 241, 234, 0);
@@ -158,7 +158,7 @@
   --muted: #d5c4ae;
   --accent: #f6f1ea;
   --accent-ink: #d5c4ae;
-  --accent-hover: #ffffff;
+  --accent-hover: var(--bq-snow);
   --accent-active: #d5c4ae;
   --accent-soft: #3a2418;
   --on-accent: #1a120e;
@@ -181,7 +181,7 @@
   --backdrop-veil: rgba(26, 18, 14, 0.86);
   --wall-tint: rgba(213, 196, 174, 0.12);
   --wall-tint-2: rgba(213, 196, 174, 0.2);
-  --pill-bg: linear-gradient(180deg, #ffffff, #efe7dc);
+  --pill-bg: linear-gradient(180deg, var(--bq-snow), #efe7dc);
   color-scheme: dark;
   accent-color: #f6f1ea;
 }
@@ -363,7 +363,7 @@ body::before {
 .home-hero--photo .home-hero-tagline,
 .home-hero--photo .home-hero-status,
 .home-hero--photo .home-hero-address {
-  color: #ffffff;
+  color: var(--bq-snow);
 }
 
 /* knappar i heron och överallt: piller som i admin */
@@ -742,10 +742,10 @@ body::before {
   border: 0 !important;
   border-radius: var(--r-pill) !important;
   /* nästan vit, så att skenan ser likadan ut på papper och på glas */
-  background: rgba(255, 255, 255, 0.9) !important;
+  background: rgb(var(--bq-snow-rgb) / 0.9) !important;
   -webkit-backdrop-filter: blur(10px) saturate(1.5);
   backdrop-filter: blur(10px) saturate(1.5);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), inset 0 0 0 1px rgba(58, 36, 24, 0.12), 0 6px 16px -12px rgba(58, 36, 24, 0.35) !important;
+  box-shadow: inset 0 1px 0 rgb(var(--bq-snow-rgb) / 0.85), inset 0 0 0 1px rgba(58, 36, 24, 0.12), 0 6px 16px -12px rgba(58, 36, 24, 0.35) !important;
 }
 
 .glass-refract [data-glide='track'] {
@@ -777,7 +777,7 @@ body::before {
 }
 
 [data-glide] > :is(button, a):is(.active, .on, .is-active, [aria-pressed='true'], [aria-selected='true'], [aria-checked='true']) {
-  color: #ffffff !important;
+  color: var(--bq-snow) !important;
 }
 
 [data-glide='bare'] {
@@ -812,7 +812,7 @@ body::before {
   translate: var(--glide-x, 0) var(--glide-y, 0);
   border-radius: var(--r-pill);
   background: linear-gradient(180deg, #3a2418, #1a120e);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 4px 10px -6px rgba(26, 18, 14, 0.6);
+  box-shadow: inset 0 1px 0 rgb(var(--bq-snow-rgb) / 0.2), 0 4px 10px -6px rgba(26, 18, 14, 0.6);
   opacity: 0;
   pointer-events: none;
   will-change: translate, width;
@@ -831,7 +831,7 @@ body::before {
 }
 
 :root[data-theme='dark'] [data-glide='track'] {
-  background: rgba(255, 255, 255, 0.06) !important;
+  background: rgb(var(--bq-snow-rgb) / 0.06) !important;
   box-shadow: inset 0 1px 0 rgba(213, 196, 174, 0.22), inset 0 0 0 1px rgba(213, 196, 174, 0.12), 0 6px 16px -12px rgba(0, 0, 0, 0.6) !important;
 }
 
@@ -844,8 +844,8 @@ body::before {
 }
 
 :root[data-theme='dark'] [data-glide]::before {
-  background: linear-gradient(180deg, #ffffff, #efe7dc);
-  box-shadow: inset 0 1px 0 #ffffff, 0 4px 10px -6px rgba(0, 0, 0, 0.6);
+  background: linear-gradient(180deg, var(--bq-snow), #efe7dc);
+  box-shadow: inset 0 1px 0 var(--bq-snow), 0 4px 10px -6px rgba(0, 0, 0, 0.6);
 }
 
 @media (hover: hover) {

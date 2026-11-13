@@ -163,7 +163,7 @@ export default function CateringRequestPage() {
   async function showQr(data: string | undefined) {
     if (!data) return undefined
     try {
-      return await QRCode.toDataURL(data, { margin: 1, width: 280 })
+      return await QRCode.toDataURL(data, { margin: 1, width: 280, color: { light: '#fdfaf6' } })
     } catch {
       return undefined
     }

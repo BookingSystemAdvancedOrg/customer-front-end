@@ -11,7 +11,7 @@ describe('paymentAppearance', () => {
     const a = paymentAppearance('light')
     expect(a.theme).toBe('stripe')
     expect(a.variables).toMatchObject({
-      colorBackground: '#ffffff',
+      colorBackground: '#fdfaf6',
       colorText: '#1a120e',
       colorPrimary: '#1a120e',
       borderRadius: '3px',
@@ -29,24 +29,24 @@ describe('paymentAppearance', () => {
   it("takes the site's field tokens and sans when they are set", () => {
     document.documentElement.style.setProperty('--field-radius', '12px')
     document.documentElement.style.setProperty('--field-border', '1px')
-    document.documentElement.style.setProperty('--field-bg', '#ffffff')
+    document.documentElement.style.setProperty('--field-bg', '#fdfaf6')
     document.documentElement.style.setProperty('--focus', 'rgba(168, 132, 98, 0.45)')
     configureSiteKit({ paymentFonts: { sans: '/a.woff2', sansFamily: 'Plus Jakarta Sans', mono: '/m.woff2' } })
     const a = paymentAppearance('light')
     expect(a.variables?.borderRadius).toBe('12px')
     expect(a.variables?.fontFamily).toMatch(/^'Plus Jakarta Sans'/)
     expect(a.variables?.focusBoxShadow).toBe('0 0 0 3px rgba(168, 132, 98, 0.45)')
-    expect(a.rules?.['.Input']).toMatchObject({ backgroundColor: '#ffffff', border: '1px solid #e3d6c4' })
+    expect(a.rules?.['.Input']).toMatchObject({ backgroundColor: '#fdfaf6', border: '1px solid #e3d6c4' })
     expect(paymentFonts().map((f) => f.family)).toContain('Plus Jakarta Sans')
     configureSiteKit({ paymentFonts: undefined })
   })
 
   it("uses the restaurant's colour and skips values Stripe can't read", () => {
     document.documentElement.style.setProperty('--accent', '#0b6e4f')
-    document.documentElement.style.setProperty('--surface', 'color-mix(in srgb, red 10%, white)')
+    document.documentElement.style.setProperty('--surface', 'color-mix(in srgb, red 10%, #fdfaf6)')
     const a = paymentAppearance('light')
     expect(a.variables?.colorPrimary).toBe('#0b6e4f')
-    expect(a.variables?.colorBackground).toBe('#ffffff')
+    expect(a.variables?.colorBackground).toBe('#fdfaf6')
   })
 })
 

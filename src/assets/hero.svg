@@ -5,7 +5,7 @@
   <!-- Tallrik -->
   <circle cx="400" cy="330" r="170" fill="#faf8f5"/>
   <circle cx="400" cy="330" r="168" fill="none" stroke="#eae6df" stroke-width="4"/>
-  <circle cx="400" cy="330" r="120" fill="#ffffff"/>
+  <circle cx="400" cy="330" r="120" fill="#fdfaf6"/>
   <circle cx="400" cy="330" r="120" fill="none" stroke="#eae6df" stroke-width="3"/>
   <!-- Maten -->
   <circle cx="385" cy="320" r="56" fill="#d98353"/>

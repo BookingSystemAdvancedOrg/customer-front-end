@@ -29,7 +29,7 @@
   --line: var(--paper-line);
   --ink: var(--print);
   --muted: var(--print-2);
-  --on-accent: var(--tenant-on-accent, #ffffff);
+  --on-accent: var(--tenant-on-accent, #fdfaf6);
   --danger: var(--ink-red);
   --danger-ink: #7f141c;
   --success: #2c6a3f;
@@ -96,9 +96,9 @@
     --fill: #332e2b;
     --surface-glass: var(--surface);
     --page-scrim: rgba(28, 25, 24, 0.9);
-    --border: rgba(255, 255, 255, 0.12);
-    --line: rgba(255, 255, 255, 0.14);
-    --paper-line: rgba(255, 255, 255, 0.16);
+    --border: rgba(253, 250, 246, 0.12);
+    --line: rgba(253, 250, 246, 0.14);
+    --paper-line: rgba(253, 250, 246, 0.16);
     --ink: #f6ece9;
     --muted: #b8aca6;
     --danger: #e0686f;
@@ -122,9 +122,9 @@
   --surface: #2a2523;
   --fill: #332e2b;
   --surface-glass: var(--surface);
-  --border: rgba(255, 255, 255, 0.12);
-  --line: rgba(255, 255, 255, 0.14);
-  --paper-line: rgba(255, 255, 255, 0.16);
+  --border: rgba(253, 250, 246, 0.12);
+  --line: rgba(253, 250, 246, 0.14);
+  --paper-line: rgba(253, 250, 246, 0.16);
   --ink: #f6ece9;
   --muted: #b8aca6;
   --steel: #6f757a;

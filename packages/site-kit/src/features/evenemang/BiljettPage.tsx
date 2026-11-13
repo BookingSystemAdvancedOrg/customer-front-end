@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useLocation } from 'react-router-dom'
 import QRCode from 'qrcode'
-import { Bar, Button, Card, Chip, Field, Input, LinkButton } from '@booqy/brand'
+import { Bar, Button, Card, Chip, Field, Input, LinkButton, tokens } from '@booqy/brand'
 import type { ChipTone } from '@booqy/brand'
 import './evenemang.css'
 import { useSite } from '../../shared/SiteContext'
@@ -123,7 +123,7 @@ function useQr(payload: string | undefined): string | null {
   useEffect(() => {
     if (!payload) return
     let live = true
-    QRCode.toDataURL(payload, { margin: 0, width: 320, errorCorrectionLevel: 'M' })
+    QRCode.toDataURL(payload, { margin: 0, width: 320, errorCorrectionLevel: 'M', color: { light: tokens.palette.paper } })
       .then((src) => live && setQr({ payload, src }))
       .catch(() => live && setQr(null))
     return () => {
