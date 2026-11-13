@@ -9,7 +9,7 @@ import { PhoneInput } from '../../shared/PhoneInput'
 import { normalizePhone, validEmail } from '../boka/bookingApi'
 import { TurnstileWidget } from '../boka/TurnstileWidget'
 import { Plate } from '../../shared/Plate'
-import { CATEGORY_LABEL, getPublicMenu, groupByCategory, menuImageUrl } from '../meny/menuApi'
+import { CATEGORY_LABEL, getPublicMenu, groupByCategory, menuImagePosition, menuImageUrl } from '../meny/menuApi'
 import type { PublicMenuItem } from '../meny/menuApi'
 import {
   MAX_LINES,
@@ -389,7 +389,7 @@ export default function BestallPage() {
       <ul className="sum-lines">
         {lines.map(({ dish, quantity }) => (
           <li key={dish.menuItemId}>
-            <Plate src={menuImageUrl(dish.imageKey)} name={dish.name} size="sm" />
+            <Plate src={menuImageUrl(dish.imageKey)} position={menuImagePosition(dish.imageFocus)} name={dish.name} size="sm" />
             <span className="sum-line-text">
               <span className="sum-line-name">{dish.name}</span>
               <span className="sum-line-qty">{kronor(ore(dish.price))} × {quantity}</span>
@@ -661,7 +661,7 @@ export default function BestallPage() {
                   const blocked = mode === 'pickup' && dish.alcohol
                   return (
                     <li className={`dish dish--order${quantity ? ' is-in-cart' : ''}`} key={dish.menuItemId} data-dish={dish.menuItemId}>
-                      <Plate src={menuImageUrl(dish.imageKey)} name={dish.name} />
+                      <Plate src={menuImageUrl(dish.imageKey)} position={menuImagePosition(dish.imageFocus)} name={dish.name} />
                       <div className="dish-text">
                         <h3 className="dish-name">{dish.name}</h3>
                         {dish.description && <p className="dish-desc">{dish.description}</p>}
@@ -702,7 +702,7 @@ export default function BestallPage() {
             <h2 className="checkout-title" ref={titleRef} tabIndex={-1}>{STEP_TITLE.cart}</h2>
             <span className="tray-plates" aria-hidden="true" ref={trayRef}>
               {lines.slice(0, 5).map(({ dish }) => (
-                <Plate key={dish.menuItemId} src={menuImageUrl(dish.imageKey)} name={dish.name} size="sm" />
+                <Plate key={dish.menuItemId} src={menuImageUrl(dish.imageKey)} position={menuImagePosition(dish.imageFocus)} name={dish.name} size="sm" />
               ))}
             </span>
           </div>

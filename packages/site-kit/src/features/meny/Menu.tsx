@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Plate } from '../../shared/Plate'
 import { useMenuList } from './useMenuList'
-import { CATEGORY_LABEL, formatPrice, groupByCategory, menuImageUrl } from './menuApi'
+import { CATEGORY_LABEL, formatPrice, groupByCategory, menuImagePosition, menuImageUrl } from './menuApi'
 import type { MenuCategory } from './menuApi'
 import { SkelDishes } from '../../shared/Skeleton'
 
@@ -82,7 +82,7 @@ export function Menu() {
           <ul className="dish-list">
             {group.items.map((dish) => (
               <li className="dish" key={dish.menuItemId}>
-                <Plate src={menuImageUrl(dish.imageKey)} name={dish.name} />
+                <Plate src={menuImageUrl(dish.imageKey)} position={menuImagePosition(dish.imageFocus)} name={dish.name} />
                 <div className="dish-text">
                   <h4 className="dish-name">{dish.name}</h4>
                   {dish.description && <p className="dish-desc">{dish.description}</p>}

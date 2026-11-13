@@ -43,6 +43,8 @@ export interface PublicMenuItem {
   active?: boolean
   /** Innehåller alkohol: kan bara beställas vid bordet. */
   alcohol?: boolean
+  /** Bildens fokuspunkt i hela procent (admin väljer den); saknas = mitten. */
+  imageFocus?: { x: number; y: number } | null
 }
 
 /* --- Bildvisning ---------------------------------------------------------- */
@@ -54,6 +56,15 @@ export interface PublicMenuItem {
  */
 export function menuImageBaseUrl(): string | undefined {
   return siteKitConfig().menuImageBaseUrl?.replace(/\/+$/, '') || undefined
+}
+
+/**
+ * CSS object-position för rättens bild: den del restaurangen valt ska synas
+ * när tallriken beskär fotot. Saknas eller är värdet trasigt gäller mitten.
+ */
+export function menuImagePosition(focus: PublicMenuItem['imageFocus']): string {
+  const axis = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? Math.min(100, Math.max(0, Math.round(v))) : 50)
+  return focus ? `${axis(focus.x)}% ${axis(focus.y)}%` : '50% 50%'
 }
 
 export function menuImageUrl(imageKey: string): string | null {

@@ -4,6 +4,12 @@ All notable changes to `@booqy/site-kit`. Semver: removing or renaming
 anything exported from `index.ts`, `testing.ts` or `styles.css` (including a
 CSS variable or class name a site styles) is a major version.
 
+## Unreleased
+
+- `PublicMenuItem.imageFocus` (the dish photo's focal point, set in admin)
+  and `menuImagePosition()`; `Menu` and the order pages crop dish photos
+  at that point (`Plate` takes a `position`). Missing = the centre.
+
 ## 0.1.0 (2026-10-27)
 
 First version, extracted from `customer-front-end` with no visible change to

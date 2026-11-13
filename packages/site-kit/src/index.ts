@@ -73,7 +73,7 @@ export { Menu } from './features/meny/Menu'
 export { CategoryNav } from './features/meny/CategoryNav'
 export { DishImage } from './features/meny/DishImage'
 export { Plate } from './shared/Plate'
-export { CATEGORY_LABEL, CATEGORY_ORDER, formatPrice, groupByCategory, menuImageUrl } from './features/meny/menuApi'
+export { CATEGORY_LABEL, CATEGORY_ORDER, formatPrice, groupByCategory, menuImagePosition, menuImageUrl } from './features/meny/menuApi'
 export type { MenuCategory, PublicMenuItem } from './features/meny/menuApi'
 
 /* --- Flöden ---------------------------------------------------------- */

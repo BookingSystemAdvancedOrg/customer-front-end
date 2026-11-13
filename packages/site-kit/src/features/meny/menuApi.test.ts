@@ -84,6 +84,16 @@ describe('getPublicMenu', () => {
   })
 })
 
+describe('menuImagePosition', () => {
+  it('ger restaurangens fokuspunkt, annars mitten', async () => {
+    const { menuImagePosition } = await loadMenuApi({})
+    expect(menuImagePosition({ x: 20, y: 80 })).toBe('20% 80%')
+    expect(menuImagePosition(null)).toBe('50% 50%')
+    expect(menuImagePosition(undefined)).toBe('50% 50%')
+    expect(menuImagePosition({ x: 140, y: Number.NaN })).toBe('100% 50%')
+  })
+})
+
 describe('menuImageUrl', () => {
   it('bygger CDN-URL av imageKey när bas-URL finns', async () => {
     const { menuImageUrl } = await loadMenuApi({
