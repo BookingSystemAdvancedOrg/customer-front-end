@@ -20,3 +20,42 @@
   background: currentColor;
   opacity: 0.7;
 }
+
+/* Önskemål och allergi per rätt i varukorgen: följer rätten till köksbongen. */
+.cart-list li > .cart-line-notes {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 4px;
+  font-size: 13.5px;
+}
+
+.cart-line-notes summary {
+  cursor: pointer;
+  width: fit-content;
+  color: var(--muted, inherit);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.cart-line-notes label {
+  margin-top: 4px;
+  font-weight: 600;
+}
+
+.cart-line-notes input {
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1.5px solid var(--paper-line);
+  border-radius: 3px;
+  background: var(--fill);
+  color: var(--ink);
+  font: 400 0.95rem/1.4 var(--font);
+}
+
+.cart-line-notes input:focus {
+  outline: none;
+  background: var(--surface);
+  border-color: var(--ink);
+}

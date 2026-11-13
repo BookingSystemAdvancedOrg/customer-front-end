@@ -23,6 +23,10 @@ import {
   getOrdering,
   kronor,
   loadCart,
+  loadLineNotes,
+  lineExtras,
+  LINE_TEXT_MAX,
+  saveLineNotes,
   orderErrorMessage,
   rememberToken,
   saveCart,
@@ -32,7 +36,7 @@ import {
   vatBreakdown,
   vatRate,
 } from './orderApi'
-import type { Cart, OrderCreated, OrderMode, OrderingState } from './orderApi'
+import type { Cart, LineNotes, OrderCreated, OrderMode, OrderingState } from './orderApi'
 import { checkCode, codeErrorMessage, discounted, normalizeCode } from '../erbjudande/offerApi'
 import type { CodeTerms } from '../erbjudande/offerApi'
 import { useStickyCart } from '../../shared/useStickyCart'
@@ -151,6 +155,11 @@ export default function BestallPage() {
   }, [locationId, tableCode])
 
   useEffect(() => saveCart(locationId, cart), [locationId, cart])
+  const [lineNotes, setLineNotes] = useState<LineNotes>(() => loadLineNotes(locationId))
+  useEffect(() => saveLineNotes(locationId, lineNotes), [locationId, lineNotes])
+  function setLineNote(id: string, field: 'note' | 'allergy', value: string) {
+    setLineNotes((prev) => ({ ...prev, [id]: { ...prev[id], [field]: value } }))
+  }
 
   const byId = useMemo(() => new Map((menu ?? []).map((d) => [d.menuItemId, d])), [menu])
   // Rätter som försvunnit från menyn (eller alkohol i avhämtning) räknas inte.
@@ -309,7 +318,7 @@ export default function BestallPage() {
         locationId,
         mode,
         ...(tableCode ? { tableCode } : {}),
-        items: lines.map((l) => ({ menuItemId: l.dish.menuItemId, quantity: l.quantity })),
+        items: lines.map((l) => ({ menuItemId: l.dish.menuItemId, quantity: l.quantity, ...lineExtras(lineNotes[l.dish.menuItemId]) })),
         name: guest.name.trim(),
         phone: guest.phone.trim(),
         email: guest.email.trim(),
@@ -359,6 +368,7 @@ export default function BestallPage() {
   const paid = useCallback(() => {
     if (!payment) return
     clearCart(locationId)
+    setLineNotes({})
     navigate(`/bestallning/${encodeURIComponent(payment.locationId)}/${encodeURIComponent(payment.orderId)}`)
   }, [payment, locationId, navigate])
 
@@ -723,6 +733,15 @@ export default function BestallPage() {
                           disabled={quantity >= MAX_QUANTITY} onClick={() => change(dish.menuItemId, 1)}>+</button>
                       </span>
                       <span className="cart-item-price">{kronor(ore(dish.price) * quantity)}</span>
+                      <details className="cart-line-notes" open={Boolean(lineNotes[dish.menuItemId]?.note || lineNotes[dish.menuItemId]?.allergy) || undefined}>
+                        <summary>Önskemål eller allergi?</summary>
+                        <label htmlFor={`line-note-${dish.menuItemId}`}>Önskemål</label>
+                        <input id={`line-note-${dish.menuItemId}`} maxLength={LINE_TEXT_MAX} placeholder="Till exempel ingen lök"
+                          value={lineNotes[dish.menuItemId]?.note ?? ''} onChange={(e) => setLineNote(dish.menuItemId, 'note', e.target.value)} />
+                        <label htmlFor={`line-allergy-${dish.menuItemId}`}>Allergi</label>
+                        <input id={`line-allergy-${dish.menuItemId}`} maxLength={LINE_TEXT_MAX} placeholder="Till exempel jordnötsallergi"
+                          value={lineNotes[dish.menuItemId]?.allergy ?? ''} onChange={(e) => setLineNote(dish.menuItemId, 'allergy', e.target.value)} />
+                      </details>
                     </li>
                   ))}
                 </ul>

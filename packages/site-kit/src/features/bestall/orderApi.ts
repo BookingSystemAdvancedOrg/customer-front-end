@@ -41,7 +41,8 @@ export interface OrderRequest {
   locationId: string
   mode: OrderMode
   tableCode?: string
-  items: { menuItemId: string; quantity: number }[]
+  /** note ("ingen lök") och allergy ("jordnötsallergi") följer rätten till köksbongen. */
+  items: { menuItemId: string; quantity: number; note?: string; allergy?: string }[]
   name: string
   phone: string
   email: string
@@ -157,7 +158,48 @@ export function saveCart(locationId: string, cart: Cart): void {
   }
 }
 
+/** Önskemål och allergi per rätt i varukorgen (gäller alla av den rätten). */
+export type LineNote = { note?: string; allergy?: string }
+export type LineNotes = Record<string, LineNote>
+export const LINE_TEXT_MAX = 140
+
+const notesKey = (locationId: string) => `${cartKey(locationId)}:notes`
+
+export function loadLineNotes(locationId: string): LineNotes {
+  try {
+    const raw = JSON.parse(sessionStorage.getItem(notesKey(locationId)) ?? '{}') as unknown
+    if (!raw || typeof raw !== 'object') return {}
+    const out: LineNotes = {}
+    for (const [id, v] of Object.entries(raw as Record<string, LineNote>)) {
+      if (v && typeof v === 'object') out[id] = { note: String(v.note ?? ''), allergy: String(v.allergy ?? '') }
+    }
+    return out
+  } catch {
+    return {}
+  }
+}
+
+export function saveLineNotes(locationId: string, notes: LineNotes): void {
+  try {
+    sessionStorage.setItem(notesKey(locationId), JSON.stringify(notes))
+  } catch {
+    // Som ovan.
+  }
+}
+
+/** Det som skickas: trimmat, tomt utelämnat. */
+export function lineExtras(n: LineNote | undefined): LineNote {
+  const note = n?.note?.trim().slice(0, LINE_TEXT_MAX)
+  const allergy = n?.allergy?.trim().slice(0, LINE_TEXT_MAX)
+  return { ...(note ? { note } : {}), ...(allergy ? { allergy } : {}) }
+}
+
 export function clearCart(locationId: string): void {
+  try {
+    sessionStorage.removeItem(notesKey(locationId))
+  } catch {
+    // Som ovan.
+  }
   try {
     sessionStorage.removeItem(cartKey(locationId))
   } catch {
