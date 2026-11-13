@@ -28,6 +28,7 @@ import {
   saveCart,
   stepQuantity,
   tableCodeFrom,
+  tableTitle,
   vatBreakdown,
   vatRate,
 } from './orderApi'
@@ -167,7 +168,7 @@ export default function BestallPage() {
   // Servern prövar beloppet före rabatten.
   const tooLarge = subtotal > MAX_ORDER_ORE
   const open = Boolean(ordering?.open && ordering[mode])
-  const tableLabel = ordering?.forTable?.label
+  const tableName = tableTitle(ordering?.forTable)
   const count = lines.reduce((n, l) => n + l.quantity, 0)
   // Utan rätter finns bara brickan.
   const step: Step = lines.length ? checkout : 'cart'
@@ -379,7 +380,7 @@ export default function BestallPage() {
     total: (applied ? discounted(ore(l.dish.price), applied.percent) : ore(l.dish.price)) * l.quantity,
   })))
   const place = mode === 'table'
-    ? (tableLabel ? (/^bord/i.test(tableLabel) ? tableLabel : `Bord ${tableLabel}`) : 'Ditt bord')
+    ? (tableName ?? 'Ditt bord')
     : `Hämtas hos ${config.tenant.name}${location.name ? `, ${location.name}` : ''}`
 
   /** Sammanfattningen till höger (och i "Visa beställning" på mobilen). */
@@ -599,9 +600,14 @@ export default function BestallPage() {
     <>
       <section className="page-head" ref={headRef}>
         <h1>{mode === 'table' ? 'Beställ till bordet' : 'Beställ för avhämtning'}</h1>
+        {mode === 'table' && tableName && (
+          <p className="order-table-chip" aria-label={`Ditt bord: ${tableName}`}>
+            {tableName}
+          </p>
+        )}
         <p className="page-lede">
           {mode === 'table'
-            ? `Välj, betala i mobilen - vi serverar vid ${tableLabel ? (/^bord/i.test(tableLabel) ? tableLabel : `bord ${tableLabel}`) : 'ditt bord'}.`
+            ? `Välj, betala i mobilen - vi serverar vid ${tableName ? (/^bord /i.test(tableName) ? `bord ${tableName.slice(5)}` : tableName) : 'ditt bord'}.`
             : `Välj, betala här och hämta hos ${config.tenant.name}. Du får ett sms när maten är klar.`}
         </p>
         {crumbs}

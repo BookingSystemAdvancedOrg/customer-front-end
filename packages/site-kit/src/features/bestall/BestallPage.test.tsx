@@ -262,14 +262,35 @@ describe('BestallPage', () => {
 
   it('keeps alcohol for table orders and names the table from the QR code', async () => {
     const user = userEvent.setup()
-    ordering = { ...ordering, forTable: { label: '5' } }
+    ordering = { ...ordering, forTable: { label: '5', title: 'Bord 5' } }
     render(<WithSite config={config()} path="/bestall?bord=code-5"><BestallPage /></WithSite>)
     expect(await screen.findByText(/vi serverar vid bord 5/)).toBeInTheDocument()
+    expect(screen.getByLabelText('Ditt bord: Bord 5')).toHaveTextContent('Bord 5')
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/ordering?table=code-5'))).toBe(true)
     await user.click(await screen.findByRole('button', { name: 'Lägg till Rödvin' }))
     await fill(user)
     await user.click(screen.getByRole('button', { name: /Till betalning/ }))
     expect(postedOrder()).toMatchObject({ mode: 'table', tableCode: 'code-5', items: [{ menuItemId: 'wine', quantity: 1 }] })
+  })
+
+  it('names a renamed table by its name', async () => {
+    ordering = { ...ordering, forTable: { label: 'Terrassen', title: 'Terrassen' } }
+    render(<WithSite config={config()} path="/bestall?bord=code-t"><BestallPage /></WithSite>)
+    expect(await screen.findByText(/vi serverar vid Terrassen/)).toBeInTheDocument()
+  })
+
+  it.each([
+    ['table code revoked', /QR-koden gäller inte längre/],
+    ['table removed', /Bordet med den här QR-koden finns inte längre/],
+  ])('explains a %s code and blocks ordering', async (error, message) => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.includes('/ordering')) return json({ error }, 400)
+      if (url.endsWith('/menu')) return json(MENU)
+      return json({ error: 'not found' }, 404)
+    })
+    render(<WithSite config={config()} path="/bestall?bord=old-code"><BestallPage /></WithSite>)
+    expect(await screen.findByRole('alert')).toHaveTextContent(message)
+    expect(await screen.findByRole('button', { name: 'Lägg till Margherita' })).toBeDisabled()
   })
 
   it('shows alcohol as table-only for pickup', async () => {

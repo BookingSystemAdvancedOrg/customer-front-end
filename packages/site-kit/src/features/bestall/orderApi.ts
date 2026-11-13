@@ -33,7 +33,8 @@ export interface OrderingState {
   closesAt?: string
   lastOrderAt?: string
   pausedUntil?: string
-  forTable?: { label: string }
+  /** Bordet QR-koden hör till, med namnet i den gällande planritningen. */
+  forTable?: { label: string; title?: string }
 }
 
 export interface OrderRequest {
@@ -172,6 +173,12 @@ export function stepQuantity(current: number, delta: number): number {
 // --- QR-kod: bordet gästen sitter vid (behålls i fliken) ---------------------
 
 
+/** "Bord 7" för ett nummer, annars bordets namn ("Terrassen"). */
+export function tableTitle(forTable: { label: string; title?: string } | undefined): string | null {
+  if (!forTable) return null
+  return forTable.title || (/^\d/.test(forTable.label) ? `Bord ${forTable.label}` : forTable.label)
+}
+
 export function tableCodeFrom(search: string): string | null {
   const fromUrl = new URLSearchParams(search).get('bord')
   try {
@@ -258,6 +265,8 @@ const ORDER_ERRORS: Record<string, string> = {
   menu_item_unavailable: 'En rätt i varukorgen finns inte längre på menyn. Ta bort den och försök igen.',
   alcohol_not_for_pickup: 'Drycker med alkohol kan bara beställas vid bordet.',
   'table code is invalid': 'QR-koden känns inte igen. Skanna koden på bordet igen.',
+  'table code revoked': 'Den här QR-koden gäller inte längre. Fråga personalen så hjälper de dig att beställa.',
+  'table removed': 'Bordet med den här QR-koden finns inte längre. Fråga personalen så hjälper de dig att beställa.',
   payment_unavailable: 'Betalningen är inte tillgänglig just nu. Försök igen om en stund.',
   verification_unavailable: 'Säkerhetskontrollen svarar inte just nu. Försök igen om en stund.',
   too_many_requests: 'För många försök. Vänta en stund och försök igen.',
