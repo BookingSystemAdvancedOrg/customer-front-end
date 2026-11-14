@@ -9,12 +9,24 @@
  * som skulle fastna i cachen. Kontroll var 60:e sekund medan fliken syns och
  * direkt när fönstret får fokus igen.
  *
+ * Fastnar aldrig: versionskontrollen ges högst 10 s, färska filer högst 3 s,
+ * och lever sidan kvar 8 s efter reload() (30 s om bytet börjat) kommer
+ * knappen tillbaka med "Kunde inte ladda om. Försök igen."
+ *
  * Samma fil finns i admin, konsolen och gästsajten; booqy.se har en
  * JS-kopia (site/assets/update-notice.js). Ändra alla tillsammans.
  */
 
 const CHECK_EVERY_MS = 60_000
 const STYLE_ID = 'booqy-update-style'
+/** Längsta väntan på versionskontrollen, så en fastnad förfrågan aldrig stoppar senare kontroller. */
+const VERSION_TIMEOUT_MS = 10000
+/** Längsta väntan på färska filer innan omladdningen ändå sker. */
+const FETCH_TIMEOUT_MS = 3000
+/** Lever sidan kvar så här länge efter reload() har något stoppat bytet: knappen tillbaka. */
+const FAILSAFE_MS = 8000
+/** Har bytet börjat (beforeunload utan stopp) väntas längre. */
+const SLOW_RELOAD_MS = 30000
 
 const CSS = `
 .booqy-update{position:fixed;z-index:2147483000;left:50%;bottom:max(16px,env(safe-area-inset-bottom));
@@ -26,6 +38,7 @@ background:var(--glass-pop,rgba(251,250,246,.74));color:var(--ink,#1c1918);
 box-shadow:0 14px 34px -12px rgba(28,25,24,.45),inset 0 1px 0 rgba(253,250,246,.6);
 font:600 0.95rem/1.3 system-ui,-apple-system,"Segoe UI",sans-serif;animation:booqy-update-in .42s cubic-bezier(.16,1,.3,1)}
 .booqy-update__text{flex:1 1 auto}
+.booqy-update__note{display:block;font-weight:500;font-size:.82rem;opacity:.75}
 .booqy-update__reload{appearance:none;border:0;border-radius:999px;padding:9px 16px;cursor:pointer;
 background:#1c1918;color:#fbfaf6;font:inherit;font-weight:700;white-space:nowrap}
 .booqy-update__reload:hover{background:#350001}
@@ -41,7 +54,7 @@ border-color:var(--glass-edge,rgba(246,236,233,.16));box-shadow:0 14px 34px -12p
 @keyframes booqy-update-in{from{opacity:0;transform:translate(-50%,12px)}to{opacity:1;transform:translate(-50%,0)}}
 `
 
-export type UpdateNoticeLabels = { text: string; reload: string; reloading: string; later: string; hint: string }
+export type UpdateNoticeLabels = { text: string; reload: string; reloading: string; later: string; hint: string; failed: string }
 
 /** Svenska som standard; konsolen (engelskt gränssnitt) skickar egna. */
 const SV: UpdateNoticeLabels = {
@@ -50,31 +63,47 @@ const SV: UpdateNoticeLabels = {
   reloading: 'Laddar om...',
   later: 'Inte nu',
   hint: 'Hämtar den nya versionen. Spara först det du håller på med.',
+  failed: 'Kunde inte ladda om. Försök igen.',
 }
 
 export type UpdateNoticeOptions = {
   /** Filen (eller filerna) vars ETag jämförs. booqy.se skickar sidan, css och js. */
   url?: string | string[]
   intervalMs?: number
-  labels?: UpdateNoticeLabels
+  labels?: Partial<UpdateNoticeLabels>
 }
 
 /** Läser versionen (ETag, annars Last-Modified) förbi alla cacher. */
 export async function readVersion(url: string | string[]): Promise<string | null> {
   const urls = Array.isArray(url) ? url : [url]
-  const parts = await Promise.all(
-    urls.map(async (u) => {
-      const res = await fetch(u, { method: 'HEAD', cache: 'no-store', credentials: 'same-origin' })
-      if (!res.ok) return null
-      return res.headers.get('etag') ?? res.headers.get('last-modified')
-    }),
-  )
-  return parts.some((p) => p === null) ? null : parts.join('|')
+  const abort = new AbortController()
+  let timer = 0
+  const timeout = new Promise<never>((_, reject) => {
+    timer = window.setTimeout(() => {
+      abort.abort()
+      reject(new Error('timeout'))
+    }, VERSION_TIMEOUT_MS)
+  })
+  try {
+    const parts = await Promise.race([
+      Promise.all(
+        urls.map(async (u) => {
+          const res = await fetch(u, { method: 'HEAD', cache: 'no-store', credentials: 'same-origin', signal: abort.signal })
+          if (!res.ok) return null
+          return res.headers.get('etag') ?? res.headers.get('last-modified')
+        }),
+      ),
+      timeout,
+    ])
+    return parts.some((p) => p === null) ? null : parts.join('|')
+  } finally {
+    window.clearTimeout(timer)
+  }
 }
 
 /**
- * Hämtar om sidans egna skript och stilmallar förbi webbläsarens cache och
- * laddar sedan om. Filer med hash i namnet byts ändå, men utan hash (som på
+ * Hämtar om sidans egna skript och stilmallar förbi webbläsarens cache (högst
+ * 3 s) och laddar sedan om. Filer med hash i namnet byts ändå, men utan hash (som på
  * booqy.se) kunde en vanlig omladdning annars visa gammal kod en stund.
  */
 export async function reloadFresh(): Promise<void> {
@@ -88,7 +117,10 @@ export async function reloadFresh(): Promise<void> {
       return false
     }
   })
-  await Promise.allSettled(own.map((u) => fetch(u, { cache: 'reload', credentials: 'same-origin' })))
+  const abort = new AbortController()
+  const timer = window.setTimeout(() => abort.abort(), FETCH_TIMEOUT_MS)
+  await Promise.allSettled(own.map((u) => fetch(u, { cache: 'reload', credentials: 'same-origin', signal: abort.signal })))
+  window.clearTimeout(timer)
   location.reload()
 }
 
@@ -114,10 +146,35 @@ function showNotice(labels: UpdateNoticeLabels, onDismiss: () => void): void {
   reload.className = 'booqy-update__reload'
   reload.textContent = labels.reload
   reload.title = labels.hint
+  const note = document.createElement('span')
+  note.className = 'booqy-update__note'
+  note.textContent = labels.failed
+
   reload.addEventListener('click', () => {
     reload.disabled = true
     reload.textContent = labels.reloading
+    note.remove()
+    // Lever sidan kvar efter reload() har något stoppat bytet (t.ex. en
+    // lämna-spärr): knappen tillbaka, aldrig ett evigt "Laddar om...".
+    let going = false
+    const probe = (e: Event) => {
+      going = !e.defaultPrevented
+    }
+    window.addEventListener('beforeunload', probe)
+    const restore = () => {
+      window.removeEventListener('beforeunload', probe)
+      reload.disabled = false
+      reload.textContent = labels.reload
+      text.append(note)
+    }
     void reloadFresh()
+      .catch(() => undefined)
+      .then(() => {
+        window.setTimeout(() => {
+          if (going) window.setTimeout(restore, SLOW_RELOAD_MS - FAILSAFE_MS)
+          else restore()
+        }, FAILSAFE_MS)
+      })
   })
 
   const close = document.createElement('button')
@@ -139,7 +196,7 @@ function showNotice(labels: UpdateNoticeLabels, onDismiss: () => void): void {
 export function startUpdateNotice(options: UpdateNoticeOptions = {}): () => void {
   const url = options.url ?? '/index.html'
   const intervalMs = options.intervalMs ?? CHECK_EVERY_MS
-  const labels = options.labels ?? SV
+  const labels: UpdateNoticeLabels = { ...SV, ...options.labels }
   let baseline: string | null = null
   let latest: string | null = null
   let running = false

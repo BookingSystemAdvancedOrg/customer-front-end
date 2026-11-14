@@ -69,4 +69,48 @@ describe('updateNotice', () => {
     await flush()
     expect(document.querySelector('.booqy-update')).not.toBeNull()
   })
+  it('gives up on a hanging version check, so the next check still runs', async () => {
+    vi.useFakeTimers()
+    let call = 0
+    vi.stubGlobal('fetch', vi.fn(() => {
+      call++
+      if (call === 1) return Promise.resolve(new Response(null, { headers: { etag: '"a"' } }))
+      if (call === 2) return new Promise<Response>(() => {})
+      return Promise.resolve(new Response(null, { headers: { etag: '"b"' } }))
+    }))
+    stop = startUpdateNotice({ intervalMs: 600_000 })
+    await vi.advanceTimersByTimeAsync(0)
+    window.dispatchEvent(new Event('focus'))
+    await vi.advanceTimersByTimeAsync(10_100)
+    window.dispatchEvent(new Event('focus'))
+    await vi.advanceTimersByTimeAsync(0)
+    expect(call).toBe(3)
+    expect(document.querySelector('.booqy-update')).not.toBeNull()
+  })
+
+  it('brings Ladda om back when the reload did not happen, even if the files hang', async () => {
+    vi.useFakeTimers()
+    const s = document.createElement('script')
+    s.src = `${location.origin}/assets/app.js`
+    document.head.appendChild(s)
+    let round = 0
+    vi.stubGlobal('fetch', vi.fn((_u: string, init?: RequestInit) =>
+      init?.method === 'HEAD'
+        ? Promise.resolve(new Response(null, { headers: { etag: round++ ? '"b"' : '"a"' } }))
+        : new Promise<Response>((_, reject) => init?.signal?.addEventListener('abort', () => reject(new Error('aborted'))))))
+    stop = startUpdateNotice({ intervalMs: 600_000 })
+    await vi.advanceTimersByTimeAsync(0)
+    window.dispatchEvent(new Event('focus'))
+    await vi.advanceTimersByTimeAsync(0)
+    const btn = document.querySelector<HTMLButtonElement>('.booqy-update__reload')!
+    btn.click()
+    expect(btn.disabled).toBe(true)
+    await vi.advanceTimersByTimeAsync(3_000 + 8_000 - 100)
+    expect(btn.disabled).toBe(true)
+    await vi.advanceTimersByTimeAsync(200)
+    expect(btn.disabled).toBe(false)
+    expect(btn.textContent).toBe('Ladda om')
+    expect(document.querySelector('.booqy-update')?.textContent).toContain('Kunde inte ladda om. Försök igen.')
+    s.remove()
+  })
 })
