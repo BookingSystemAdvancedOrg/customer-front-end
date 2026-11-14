@@ -508,4 +508,28 @@ describe('BestallPage options, allergens and categories', () => {
       options: [{ group: 'Storlek', choice: 'Stor' }, { group: 'Extra', choice: 'Ost' }, { group: 'Extra', choice: 'Skinka' }],
     }])
   })
+
+  it('lets the guest pick and unpick a paid choice in an optional one-choice group', async () => {
+    const user = userEvent.setup()
+    const menu = {
+      items: [{ menuItemId: 'burger', name: 'Burgare', description: '', price: 150, category: 'mains', imageKey: null,
+        options: [{ name: 'Extra', required: false, maxChoices: 1,
+          choices: [{ name: 'Extra ost', price: 15 }, { name: 'Bacon', price: 20 }] }] }],
+    }
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.includes('/ordering')) return json(ordering)
+      if (url.endsWith('/menu')) return json(menu)
+      return json({ error: 'not found' }, 404)
+    })
+    render(<WithSite config={config()} path="/bestall"><BestallPage /></WithSite>)
+    await user.click(await screen.findByRole('button', { name: 'Välj tillval och lägg till Burgare' }))
+    const dialog = screen.getByRole('dialog', { name: 'Burgare' })
+    expect(within(dialog).getByRole('radio', { name: 'Inget' })).toBeChecked()
+    expect(within(dialog).getByRole('button', { name: /Lägg till · 150 kr/ })).toBeEnabled()
+    await user.click(within(dialog).getByRole('radio', { name: /Extra ost/ }))
+    expect(within(dialog).getByRole('button', { name: /Lägg till · 165 kr/ })).toBeInTheDocument()
+    await user.click(within(dialog).getByRole('radio', { name: 'Inget' }))
+    expect(within(dialog).getByRole('radio', { name: /Extra ost/ })).not.toBeChecked()
+    expect(within(dialog).getByRole('button', { name: /Lägg till · 150 kr/ })).toBeEnabled()
+  })
 })

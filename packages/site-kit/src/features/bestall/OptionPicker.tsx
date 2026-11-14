@@ -7,7 +7,8 @@ import type { OptionPick } from './orderApi'
 
 /**
  * Tillvalen för en rätt innan den läggs i varukorgen: ett val i en grupp
- * med "Ett val" (radioknappar), annars kryssrutor upp till gruppens max.
+ * med "Ett val" (radioknappar, med "Inget" när gruppen är valfri), annars
+ * kryssrutor upp till gruppens max.
  * Priset visas med tilläggen; servern räknar om det när beställningen görs.
  */
 export function OptionPicker({
@@ -40,6 +41,10 @@ export function OptionPicker({
       document.body.style.overflow = prev
     }
   }, [onClose])
+
+  function clearGroup(group: string) {
+    setPicks((prev) => prev.filter((p) => p.group !== group))
+  }
 
   function toggle(group: string, choice: string, single: boolean, max: number) {
     setPicks((prev) => {
@@ -74,6 +79,17 @@ export function OptionPicker({
                   {!single && `, välj upp till ${g.maxChoices}`}
                 </span>
               </legend>
+              {single && !g.required && (
+                <label className="option-choice">
+                  <input
+                    type="radio"
+                    name={`${titleId}-${g.name}`}
+                    checked={mine.length === 0}
+                    onChange={() => clearGroup(g.name)}
+                  />
+                  <span className="option-choice-name">Inget</span>
+                </label>
+              )}
               {g.choices.map((c) => {
                 const checked = mine.some((p) => p.choice === c.name)
                 return (
