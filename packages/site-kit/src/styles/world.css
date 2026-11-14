@@ -685,7 +685,7 @@ svg {
 }
 
 .booking-field input,
-.booking-field select,
+.booking-field .combo,
 .booking-field textarea {
   min-height: 52px;
   padding: 12px 16px;
@@ -698,7 +698,7 @@ svg {
 }
 
 .booking-field input:focus,
-.booking-field select:focus,
+.booking-field .combo:focus,
 .booking-field textarea:focus {
   outline: none;
   background: var(--surface);
@@ -841,7 +841,7 @@ svg {
   cursor: not-allowed;
 }
 
-.party-stepper select {
+.party-stepper .combo {
   min-width: 128px;
   min-height: 50px;
   padding: 0 12px;
@@ -1320,7 +1320,7 @@ h1, h2, h3, h4 {
 .chip-count,
 .stepper > span,
 .cart-qty span,
-.party-stepper select,
+.party-stepper .combo,
 .order-mobile-bar-total,
 .order-mobile-bar-count,
 .offer-peek-percent,
@@ -1723,7 +1723,7 @@ h1, h2, h3, h4 {
 }
 
 .booking-field input,
-.booking-field select,
+.booking-field .combo,
 .booking-field textarea,
 .catering-dishes input,
 .cart-code-row input,
@@ -1740,13 +1740,13 @@ h1, h2, h3, h4 {
 }
 
 .booking-field input:hover,
-.booking-field select:hover,
+.booking-field .combo:hover,
 .booking-field textarea:hover {
   border-color: var(--muted);
 }
 
 .booking-field input:focus,
-.booking-field select:focus,
+.booking-field .combo:focus,
 .booking-field textarea:focus,
 .catering-dishes input:focus,
 .cart-code-row input:focus,
@@ -2607,7 +2607,7 @@ h1, h2, h3, h4 {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
 }
 
-.party-stepper select {
+.party-stepper .combo {
   min-height: 44px;
   border-radius: var(--r-md);
   font: 700 1rem/1 var(--mono);

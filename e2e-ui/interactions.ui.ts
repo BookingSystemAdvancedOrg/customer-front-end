@@ -113,6 +113,32 @@ for (const vp of SIZES) {
       finish(info, 'order-cart', issues)
     })
 
+    test(`dropdown: party size in the site look, picked by keyboard ${vp.name} ${theme} @x`, async ({ page }, info) => {
+      await open(page, '/boka-bord')
+      const issues: Issue[] = []
+      const box = page.getByRole('combobox', { name: 'Antal personer' })
+      await box.scrollIntoViewIfNeeded()
+      await box.click()
+      const list = page.getByRole('listbox', { name: 'Antal personer' })
+      await expect(list).toBeVisible()
+      await page.waitForTimeout(300)
+      const b = await list.boundingBox()
+      if (!b || b.x < -1 || b.x + b.width > vp.width + 1 || b.y + b.height > vp.height + 1) issues.push({ kind: 'dropdown-bounds', severity: 'high', message: `Dropdown list outside the window: ${JSON.stringify(b)}` })
+      const sheet = await page.locator('.combo-pop--sheet').count()
+      if (phone !== Boolean(sheet)) issues.push({ kind: 'dropdown-mode', severity: 'high', message: phone ? 'No bottom sheet on a phone' : 'A bottom sheet on a wide screen' })
+      issues.push(...(await axeIssues(page)))
+      await page.screenshot({ path: info.outputPath('dropdown.png') })
+      await page.keyboard.press('ArrowDown')
+      await page.keyboard.press('Enter')
+      await expect(list).toBeHidden()
+      if (!/3 personer/.test((await box.textContent()) ?? '')) issues.push({ kind: 'dropdown-keyboard', severity: 'high', message: 'ArrowDown + Enter did not pick the next party size' })
+      await box.click()
+      await page.keyboard.press('Escape')
+      await expect(list).toBeHidden()
+      if (!(await box.evaluate((el) => el === document.activeElement))) issues.push({ kind: 'dropdown-focus', severity: 'medium', message: 'Escape did not leave focus on the dropdown' })
+      finish(info, 'dropdown', issues)
+    })
+
     test(`booking: pick a time and reach the details step ${vp.name} ${theme}`, async ({ page }, info) => {
       await open(page, '/boka-bord')
       const issues: Issue[] = []

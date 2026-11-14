@@ -11,7 +11,7 @@ const COMPONENTS = [
   'BookingFlow', 'ManageBooking', 'OrderFlow', 'OrderStatus', 'CateringFlow', 'CateringRequest',
   'OfferCard', 'FloorPlan3D', 'FloorPlanSvg', 'GuaranteeStep', 'TurnstileWidget',
   'PaymentTicket', 'PaymentPanel', 'AddToCalendar', 'Celebrate', 'DateInput', 'TimeInput',
-  'DateTimeInput', 'FlowSteps', 'OpeningHoursModal', 'PhoneInput', 'PhoneLink', 'ThemeToggle',
+  'DateTimeInput', 'FlowSteps', 'Select', 'OpeningHoursModal', 'PhoneInput', 'PhoneLink', 'ThemeToggle',
   'GuestDataNotice', 'MarketingConsent', 'PrivacyPolicy', 'CookiePolicy', 'BookingTermsPage', 'NoticeText',
 ] as const
 

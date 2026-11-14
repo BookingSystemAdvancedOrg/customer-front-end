@@ -1,3 +1,4 @@
+import { Select } from '../../shared/Select'
 import { DEFAULT_CATEGORIES } from './menuApi'
 import type { MenuCategory, MenuCategoryEntry } from './menuApi'
 
@@ -46,17 +47,12 @@ export function CategoryNav({
         <label htmlFor="category-select" className="category-dropdown-label">
           Välj kategori
         </label>
-        <select
+        <Select
           id="category-select"
           value={filter}
-          onChange={(e) => onSelect(e.target.value as MenuCategory)}
-        >
-          {categories.map(({ categoryId: category, name }) => (
-            <option key={category} value={category}>
-              {name}
-            </option>
-          ))}
-        </select>
+          onChange={(v) => onSelect(v as MenuCategory)}
+          options={categories.map(({ categoryId, name }) => ({ value: categoryId, label: name }))}
+        />
       </div>
     </>
   )

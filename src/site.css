@@ -65,7 +65,7 @@
 }
 
 .contact-form-field input,
-.contact-form-field select,
+.contact-form-field .combo,
 .contact-form-field textarea {
   width: 100%;
   margin: 0;
@@ -225,7 +225,7 @@
   color: color-mix(in srgb, var(--on-accent) 80%, transparent);
 }
 
-.location-picker select {
+.location-picker .combo {
   min-height: 36px;
   padding: 0 34px 0 14px;
   font: 600 0.92rem var(--font);
@@ -752,7 +752,7 @@
   border-color: var(--on-accent);
 }
 
-.location-picker select {
+.location-picker .combo {
   border-radius: var(--r-md);
   font: 600 0.8rem/1 var(--mono);
 }
@@ -849,7 +849,7 @@
 }
 
 .contact-form-field input,
-.contact-form-field select,
+.contact-form-field .combo,
 .contact-form-field textarea {
   min-height: 48px;
   padding: 10px 14px;

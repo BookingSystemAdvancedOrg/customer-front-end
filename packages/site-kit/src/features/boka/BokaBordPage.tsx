@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { useSite } from '../../shared/SiteContext'
 import { Slot } from '../../shared/slots'
 import { PhoneInput } from '../../shared/PhoneInput'
+import { Select } from '../../shared/Select'
 import { useLocationInfo } from '../../shared/useLocationInfo'
 import AddToCalendar from '../../shared/AddToCalendar'
 import { bookingEvent, restaurantName } from '../../shared/calendar'
@@ -711,11 +712,15 @@ export default function BokaBordPage() {
                 disabled={partySize <= 1} onClick={() => choosePartySize(partySize - 1)}>
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14" /></svg>
               </button>
-              <select id="party-size" value={partySize} onChange={(e) => choosePartySize(Number(e.target.value))}>
-                {Array.from({ length: maxParty }, (_, i) => i + 1).map((n) => (
-                  <option key={n} value={n}>{n} {n === 1 ? 'person' : 'personer'}</option>
-                ))}
-              </select>
+              <Select
+                id="party-size"
+                value={String(partySize)}
+                onChange={(v) => choosePartySize(Number(v))}
+                options={Array.from({ length: maxParty }, (_, i) => i + 1).map((n) => ({
+                  value: String(n),
+                  label: `${n} ${n === 1 ? 'person' : 'personer'}`,
+                }))}
+              />
               <button type="button" className="party-btn" aria-label="En person till"
                 disabled={partySize >= maxParty} onClick={() => choosePartySize(partySize + 1)}>
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>

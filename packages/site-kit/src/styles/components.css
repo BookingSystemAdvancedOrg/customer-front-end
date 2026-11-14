@@ -1131,7 +1131,7 @@
 }
 
 .booking-field input,
-.booking-field select,
+.booking-field .combo,
 .booking-field textarea {
   min-height: 44px;
   padding: 10px 16px;
@@ -1144,13 +1144,13 @@
 }
 
 .booking-field input:focus,
-.booking-field select:focus,
+.booking-field .combo:focus,
 .booking-field textarea:focus {
   outline: none;
   box-shadow: 0 0 0 4px var(--focus);
 }
 
-.booking-field select {
+.booking-field .combo {
   max-width: 240px;
 }
 

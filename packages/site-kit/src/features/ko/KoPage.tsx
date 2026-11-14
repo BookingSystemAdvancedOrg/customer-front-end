@@ -4,6 +4,7 @@ import { Bar, Button } from '@booqy/brand'
 import './ko.css'
 import { ApiError } from '../../shared/api'
 import { PhoneInput } from '../../shared/PhoneInput'
+import { Select } from '../../shared/Select'
 import { toE164 } from '../../shared/phone'
 import { useSite } from '../../shared/SiteContext'
 import { TurnstileWidget } from '../boka/TurnstileWidget'
@@ -162,9 +163,11 @@ function JoinForm({ onJoined }: { onJoined: (token: string) => void }) {
           </label>
           <label className="booking-field">
             <span>Antal personer</span>
-            <select value={party} onChange={(e) => setParty(Number(e.target.value))}>
-              {Array.from({ length: 20 }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n}</option>)}
-            </select>
+            <Select
+              value={String(party)}
+              onChange={(v) => setParty(Number(v))}
+              options={Array.from({ length: 20 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) }))}
+            />
           </label>
           <label className="booking-field">
             <span>Mobilnummer</span>

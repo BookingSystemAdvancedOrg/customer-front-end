@@ -6,6 +6,11 @@ CSS variable or class name a site styles) is a major version.
 
 ## Unreleased
 
+- `Select`: a dropdown in the site's look instead of the system menu
+  (ARIA select-only combobox, list in a portal, a sheet from the bottom on
+  phones). Every dropdown in the kit uses it (`CategoryNav`, party size in
+  `BookingFlow`, the waitlist); the `.party-stepper select`,
+  `.booking-field select` rules now style `.combo`.
 - The restaurant's own menu categories: `getPublicMenuWithCategories()`,
   `useMenuList().categories`, `groupByCategory(items, categories)` (groups
   carry a `label`; unknown categories last under Övrigt) and an optional
