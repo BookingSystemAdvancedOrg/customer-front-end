@@ -211,13 +211,24 @@ describe('BokaBordPage', () => {
     )
   })
 
+  it('large parties get a formatted number that dials E.164', async () => {
+    render(
+      <WithSite>
+        <BokaBordPage />
+      </WithSite>,
+    )
+    const note = await screen.findByText(/Fler än \d+ personer\? Ring/)
+    expect(within(note).getByRole('link', { name: '08-123 456 78' })).toHaveAttribute('href', 'tel:+46812345678')
+  })
+
   it('shows phone booking only when the plan has no reservations', () => {
     render(
       <WithSite config={siteConfig({ features: { reservations: false } })}>
         <BokaBordPage />
       </WithSite>,
     )
-    expect(screen.getByText(/Ring oss på 08-123 456 78/)).toBeInTheDocument()
+    expect(screen.getByText(/Ring oss på/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '08-123 456 78' })).toHaveAttribute('href', 'tel:+46812345678')
     expect(fetchMock).not.toHaveBeenCalled()
   })
 

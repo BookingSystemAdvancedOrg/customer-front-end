@@ -7,7 +7,7 @@ vi.mock('../../shared/SiteContext', () => ({
   useSite: () => ({
     config: {
       tenant: { name: 'Testkrogen' },
-      legal: { legalName: 'Testkrogen AB', orgNumber: '556000-0000', address: 'Gatan 1', contactEmail: 'hej@test.se' },
+      legal: { legalName: 'Testkrogen AB', orgNumber: '556000-0000', address: 'Gatan 1', contactEmail: 'hej@test.se', contactPhone: '+46812345678' },
     },
   }),
 }))
@@ -20,5 +20,17 @@ describe('PrivacyPage cookie table', () => {
       expect(screen.getByText(entry.purpose)).toBeInTheDocument()
     }
     expect(screen.getByText(/inga cookies för statistik, spårning eller reklam/)).toBeInTheDocument()
+  })
+})
+
+describe('PrivacyPage contact', () => {
+  it('shows the contact number in Swedish form with an E.164 tel: link', () => {
+    const { container } = render(<PrivacyPage />)
+    const links = screen.getAllByRole('link', { name: '08-123 456 78' })
+    expect(links.length).toBeGreaterThan(0)
+    for (const link of links) expect(link).toHaveAttribute('href', 'tel:+46812345678')
+    expect(container.textContent).toContain('Kontakt: hej@test.se, 08-123 456 78.')
+    expect(container.textContent).toContain('Kontakta oss på hej@test.se, 08-123 456 78.')
+    expect(container.textContent).not.toContain('+46812345678')
   })
 })

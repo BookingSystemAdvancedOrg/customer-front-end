@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
-import { useLocationInfo, useSite } from '@booqy/site-kit'
+import { PhoneLink, useLocationInfo, useSite } from '@booqy/site-kit'
 import { Button } from '@booqy/brand'
 
 const SUBJECT_OPTIONS = [
@@ -43,14 +43,16 @@ export default function KontaktPage() {
         <p className="hero-sub">Skicka ett meddelande till oss. Vi återkommer så snart vi kan.</p>
         {(phone || address) && (
           <p className="hero-sub">
-            {[address, phone].filter(Boolean).join(' · ')}
+            {address}
+            {address && phone && ' · '}
+            {phone && <PhoneLink phone={phone} />}
           </p>
         )}
       </section>
 
       {!email && (
         <p className="notice" role="status">
-          {phone ? `Ring oss på ${phone}.` : 'Kontaktuppgifter saknas just nu.'}
+          {phone ? <>Ring oss på <PhoneLink phone={phone} />.</> : 'Kontaktuppgifter saknas just nu.'}
         </p>
       )}
 

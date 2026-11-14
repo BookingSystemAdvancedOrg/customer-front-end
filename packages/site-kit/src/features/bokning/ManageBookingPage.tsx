@@ -15,6 +15,7 @@ import AddToCalendar from '../../shared/AddToCalendar'
 import { bookingEvent, restaurantName } from '../../shared/calendar'
 import { SiteContext } from '../../shared/SiteContext'
 import { SkelLines } from '../../shared/Skeleton'
+import { PhoneLink } from '../../shared/PhoneLink'
 
 const STATUS_TEXT: Record<string, string> = {
   pending: 'Väntar på kortgaranti',
@@ -159,7 +160,7 @@ export default function ManageBookingPage() {
           )}
           {booking.location?.phoneNumber && (
             <p className="cell-muted">
-              Frågor eller ändringar? Ring {booking.location.phoneNumber}.
+              Frågor eller ändringar? Ring <PhoneLink phone={booking.location.phoneNumber} />.
             </p>
           )}
         </>

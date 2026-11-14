@@ -11,7 +11,7 @@ const COMPONENTS = [
   'BookingFlow', 'ManageBooking', 'OrderFlow', 'OrderStatus', 'CateringFlow', 'CateringRequest',
   'OfferCard', 'FloorPlan3D', 'FloorPlanSvg', 'GuaranteeStep', 'TurnstileWidget',
   'PaymentTicket', 'PaymentPanel', 'AddToCalendar', 'Celebrate', 'DateInput', 'TimeInput',
-  'DateTimeInput', 'FlowSteps', 'OpeningHoursModal', 'PhoneInput', 'ThemeToggle',
+  'DateTimeInput', 'FlowSteps', 'OpeningHoursModal', 'PhoneInput', 'PhoneLink', 'ThemeToggle',
   'GuestDataNotice', 'MarketingConsent', 'PrivacyPolicy', 'CookiePolicy', 'BookingTermsPage', 'NoticeText',
 ] as const
 
@@ -19,7 +19,7 @@ const FUNCTIONS = [
   'configureSiteKit', 'siteKitConfig', 'useSite', 'useLocationInfo', 'useMenuList', 'useStickyCart', 'useTheme',
   'apiGet', 'apiPost', 'apiDelete', 'apiBaseUrl', 'isApiConfigured', 'getSiteConfig', 'siteQuery', 'isDevHost',
   'openStatus', 'businessHoursToRows', 'formatPrice', 'menuImageUrl', 'groupByCategory',
-  'bookingTerms', 'toE164', 'formatPhone', 'buildIcs', 'googleCalendarUrl',
+  'bookingTerms', 'toE164', 'formatPhone', 'formatPhoneNational', 'phoneHref', 'buildIcs', 'googleCalendarUrl',
   'setTheme', 'currentTheme', 'trackPage', 'captureAttribution', 'paymentAppearance', 'stripeFor',
 ] as const
 

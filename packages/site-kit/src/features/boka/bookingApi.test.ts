@@ -84,11 +84,24 @@ describe('guest fields (same rules as the server)', () => {
     ['+46 (0)70 123 45 67', '+46701234567'],
     ['0046701234567', '+46701234567'],
     ['+358 40 123 4567', '+358401234567'],
+    ['701740605', '+46701740605'],
+    ['70 174 06 05', '+46701740605'],
+    ['+46701740605', '+46701740605'],
+    ['+46 070 174 06 05', '+46701740605'],
+    ['0046 70 174 06 05', '+46701740605'],
+    ['08-123 45 67', '+4681234567'],
   ])('accepts %s', (raw, expected) => {
     expect(normalizePhone(raw)).toBe(expected)
   })
 
-  it.each(['', '12345678', '070-12', '+0701234567', 'telefon'])('rejects %s', (raw) => {
+  it.each([
+    '', '12345678', '070-12', '+0701234567', 'telefon',
+    '70174060', // mobile one digit short
+    '7017406051', // mobile one digit too many, no prefix
+    '+4670174060', // +46 mobile one digit short
+    '+467017406051', // +46 mobile one digit too many
+    '0812345', // Stockholm too short
+  ])('rejects %s', (raw) => {
     expect(normalizePhone(raw)).toBeNull()
   })
 

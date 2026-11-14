@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
-import { editPhone, formatPhone, toE164 } from './phone'
+import { editPhone, formatPhone, formatPhoneNational, phoneHref, toE164 } from './phone'
+import { PhoneLink } from './PhoneLink'
 import { PhoneInput } from './PhoneInput'
 
 describe('toE164', () => {
@@ -12,7 +13,10 @@ describe('toE164', () => {
     ['+46 72 300 15 73', '+46723001573'],
     ['+46 (0)72 300 15 73', '+46723001573'],
     ['0046723001573', '+46723001573'],
-    ['723001573', '723001573'], // no 0 or +: left alone, the form flags it
+    ['723001573', '+46723001573'], // Swedish mobile without the 0
+    ['72 300 15 73', '+46723001573'],
+    ['12345678', '12345678'], // no 0, + or mobile: left alone, the form flags it
+    ['72300157', '72300157'], // a digit short: not guessed
     ['08-123 45 67', '+4681234567'],
     ['+4712345678', '+4712345678'],
     ['07230015739999', '+46723001573'], // capped at 9 national digits
@@ -35,6 +39,38 @@ describe('formatPhone', () => {
     ['+4712345678', '+47 123 456 78'],
   ])('%s -> %s', (raw, expected) => {
     expect(formatPhone(raw)).toBe(expected)
+  })
+})
+
+describe('formatPhoneNational', () => {
+  it.each([
+    ['+46701740605', '070-174 06 05'],
+    ['0701740605', '070-174 06 05'],
+    ['+4681234567', '08-123 45 67'],
+    ['+46812345678', '08-123 456 78'],
+    ['+46311234567', '031-123 45 67'],
+    ['+4640123456', '040-12 34 56'],
+    ['+46411123456', '0411-12 34 56'],
+    ['+46101234567', '010-123 45 67'], // 010: company and switchboard numbers
+    ['010-123 45 67', '010-123 45 67'],
+    ['+46201234567', '020-123 45 67'],
+    ['+46771123456', '0771-12 34 56'], // 07 but not a mobile series
+    ['+46731234567', '073-123 45 67'],
+    ['+46761234567', '076-123 45 67'],
+    ['+46791234567', '079-123 45 67'],
+    ['+4712345678', '+47 123 456 78'],
+    ['ring receptionen', 'ring receptionen'],
+  ])('%s -> %s', (raw, expected) => {
+    expect(formatPhoneNational(raw)).toBe(expected)
+  })
+})
+
+describe('PhoneLink', () => {
+  it('shows the Swedish format and dials E.164', () => {
+    render(<PhoneLink phone="+46701740605" />)
+    const link = screen.getByRole('link', { name: '070-174 06 05' })
+    expect(link).toHaveAttribute('href', 'tel:+46701740605')
+    expect(phoneHref('070-174 06 05')).toBe('tel:+46701740605')
   })
 })
 
@@ -72,6 +108,14 @@ describe('PhoneInput', () => {
     await user.type(screen.getByLabelText('Telefon'), '0723001573')
     expect(screen.getByLabelText('Telefon')).toHaveValue('+46 72 300 15 73')
     expect(screen.getByRole('status')).toHaveTextContent('+46723001573')
+  })
+
+  it('turns a mobile number typed without the 0 into +46', async () => {
+    const user = userEvent.setup()
+    render(<Harness />)
+    await user.type(screen.getByLabelText('Telefon'), '70 174 06 05')
+    expect(screen.getByLabelText('Telefon')).toHaveValue('+46 70 174 06 05')
+    expect(screen.getByRole('status')).toHaveTextContent('+46701740605')
   })
 
   it('backspace works through the spaces', async () => {
