@@ -4126,3 +4126,41 @@ a,
     display: none;
   }
 }
+
+/* Rätter på smala telefoner: mindre foto och priset under texten på menyn,
+   så att namn och beskrivning får bredden. Långa ord bryts i stället för att
+   klippas. */
+.dish-name,
+.dish-desc,
+.dish-allergens {
+  overflow-wrap: break-word;
+}
+
+@media (max-width: 480px) {
+  .dish {
+    gap: 12px;
+  }
+
+  .dish > .plate {
+    --size: 60px;
+  }
+
+  .dish:not(.dish--order) {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .dish:not(.dish--order) > .plate {
+    grid-row: span 2;
+  }
+
+  .dish:not(.dish--order) > .dish-price {
+    grid-column: 2;
+    margin-top: -8px;
+  }
+
+  .dish-action .order-only-table {
+    display: block;
+    max-width: 64px;
+    text-align: right;
+  }
+}

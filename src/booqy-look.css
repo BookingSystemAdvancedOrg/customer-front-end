@@ -350,7 +350,7 @@ body::before {
   font: 600 0.8rem/1 var(--font);
 }
 .mobile-drawer {
-  padding: 84px 20px 24px;
+  padding: 12px 20px 24px;
   border-radius: var(--r-panel) 0 0 var(--r-panel);
 }
 .mobile-drawer-list a,
@@ -1193,10 +1193,12 @@ body::before {
   grid-template-columns: minmax(0, 1fr);
   place-items: center;
 }
-.opening-hours-modal-backdrop,
-.mobile-drawer-backdrop {
+.opening-hours-modal-backdrop {
   position: fixed;
   inset: 0;
+}
+.opening-hours-modal-backdrop,
+.mobile-drawer-backdrop {
   background: var(--scrim);
   -webkit-backdrop-filter: blur(6px) saturate(1.2);
   backdrop-filter: blur(6px) saturate(1.2);
@@ -1323,5 +1325,31 @@ body::before {
   .btn.small,
   .site .stepper button {
     background-color: var(--surface);
+  }
+}
+
+/* --- Telefon: varje knapp och länk är minst 44 px att trycka på ---------- */
+@media (max-width: 640px) {
+  .site .site-header-brand {
+    min-height: 44px;
+  }
+  .site .site-header-theme {
+    width: 44px;
+    height: 44px;
+  }
+  .site-footer-legal a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  .site .site-footer-sound {
+    min-height: 44px;
+  }
+  .chip,
+  [data-glide='track'] > :is(button, a) {
+    min-height: 44px;
+  }
+  .site .bq-btn--sm {
+    min-height: 44px;
   }
 }

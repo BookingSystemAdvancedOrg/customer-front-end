@@ -113,7 +113,7 @@ export function CustomerLayout() {
     <div className="site">
       <header className="site-header" ref={headerRef}>
         <div className="site-header-inner">
-          <Link className="site-header-brand" to="/" aria-label={`${tenant.name} - startsida`}>
+          <Link className="site-header-brand" to="/" aria-label={`${tenant.name} - startsida`} onClick={closeMenu}>
             {tenant.branding.logoUrl ? (
               <img src={tenant.branding.logoUrl} alt="" width={44} height={44} />
             ) : null}

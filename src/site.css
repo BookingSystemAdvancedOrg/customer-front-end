@@ -291,7 +291,13 @@
   }
 }
 
-/* Mobilmenyn: ett ark från höger. */
+/* Mobilmenyn: ett ark från höger, under sidhuvudet, så att stängknappen,
+   namnet och temaknappen alltid går att trycka på medan menyn är öppen.
+   Sidhuvudet lyfts över skuggan men ligger kvar under arket. */
+.site:has(.mobile-drawer--open) .site-header {
+  z-index: 46;
+}
+
 .mobile-drawer-backdrop {
   position: fixed;
   inset: 0;
@@ -309,12 +315,14 @@
 
 .mobile-drawer {
   position: fixed;
-  top: 0;
+  top: calc(var(--header-h, 76px) + 8px);
   right: 0;
   bottom: 0;
   z-index: 50;
   width: min(86vw, 340px);
-  padding: 76px 16px 24px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 12px 16px 24px;
   transform: translateX(100%);
   visibility: hidden;
   transition: transform 320ms var(--spring), visibility 0s linear 320ms;
@@ -509,8 +517,10 @@
 
 @media (max-width: 1000px) {
 
-  .site-main:has(.order-mobile-bar) {
-    padding-bottom: 110px;
+  /* Beställningsraden svävar längst ner: sidan (även sidfoten) får plats
+     under den, så att inget i sidfoten hamnar bakom raden. */
+  .site:has(.order-mobile-bar) {
+    padding-bottom: calc(88px + env(safe-area-inset-bottom));
   }
 }
 
