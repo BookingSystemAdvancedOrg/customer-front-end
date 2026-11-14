@@ -6,7 +6,7 @@ import { useSite } from '../../shared/SiteContext'
 import { PhoneInput } from '../../shared/PhoneInput'
 import { normalizePhone, validEmail } from '../boka/bookingApi'
 import { TurnstileWidget } from '../boka/TurnstileWidget'
-import { CATEGORY_LABEL, getPublicMenu, groupByCategory } from '../meny/menuApi'
+import { getPublicMenu, groupByCategory } from '../meny/menuApi'
 import { useStickyCart } from '../../shared/useStickyCart'
 import type { PublicMenuItem } from '../meny/menuApi'
 import {
@@ -360,8 +360,8 @@ export default function CateringPage() {
           )}
 
           {groupByCategory(legacyMenu).map((group) => (
-            <section key={group.category} aria-label={CATEGORY_LABEL[group.category]}>
-              <h2 className="menu-content-title">{CATEGORY_LABEL[group.category]}</h2>
+            <section key={group.category} aria-label={group.label}>
+              <h2 className="menu-content-title">{group.label}</h2>
               <ul className="catering-dishes">
                 {group.items.map((dish) => (
                   <li key={dish.menuItemId}>

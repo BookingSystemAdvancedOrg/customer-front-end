@@ -11,9 +11,15 @@ import { apiGet, ApiError } from '../../shared/api'
  * representerade här.
  */
 
-export type MenuCategory = 'starters' | 'mains' | 'desserts' | 'drinks'
+/** Ett categoryId bland platsens kategorier (de fyra standard tills ägaren ändrar). */
+export type MenuCategory = string
 
-/** Visningsordning och svenska rubriker för menyns kategorier. */
+export interface MenuCategoryEntry {
+  categoryId: string
+  name: string
+}
+
+/** Standardkategorierna: visningsordning och svenska rubriker när API:t inte skickar platsens egna. */
 export const CATEGORY_ORDER: MenuCategory[] = [
   'starters',
   'mains',
@@ -21,11 +27,43 @@ export const CATEGORY_ORDER: MenuCategory[] = [
   'drinks',
 ]
 
-export const CATEGORY_LABEL: Record<MenuCategory, string> = {
+export const CATEGORY_LABEL: Record<string, string> = {
   starters: 'Förrätter',
   mains: 'Varmrätter',
   desserts: 'Efterrätter',
   drinks: 'Drycker',
+}
+
+export const DEFAULT_CATEGORIES: MenuCategoryEntry[] = CATEGORY_ORDER.map((categoryId) => ({
+  categoryId,
+  name: CATEGORY_LABEL[categoryId],
+}))
+
+/** EU:s 14 allergener, samma koder som API:t, med svenska namn. */
+export const ALLERGEN_LABEL: Record<string, string> = {
+  gluten: 'Gluten', crustaceans: 'Kräftdjur', eggs: 'Ägg', fish: 'Fisk', peanuts: 'Jordnötter', soy: 'Soja',
+  milk: 'Mjölk', nuts: 'Nötter', celery: 'Selleri', mustard: 'Senap', sesame: 'Sesamfrön',
+  sulphites: 'Svaveldioxid och sulfiter', lupin: 'Lupin', molluscs: 'Blötdjur',
+}
+
+/** "Innehåller: Gluten, Mjölk", eller null utan allergener. */
+export function allergenText(allergens: string[] | undefined): string | null {
+  const names = (allergens ?? []).map((a) => ALLERGEN_LABEL[a]).filter(Boolean)
+  return names.length ? `Innehåller: ${names.join(', ')}` : null
+}
+
+/** Ett tillval och dess pristillägg i kr. */
+export interface OptionChoice {
+  name: string
+  price: number
+}
+
+/** En grupp tillval (Storlek, Extra ...). */
+export interface OptionGroup {
+  name: string
+  required: boolean
+  maxChoices: number
+  choices: OptionChoice[]
 }
 
 /**
@@ -39,8 +77,13 @@ export interface PublicMenuItem {
   description: string
   price: number
   category: MenuCategory
-  imageKey: string
+  /** null = ingen bild (platshållaren visas). */
+  imageKey: string | null
   active?: boolean
+  /** EU-allergener (koder, se ALLERGEN_LABEL). */
+  allergens?: string[]
+  /** Tillval gästen väljer vid beställning. */
+  options?: OptionGroup[]
   /** Innehåller alkohol: kan bara beställas vid bordet. */
   alcohol?: boolean
   /** Bildens fokuspunkt i hela procent (admin väljer den); saknas = mitten. */
@@ -67,9 +110,9 @@ export function menuImagePosition(focus: PublicMenuItem['imageFocus']): string {
   return focus ? `${axis(focus.x)}% ${axis(focus.y)}%` : '50% 50%'
 }
 
-export function menuImageUrl(imageKey: string): string | null {
+export function menuImageUrl(imageKey: string | null | undefined): string | null {
   const base = menuImageBaseUrl()
-  if (!imageKey.trim() || !base) return null
+  if (!imageKey?.trim() || !base) return null
   return `${base}/${imageKey}`
 }
 
@@ -109,26 +152,69 @@ function toFriendlyMenuError(err: unknown): Error {
 export async function getPublicMenu(
   locationId: string,
 ): Promise<PublicMenuItem[]> {
+  return (await getPublicMenuWithCategories(locationId)).items
+}
+
+/** Rätterna och platsens kategorier (standard när ett äldre API inte skickar dem). */
+export async function getPublicMenuWithCategories(
+  locationId: string,
+): Promise<{ items: PublicMenuItem[]; categories: MenuCategoryEntry[] }> {
   try {
-    const res = await apiGet<{ items?: PublicMenuItem[] }>(
+    const res = await apiGet<{ items?: PublicMenuItem[]; categories?: MenuCategoryEntry[] }>(
       `/locations/${encodeURIComponent(locationId)}/menu`,
     )
-    return (res.items ?? []).filter((item) => item.active !== false)
+    return {
+      items: (res.items ?? []).filter((item) => item.active !== false),
+      categories: res.categories?.length ? res.categories : DEFAULT_CATEGORIES,
+    }
   } catch (err) {
     throw toFriendlyMenuError(err)
   }
 }
 
-/** Grupperar rätterna per kategori i visningsordning, sorterade på namn. */
+/**
+ * Grupperar rätterna per kategori i platsens ordning, sorterade på namn.
+ * Rätter vars kategori inte finns bland platsens hamnar sist under Övrigt.
+ */
 export function groupByCategory(
   items: PublicMenuItem[],
-): { category: MenuCategory; items: PublicMenuItem[] }[] {
-  return CATEGORY_ORDER.map((category) => ({
-    category,
-    items: items
-      .filter((item) => item.category === category)
-      .sort((a, b) => a.name.localeCompare(b.name, 'sv')),
-  })).filter((group) => group.items.length > 0)
+  categories: MenuCategoryEntry[] = DEFAULT_CATEGORIES,
+): { category: MenuCategory; label: string; items: PublicMenuItem[] }[] {
+  const known = new Set(categories.map((c) => c.categoryId))
+  const sorted = (list: PublicMenuItem[]) => list.slice().sort((a, b) => a.name.localeCompare(b.name, 'sv'))
+  return [
+    ...categories.map((c) => ({
+      category: c.categoryId,
+      label: c.name,
+      items: sorted(items.filter((item) => item.category === c.categoryId)),
+    })),
+    { category: 'ovrigt', label: 'Övrigt', items: sorted(items.filter((item) => !known.has(item.category))) },
+  ].filter((group) => group.items.length > 0)
+}
+
+/** Tillvalens pristillägg i öre för gästens val (servern räknar likadant). */
+export function optionsOre(item: PublicMenuItem, picks: { group: string; choice: string }[]): number {
+  let sum = 0
+  for (const pick of picks) {
+    const choice = item.options?.find((g) => g.name === pick.group)?.choices.find((c) => c.name === pick.choice)
+    if (choice) sum += Math.round(choice.price * 100)
+  }
+  return sum
+}
+
+/**
+ * Är gästens val giltiga för rätten: varje grupp och val finns, högst
+ * maxChoices per grupp och minst ett val i de grupper som krävs.
+ */
+export function validPicks(item: PublicMenuItem, picks: { group: string; choice: string }[]): boolean {
+  const groups = item.options ?? []
+  for (const pick of picks) {
+    if (!groups.some((g) => g.name === pick.group && g.choices.some((c) => c.name === pick.choice))) return false
+  }
+  return groups.every((g) => {
+    const mine = picks.filter((p) => p.group === g.name)
+    return mine.length <= g.maxChoices && new Set(mine.map((p) => p.choice)).size === mine.length && (!g.required || mine.length > 0)
+  })
 }
 
 /** Pris i kr med svensk formatering: heltal utan decimaler, annars två. */

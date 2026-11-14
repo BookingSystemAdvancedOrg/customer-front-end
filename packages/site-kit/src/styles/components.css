@@ -2211,3 +2211,102 @@
     display: none;
   }
 }
+
+/* --- Allergener och tillval (Meny, Beställ mat) ----------------------------- */
+
+.dish-allergens {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.cart-item-options,
+.sum-line-options {
+  display: block;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 400;
+  line-height: 1.35;
+}
+
+.dish-option-action {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.dish-option-count {
+  color: var(--muted);
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.option-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.option-group {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.option-group legend {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  margin-bottom: 0.25rem;
+  padding: 0;
+  font-weight: 650;
+}
+
+.option-group-rule {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 400;
+}
+
+.option-choice {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 2.5rem;
+  padding: 0.2rem 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--ink, currentColor) 10%, transparent);
+  cursor: pointer;
+}
+
+.option-choice input {
+  width: 1.1rem;
+  height: 1.1rem;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.option-choice:has(input:disabled) {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.option-choice-price {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.option-picker-add {
+  width: 100%;
+  justify-content: center;
+}

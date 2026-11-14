@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Plate } from '../../shared/Plate'
 import { useMenuList } from './useMenuList'
-import { CATEGORY_LABEL, formatPrice, groupByCategory, menuImagePosition, menuImageUrl } from './menuApi'
+import { allergenText, formatPrice, groupByCategory, menuImagePosition, menuImageUrl } from './menuApi'
 import type { MenuCategory } from './menuApi'
 import { SkelDishes } from '../../shared/Skeleton'
 
@@ -11,8 +11,8 @@ import { SkelDishes } from '../../shared/Skeleton'
  * lägger sin egen hero ovanför (se site-template:s MenyPage).
  */
 export function Menu() {
-  const { configured, loading, error, items } = useMenuList()
-  const groups = groupByCategory(items)
+  const { configured, loading, error, items, categories } = useMenuList()
+  const groups = groupByCategory(items, categories)
   const [active, setActive] = useState<MenuCategory | null>(null)
   const sectionRefs = useRef(new Map<MenuCategory, HTMLElement>())
 
@@ -60,7 +60,7 @@ export function Menu() {
               aria-current={(active ?? groups[0].category) === g.category ? 'true' : undefined}
               onClick={() => jump(g.category)}
             >
-              {CATEGORY_LABEL[g.category]}
+              {g.label}
               <span className="chip-count">{g.items.length}</span>
             </button>
           ))}
@@ -78,7 +78,7 @@ export function Menu() {
             else sectionRefs.current.delete(group.category)
           }}
         >
-          <h3 id={`cat-${group.category}`} className="menu-section-title">{CATEGORY_LABEL[group.category]}</h3>
+          <h3 id={`cat-${group.category}`} className="menu-section-title">{group.label}</h3>
           <ul className="dish-list">
             {group.items.map((dish) => (
               <li className="dish" key={dish.menuItemId}>
@@ -86,6 +86,7 @@ export function Menu() {
                 <div className="dish-text">
                   <h4 className="dish-name">{dish.name}</h4>
                   {dish.description && <p className="dish-desc">{dish.description}</p>}
+                  {allergenText(dish.allergens) && <p className="dish-allergens">{allergenText(dish.allergens)}</p>}
                 </div>
                 <span className="dish-price">{formatPrice(dish.price)}</span>
               </li>

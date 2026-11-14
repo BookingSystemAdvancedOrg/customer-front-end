@@ -174,9 +174,14 @@ export default function OrderStatusPage() {
             </p>
           )}
           <ul className="cart-list order-status-lines">
-            {order.lines.map((line) => (
-              <li key={line.menuItemId}>
-                <span className="cart-item-name">{line.quantity} × {line.name}</span>
+            {order.lines.map((line, i) => (
+              <li key={`${line.menuItemId}-${i}`}>
+                <span className="cart-item-name">
+                  {line.quantity} × {line.name}
+                  {line.options?.length ? (
+                    <span className="cart-item-options">{line.options.map((o) => o.choice).join(', ')}</span>
+                  ) : null}
+                </span>
                 <span />
                 <span className="cart-item-price">{kronor(line.total)}</span>
               </li>
