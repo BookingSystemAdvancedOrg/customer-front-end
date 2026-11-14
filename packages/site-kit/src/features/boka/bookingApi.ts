@@ -1,5 +1,6 @@
 import { apiDelete, apiGet, apiPost, ApiError } from '../../shared/api'
 import { withAttribution } from '../../shared/visits'
+import { normalizePhone } from '../../shared/phone'
 
 /**
  * Klient mot bokningsrutterna (backend docs/RESERVATIONS.md):
@@ -240,18 +241,12 @@ const path = (locationId: string) => `/locations/${encodeURIComponent(locationId
 export const NAME_MAX = 100
 export const EMAIL_MAX = 254
 export const NOTES_MAX = 500
-const E164 = /^\+[1-9]\d{7,14}$/
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
 
 /** Telefonnummer som servern sparar dem (E.164), eller null om servern
- * skulle neka numret. "070-123 45 67" -> "+46701234567". */
-export function normalizePhone(raw: string): string | null {
-  let digits = raw.trim().replace(/[\s\-.]/g, '')
-  digits = digits.replace(/^(\+\d{1,3})\(0\)/, '$1').replace(/[()]/g, '')
-  if (digits.startsWith('00')) digits = `+${digits.slice(2)}`
-  else if (digits.startsWith('0')) digits = `+46${digits.slice(1)}`
-  return E164.test(digits) ? digits : null
-}
+ * skulle neka numret. Bor i shared/phone så att fältet och valideringen
+ * följer samma regler. */
+export { normalizePhone }
 
 export function validEmail(raw: string): boolean {
   const email = raw.trim()

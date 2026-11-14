@@ -4,6 +4,7 @@ import { clearCart, clock, getOrder, kronor, orderErrorMessage, recallToken } fr
 import type { GuestOrder } from './orderApi'
 import { FlowSteps } from '../../shared/FlowSteps'
 import { Celebrate } from '../../shared/Celebrate'
+import { PhoneLink } from '../../shared/PhoneLink'
 
 /** Hur ofta sidan frågar om beställningen medan gästen väntar. */
 export const STATUS_POLL_MS = 5_000
@@ -193,7 +194,7 @@ export default function OrderStatusPage() {
             <span>{kronor(order.totalAmount)}</span>
           </div>
           {order.location?.phoneNumber && (
-            <p className="cell-muted">Frågor? Ring {order.location.phoneNumber}.</p>
+            <p className="cell-muted">Frågor? Ring <PhoneLink phone={order.location.phoneNumber} />.</p>
           )}
         </>
       )}

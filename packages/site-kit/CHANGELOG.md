@@ -6,6 +6,12 @@ CSS variable or class name a site styles) is a major version.
 
 ## Unreleased
 
+- Phone numbers: a Swedish mobile number typed without the 0 ("70 174 06 05")
+  becomes +46701740605 in `PhoneInput`/`toE164` and is accepted by
+  `normalizePhone`, which now lives in `shared/phone` and also refuses
+  Swedish numbers of the wrong length (same rules as the server). New
+  `formatPhoneNational` ("070-174 06 05"), `phoneHref` ("tel:+46701740605")
+  and `PhoneLink`; the guest pages show restaurant numbers that way.
 - `PublicMenuItem.imageFocus` (the dish photo's focal point, set in admin)
   and `menuImagePosition()`; `Menu` and the order pages crop dish photos
   at that point (`Plate` takes a `position`). Missing = the centre.

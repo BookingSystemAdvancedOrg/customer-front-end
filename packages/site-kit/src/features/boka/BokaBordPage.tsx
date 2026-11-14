@@ -45,6 +45,8 @@ import { Celebrate } from '../../shared/Celebrate'
 import { GuestDataNotice } from '../../shared/GuestDataNotice'
 import { MarketingConsent, NO_CONSENT, consentFields } from '../../shared/MarketingConsent'
 import type { ConsentChoice } from '../../shared/MarketingConsent'
+import { PhoneLink } from '../../shared/PhoneLink'
+import { formatPhoneNational } from '../../shared/phone'
 
 const DEFAULT_MAX_PARTY = 12
 /** Hur ofta lediga tider hämtas om medan gästen väljer (tider inom 30
@@ -363,7 +365,7 @@ export default function BokaBordPage() {
   )
   const hasCombinations = options.some((o) => o.tableIds.length > 1)
   const day = availability?.day ?? null
-  const dayText = dayMessage(day, info.phone)
+  const dayText = dayMessage(day, formatPhoneNational(info.phone))
   const allTables = useMemo(
     () => (floors ?? []).flatMap((g) => g.elements.filter((e): e is LayoutTableElement => e.type === 'table')),
     [floors],
@@ -407,7 +409,7 @@ export default function BokaBordPage() {
       label: labels.get(u.tableId) ?? u.tableId,
       partySize,
       startTime: slot?.startTime ?? '',
-      phone: info.phone,
+      phone: formatPhoneNational(info.phone),
       hasCombinations,
     })
   }
@@ -465,7 +467,7 @@ export default function BokaBordPage() {
       !slot ? 'Välj en tid.'
       : !option ? 'Välj ett bord.'
       : cardNeeded && !config.stripe.publishableKey
-        ? `Onlinebokning för ${partySize} personer kräver kortgaranti, som inte är tillgänglig just nu. Ring oss på ${info.phone || 'restaurangen'}.`
+        ? `Onlinebokning för ${partySize} personer kräver kortgaranti, som inte är tillgänglig just nu. Ring oss på ${formatPhoneNational(info.phone) || 'restaurangen'}.`
       : turnstileSiteKey && !turnstileToken
         ? 'Bekräfta säkerhetskontrollen (rutan ovanför knappen).'
         : null
@@ -589,7 +591,7 @@ export default function BokaBordPage() {
       <section className="page-hero">
         <h1>Boka bord</h1>
         <p className="hero-sub">
-          Ring oss på {info.phone || 'restaurangen'} så hjälper vi dig att boka bord.
+          Ring oss på {info.phone ? <PhoneLink phone={info.phone} /> : 'restaurangen'} så hjälper vi dig att boka bord.
         </p>
       </section>
     )
@@ -681,7 +683,7 @@ export default function BokaBordPage() {
           </div>
         )}
         <p className="cell-muted">
-          Frågor? Ring {info.phone || 'restaurangen'}{info.email ? ` eller mejla ${info.email}` : ''}.
+          Frågor? Ring {info.phone ? <PhoneLink phone={info.phone} /> : 'restaurangen'}{info.email ? ` eller mejla ${info.email}` : ''}.
         </p>
       </section>
       </>
@@ -721,7 +723,7 @@ export default function BokaBordPage() {
             </div>
           </div>
           <p className="cell-muted">
-            Fler än {maxParty} personer? Ring {info.phone || 'restaurangen'}.
+            Fler än {maxParty} personer? Ring {info.phone ? <PhoneLink phone={info.phone} /> : 'restaurangen'}.
           </p>
           <div className="booking-dates" role="group" aria-label="Välj datum">
             {dates.map((d) => {

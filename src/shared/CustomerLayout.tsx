@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
   OfferCard,
   OpeningHoursModal,
+  PhoneLink,
   SkelCard,
   SoundToggle,
   ThemeToggle,
@@ -244,7 +245,7 @@ export function CustomerLayout() {
           <div>
             <h3>Adress &amp; kontakt</h3>
             {location.address && <p>{location.address}</p>}
-            {location.phone && <p><a href={`tel:${location.phone.replace(/[^\d+]/g, '')}`}>{location.phone}</a></p>}
+            {location.phone && <p><PhoneLink phone={location.phone} /></p>}
             {location.email && <p><a href={`mailto:${location.email}`}>{location.email}</a></p>}
           </div>
         </div>

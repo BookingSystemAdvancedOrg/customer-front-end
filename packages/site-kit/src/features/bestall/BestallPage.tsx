@@ -46,6 +46,7 @@ import { GuestDataNotice } from '../../shared/GuestDataNotice'
 import { MarketingConsent, NO_CONSENT, consentFields } from '../../shared/MarketingConsent'
 import type { ConsentChoice } from '../../shared/MarketingConsent'
 import { SkelDishes } from '../../shared/Skeleton'
+import { formatPhoneNational } from '../../shared/phone'
 
 const STEPS = [{ label: 'Varukorg' }, { label: 'Dina uppgifter' }, { label: 'Betala' }, { label: 'Klart' }]
 
@@ -476,7 +477,7 @@ export default function BestallPage() {
                   <h2 id="checkout-who" className="checkout-sub">Dina uppgifter</h2>
                   <div className="checkout-card checkout-card--facts">
                     <p className="checkout-fact-strong">{guest.name}</p>
-                    <p>{guest.phone} · {guest.email}</p>
+                    <p>{formatPhoneNational(guest.phone)} · {guest.email}</p>
                     <p>{place}</p>
                   </div>
                 </section>
@@ -639,7 +640,7 @@ export default function BestallPage() {
             ? mode === 'table'
               ? 'Beställning vid bordet är inte påslagen - fråga personalen.'
               : 'Avhämtning går inte att beställa online just nu.'
-            : closedMessage(ordering, info.phone)}
+            : closedMessage(ordering, formatPhoneNational(info.phone))}
         </p>
       )}
       {ordering?.open && ordering.lastOrderAt && (
