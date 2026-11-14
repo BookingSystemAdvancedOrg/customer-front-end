@@ -44,6 +44,13 @@ describe('KoPage', () => {
     expect(window.localStorage.getItem('booqy-waitlist-loc-1')).toContain('tok.mac')
   })
 
+  it('names the party size dropdown and its list by the label alone', () => {
+    page()
+    const box = screen.getByRole('combobox', { name: 'Antal personer' })
+    fireEvent.click(box)
+    expect(screen.getByRole('listbox')).toHaveAttribute('aria-label', 'Antal personer')
+  })
+
   it('takes the offered table from the SMS link', async () => {
     window.location.hash = '#tok.mac'
     vi.mocked(api.queueStatus).mockResolvedValue({

@@ -161,14 +161,15 @@ function JoinForm({ onJoined }: { onJoined: (token: string) => void }) {
             <span>Namn</span>
             <input autoComplete="name" maxLength={80} required value={name} onChange={(e) => setName(e.target.value)} />
           </label>
-          <label className="booking-field">
-            <span>Antal personer</span>
+          <div className="booking-field">
+            <label htmlFor="ko-party-size">Antal personer</label>
             <Select
+              id="ko-party-size"
               value={String(party)}
               onChange={(v) => setParty(Number(v))}
               options={Array.from({ length: 20 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) }))}
             />
-          </label>
+          </div>
           <label className="booking-field">
             <span>Mobilnummer</span>
             <PhoneInput value={phone} onChange={setPhone} />

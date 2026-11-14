@@ -122,8 +122,23 @@ for (const vp of SIZES) {
       const list = page.getByRole('listbox', { name: 'Antal personer' })
       await expect(list).toBeVisible()
       await page.waitForTimeout(300)
-      const b = await list.boundingBox()
-      if (!b || b.x < -1 || b.x + b.width > vp.width + 1 || b.y + b.height > vp.height + 1) issues.push({ kind: 'dropdown-bounds', severity: 'high', message: `Dropdown list outside the window: ${JSON.stringify(b)}` })
+      // the whole popup box (list plus its padding and border), not only the listbox
+      const popBox = page.locator('.combo-pop')
+      const fits = async (label: string) => {
+        const b = await popBox.boundingBox()
+        const t = await box.boundingBox()
+        if (!b || b.x < -1 || b.x + b.width > vp.width + 1 || b.y < -1 || b.y + b.height > vp.height + 1) issues.push({ kind: 'dropdown-bounds', severity: 'high', message: `${label}: dropdown outside the window: ${JSON.stringify(b)}` })
+        else if (!phone && t && b.y < t.y + t.height - 1 && b.y + b.height > t.y + 1) issues.push({ kind: 'dropdown-overlap', severity: 'high', message: `${label}: dropdown covers its trigger: ${JSON.stringify({ pop: b, trigger: t })}` })
+      }
+      await fits('Opened')
+      if (phone) {
+        const before = await page.evaluate(() => window.scrollY)
+        await page.mouse.move(vp.width / 2, 40)
+        await page.mouse.wheel(0, 400)
+        await page.waitForTimeout(300)
+        const after = await page.evaluate(() => window.scrollY)
+        if (Math.abs(after - before) > 1) issues.push({ kind: 'dropdown-scroll-behind', severity: 'medium', message: `The page scrolled behind the open sheet (${before} to ${after})` })
+      }
       const sheet = await page.locator('.combo-pop--sheet').count()
       if (phone !== Boolean(sheet)) issues.push({ kind: 'dropdown-mode', severity: 'high', message: phone ? 'No bottom sheet on a phone' : 'A bottom sheet on a wide screen' })
       issues.push(...(await axeIssues(page)))
@@ -136,6 +151,20 @@ for (const vp of SIZES) {
       await page.keyboard.press('Escape')
       await expect(list).toBeHidden()
       if (!(await box.evaluate((el) => el === document.activeElement))) issues.push({ kind: 'dropdown-focus', severity: 'medium', message: 'Escape did not leave focus on the dropdown' })
+      if (!phone) {
+        // trigger near the bottom of the window: the list flips above and keeps its gap
+        await box.evaluate((el) => window.scrollBy(0, el.getBoundingClientRect().bottom - window.innerHeight + 60))
+        await page.waitForTimeout(200)
+        const t = await box.boundingBox()
+        if (t && t.y + t.height > vp.height - 200) {
+          await box.click()
+          await expect(list).toBeVisible()
+          await page.waitForTimeout(300)
+          if (!(await page.locator('.combo-pop--above').count())) issues.push({ kind: 'dropdown-flip', severity: 'medium', message: 'With no room below, the dropdown did not open above' })
+          await fits('Flipped')
+          await page.keyboard.press('Escape')
+        }
+      }
       finish(info, 'dropdown', issues)
     })
 

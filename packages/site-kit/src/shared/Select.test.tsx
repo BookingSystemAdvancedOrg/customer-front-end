@@ -194,6 +194,39 @@ describe('Select', () => {
     expect(parseFloat(pop.style.top)).toBe(window.innerHeight - 60 - 6 - 200)
   })
 
+  it('counts the popup padding and border: a gap above the trigger, inside the window below', async () => {
+    const user = userEvent.setup()
+    const style = document.createElement('style')
+    style.textContent = '.combo-pop { padding: 6px; border: 1px solid; }'
+    document.head.appendChild(style)
+    try {
+      vi.spyOn(HTMLElement.prototype, 'scrollHeight', 'get').mockReturnValue(200)
+      render(<Fruit />)
+      const box = screen.getByRole('combobox')
+      const vh = window.innerHeight
+      const rect = (top: number) => ({ top, bottom: top + 44, left: 20, right: 220, width: 200, height: 44, x: 20, y: top, toJSON() {} })
+      // above: the whole box (list + 14 px) ends 6 px over the trigger
+      vi.spyOn(box, 'getBoundingClientRect').mockReturnValue(rect(vh - 60) as DOMRect)
+      await user.click(box)
+      let pop = screen.getByRole('listbox').parentElement as HTMLElement
+      expect(pop).toHaveClass('combo-pop--above')
+      expect(parseFloat(pop.style.top)).toBe(vh - 60 - 6 - (200 + 14))
+      await user.keyboard('{Escape}')
+      // below, shortened in a short window: the box ends 8 px inside it
+      vi.spyOn(HTMLElement.prototype, 'scrollHeight', 'get').mockReturnValue(600)
+      vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(500)
+      vi.spyOn(box, 'getBoundingClientRect').mockReturnValue(rect(180) as DOMRect)
+      await user.click(box)
+      pop = screen.getByRole('listbox').parentElement as HTMLElement
+      expect(pop).toHaveClass('combo-pop--below')
+      const maxH = parseFloat(screen.getByRole('listbox').style.maxHeight)
+      expect(parseFloat(pop.style.top)).toBe(180 + 44 + 6)
+      expect(parseFloat(pop.style.top) + maxH + 14).toBe(500 - 8)
+    } finally {
+      style.remove()
+    }
+  })
+
   it('keeps the list inside the window horizontally', async () => {
     const user = userEvent.setup()
     render(<Fruit />)
@@ -218,6 +251,30 @@ describe('Select', () => {
     expect(screen.getByRole('listbox')).toBeInTheDocument()
     await user.click(document.querySelector('.combo-backdrop') as HTMLElement)
     expect(screen.queryByRole('listbox')).toBeNull()
+  })
+
+  it('locks page scrolling on the root while the phone sheet is open', async () => {
+    mockMatchMedia(true)
+    const user = userEvent.setup()
+    render(<Fruit />)
+    await user.click(screen.getByRole('combobox'))
+    expect(document.documentElement.style.overflow).toBe('hidden')
+    await user.keyboard('{Escape}')
+    expect(document.documentElement.style.overflow).toBe('')
+  })
+
+  it('names the list after a wrapping label without the current value', async () => {
+    mockMatchMedia(true)
+    const user = userEvent.setup()
+    render(
+      <label>
+        <span>Antal</span>
+        <Select value="2" onChange={() => {}} options={[{ value: '1', label: '1' }, { value: '2', label: '2' }]} />
+      </label>,
+    )
+    await user.click(screen.getByRole('combobox'))
+    expect(screen.getByRole('listbox')).toHaveAttribute('aria-label', 'Antal')
+    expect(document.querySelector('.combo-title')).toHaveTextContent(/^Antal$/)
   })
 
   it('on a wide screen opens a popover, not a sheet', async () => {

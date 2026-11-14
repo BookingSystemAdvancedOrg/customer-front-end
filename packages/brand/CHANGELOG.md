@@ -7,6 +7,9 @@ major version. A new token, variant or component is a minor version.
 
 ## Unreleased (minor: next version 0.2.0)
 
+- `Select` is deprecated (owner, 2026-11-14: no dropdown opens the system
+  menu). It stays a native select so admin and console copies keep building;
+  the guest site uses `Select` from `@booqy/site-kit`.
 - No pure white (owner, 2026-11-13): palette `white` (#ffffff) is replaced by
   `snow` (#fdfaf6, surfaces, text on dark fills, glass highlights) and `paper`
   (#fbf8f3, receipt paper and the ticket QR plate). Every rgba(255, 255, 255, a)

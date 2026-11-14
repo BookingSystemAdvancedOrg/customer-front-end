@@ -1297,6 +1297,7 @@ h1, h2, h3, h4 {
 .category-sidebar-kicker,
 .category-dropdown-label,
 .booking-field > span:first-child,
+.booking-field > label:first-child,
 .offer-stub-label,
 .order-only-table,
 .storage-table th,

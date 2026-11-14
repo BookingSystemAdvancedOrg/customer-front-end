@@ -65,6 +65,16 @@ function Chevron() {
   )
 }
 
+/** Etikettens text utan knappens eget värde (när knappen ligger inuti <label>). */
+function labelText(t: HTMLButtonElement | null): string {
+  const label = t?.labels?.[0]
+  if (!label || !t) return ''
+  if (!label.contains(t)) return label.textContent ?? ''
+  const copy = label.cloneNode(true) as HTMLElement
+  copy.querySelectorAll('.combo-field, .combo').forEach((n) => n.remove())
+  return copy.textContent ?? ''
+}
+
 type Place = { top: number; left: number; width: number; maxHeight: number; above: boolean }
 
 export function Select({
@@ -118,7 +128,7 @@ export function Select({
       ?.split(/\s+/)
       .map((x) => document.getElementById(x)?.textContent ?? '')
       .join(' ')
-    setTitle((labelled || t?.labels?.[0]?.textContent || aria['aria-label'] || '').trim())
+    setTitle((labelled || labelText(t) || aria['aria-label'] || '').trim())
     setSheet(typeof window.matchMedia === 'function' && window.matchMedia(SELECT_SHEET_QUERY).matches)
     setPlace(null)
     setActive(enabled(at) ? at : first())
@@ -204,23 +214,39 @@ export function Select({
     function measure() {
       const t = trigger.current
       const l = list.current
-      if (!t || !l) return
+      const p = pop.current
+      if (!t || !l || !p) return
       const r = t.getBoundingClientRect()
       const vw = window.innerWidth
       const vh = window.innerHeight
+      // Rutans egen utfyllnad och kant: rutan är så mycket högre än listan.
+      const cs = window.getComputedStyle(p)
+      const px = (v: string) => parseFloat(v) || 0
+      const chrome = px(cs.paddingTop) + px(cs.paddingBottom) + px(cs.borderTopWidth) + px(cs.borderBottomWidth)
       const want = Math.min(l.scrollHeight || MAX_H, MAX_H)
       const below = vh - r.bottom - GAP - EDGE
       const above = r.top - GAP - EDGE
-      const up = below < want && above > below
-      const maxHeight = Math.max(96, Math.min(MAX_H, up ? above : below))
+      const up = below < want + chrome && above > below
+      const maxHeight = Math.max(96, Math.min(MAX_H, (up ? above : below) - chrome))
       const width = Math.min(Math.max(r.width, 160), vw - EDGE * 2)
       const left = Math.min(Math.max(r.left, EDGE), vw - width - EDGE)
-      const top = up ? r.top - GAP - Math.min(want, maxHeight) : r.bottom + GAP
+      const top = up ? r.top - GAP - (Math.min(want, maxHeight) + chrome) : r.bottom + GAP
       setPlace({ top, left, width, maxHeight, above: up })
     }
     measure()
     window.addEventListener('resize', measure)
     return () => window.removeEventListener('resize', measure)
+  }, [open, sheet])
+
+  // Arket nerifrån: sidan under står still (roten låses, inte body, som menyn).
+  useEffect(() => {
+    if (!open || !sheet) return
+    const root = document.documentElement
+    const prev = root.style.overflow
+    root.style.overflow = 'hidden'
+    return () => {
+      root.style.overflow = prev
+    }
   }, [open, sheet])
 
   // Stäng vid klick utanför och när sidan (eller en förälder) rullar.

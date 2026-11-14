@@ -176,6 +176,8 @@
   z-index: 1099;
   inset: 0;
   background: var(--scrim, rgba(0, 0, 0, 0.4));
+  touch-action: none;
+  overscroll-behavior: contain;
   animation: combo-fade 180ms ease-out both;
 }
 
