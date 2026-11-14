@@ -87,11 +87,13 @@ export function CustomerLayout() {
       if (e.key === 'Escape') closeMenu()
     }
     document.addEventListener('keydown', onKey)
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
+    // lock the root, not body: overflow on body makes body the scroller and the sticky header scrolls away
+    const root = document.documentElement
+    const prev = root.style.overflow
+    root.style.overflow = 'hidden'
     return () => {
       document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = prev
+      root.style.overflow = prev
     }
   }, [menuOpen])
 

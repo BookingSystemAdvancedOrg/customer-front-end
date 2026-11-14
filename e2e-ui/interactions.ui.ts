@@ -47,6 +47,30 @@ for (const vp of SIZES) {
         if (await page.locator('.mobile-drawer--open').count()) issues.push({ kind: 'drawer-no-close', severity: 'high', message: 'The mobile menu cannot be closed with Escape or a tap outside' })
         finish(info, 'mobile-menu', issues)
       })
+
+      test(`mobile menu scrolled ${vp.name} ${theme} @x`, async ({ page }, info) => {
+        // opening the menu mid-page must keep the header (close, name, theme) on screen
+        await open(page, '/meny')
+        const issues: Issue[] = []
+        await page.evaluate(() => window.scrollTo(0, 600))
+        await page.waitForTimeout(300)
+        await page.getByRole('button', { name: 'Öppna meny' }).click()
+        await page.waitForTimeout(400)
+        await expect(page.getByRole('navigation', { name: 'Mobilmeny' })).toBeVisible()
+        const headerTop = await page.evaluate(() => document.querySelector('.site-header')?.getBoundingClientRect().top ?? null)
+        if (headerTop === null || Math.abs(headerTop) > 1) issues.push({ kind: 'drawer-header-gone', severity: 'high', message: `With the page scrolled, the header leaves the screen when the menu opens (top ${headerTop})`, selector: '.site-header' })
+        const closeBtn = page.getByRole('button', { name: 'Stäng meny' })
+        const cb = await closeBtn.boundingBox()
+        const hit = cb ? await page.evaluate(({ x, y }) => { const e = document.elementFromPoint(x, y); return e?.closest('button')?.getAttribute('aria-label') ?? e?.tagName ?? null }, { x: cb.x + cb.width / 2, y: cb.y + cb.height / 2 }) : null
+        if (hit !== 'Stäng meny') issues.push({ kind: 'drawer-close-covered', severity: 'high', message: `With the page scrolled, the close button of the open menu cannot be tapped (a tap hits ${hit})`, selector: 'button.site-header-burger--open' })
+        await page.screenshot({ path: info.outputPath('menu-open-scrolled.png') })
+        await closeBtn.click()
+        await page.waitForTimeout(400)
+        if (await page.locator('.mobile-drawer--open').count()) issues.push({ kind: 'drawer-no-close', severity: 'high', message: 'With the page scrolled, the close button does not close the menu' })
+        const y = await page.evaluate(() => window.scrollY)
+        if (Math.abs(y - 600) > 2) issues.push({ kind: 'drawer-scroll-jump', severity: 'medium', message: `Closing the menu moved the page from 600 to ${y}` })
+        finish(info, 'mobile-menu-scrolled', issues)
+      })
     }
 
     test(`theme toggle ${vp.name} ${theme}`, async ({ page }, info) => {
