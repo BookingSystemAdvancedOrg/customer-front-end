@@ -30,6 +30,24 @@ describe('getPublicActiveLayout', () => {
     expect(url).toBe('https://api.example.com/locations/loc-1/layout/active')
   })
 
+  it('släpper en kassa från en äldre layout men behåller allt annat', async () => {
+    const wall = { elementId: 'w1', type: 'wall', x: 0, y: 0, z: 0, width: 4, height: 1.8, depth: 0.2, rotationY: 0 }
+    const register = { ...wall, elementId: 'cr1', type: 'cashRegister', label: 'Kassa' }
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ floors: [], elements: [wall, register] }), { status: 200 }),
+      ),
+    )
+    const { getPublicActiveLayout } = await loadLayoutApi({
+      VITE_API_BASE_URL: 'https://api.example.com',
+    })
+
+    const layout = await getPublicActiveLayout('loc-1')
+
+    expect(layout.elements.map((el) => el.elementId)).toEqual(['w1'])
+  })
+
   it('översätter 404 till "ingen publicerad planritning"', async () => {
     vi.stubGlobal(
       'fetch',

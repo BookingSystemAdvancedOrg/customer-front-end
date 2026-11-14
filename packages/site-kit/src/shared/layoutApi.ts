@@ -95,13 +95,28 @@ function toFriendlyLayoutError(err: unknown): Error {
 export async function getPublicActiveLayout(
   locationId: string,
 ): Promise<PublicActiveLayout> {
+  let layout: PublicActiveLayout
   try {
-    return await apiGet<PublicActiveLayout>(
+    layout = await apiGet<PublicActiveLayout>(
       `/locations/${encodeURIComponent(locationId)}/layout/active`,
     )
   } catch (err) {
     throw toFriendlyLayoutError(err)
   }
+  return withoutLegacyElements(layout)
+}
+
+/**
+ * Tar bort element som gästsidan aldrig ritar och som inte ska påverka
+ * planens utsnitt: en kassa (`cashRegister`) från en äldre layout. Booqy är
+ * bara online och kassan finns inte längre i editorn, men en tidigare
+ * publicerad version kan fortfarande innehålla en.
+ */
+export function withoutLegacyElements(layout: PublicActiveLayout): PublicActiveLayout {
+  const elements = (layout.elements ?? []).filter(
+    (el) => (el as { type: string }).type !== 'cashRegister',
+  )
+  return { ...layout, floors: layout.floors ?? [], elements }
 }
 
 export interface LayoutViewBox {
