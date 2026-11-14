@@ -142,7 +142,11 @@ export function normalizePhone(raw: string): string | null {
 const SE_TWO_DIGIT_AREA = new Set([
   '11', '13', '16', '18', '19', '21', '23', '26', '31', '33', '35', '36',
   '40', '42', '44', '46', '54', '60', '63', '90',
+  '10', '20', // 010 (företag och växlar) och 020 (frinummer)
 ])
+
+/** Mobilserierna 070, 072, 073, 076 och 079; andra 07-nummer (0771...) har tre siffror. */
+const SE_MOBILE_SERIES = new Set(['70', '72', '73', '76', '79'])
 
 /** Abonnentnumret i svenska grupper: "123 45 67", "123 456 78", "12 34 56". */
 function subscriberGroups(digits: string): string {
@@ -152,7 +156,8 @@ function subscriberGroups(digits: string): string {
 
 /**
  * Ett nummer som gäster läser det: "+46701740605" -> "070-174 06 05",
- * "+4681234567" -> "08-123 45 67", "+46311234567" -> "031-123 45 67".
+ * "+4681234567" -> "08-123 45 67", "+46311234567" -> "031-123 45 67",
+ * "+46101234567" -> "010-123 45 67", "+46771123456" -> "0771-12 34 56".
  * Utländska nummer visas som formatPhone ("+47 123 456 78"); det som inte
  * är ett telefonnummer visas som det stod.
  */
@@ -162,7 +167,7 @@ export function formatPhoneNational(value: string): string {
   if (!e164.startsWith('+46')) return formatPhone(e164)
   const national = e164.slice(3)
   const areaLength = national.startsWith('8') ? 1
-    : national.startsWith('7') || SE_TWO_DIGIT_AREA.has(national.slice(0, 2)) ? 2 : 3
+    : SE_MOBILE_SERIES.has(national.slice(0, 2)) || SE_TWO_DIGIT_AREA.has(national.slice(0, 2)) ? 2 : 3
   return `0${national.slice(0, areaLength)}-${subscriberGroups(national.slice(areaLength))}`
 }
 

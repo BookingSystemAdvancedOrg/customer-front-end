@@ -11,7 +11,10 @@ CSS variable or class name a site styles) is a major version.
   `normalizePhone`, which now lives in `shared/phone` and also refuses
   Swedish numbers of the wrong length (same rules as the server). New
   `formatPhoneNational` ("070-174 06 05"), `phoneHref` ("tel:+46701740605")
-  and `PhoneLink`; the guest pages show restaurant numbers that way.
+  and `PhoneLink`; the guest pages (also the privacy policy contact) show
+  restaurant numbers that way. 010 and 020 numbers get a 2-digit prefix,
+  and only the mobile series (070, 072, 073, 076, 079) are split as 07x, so
+  "+46771123456" shows as "0771-12 34 56".
 - `PublicMenuItem.imageFocus` (the dish photo's focal point, set in admin)
   and `menuImagePosition()`; `Menu` and the order pages crop dish photos
   at that point (`Plate` takes a `position`). Missing = the centre.
