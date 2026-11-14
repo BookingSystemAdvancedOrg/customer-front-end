@@ -454,3 +454,82 @@ describe('BestallPage discount code', () => {
     expect(await screen.findByText('Koden är redan använd.')).toBeInTheDocument()
   })
 })
+
+describe('BestallPage options, allergens and categories', () => {
+  const OPTION_MENU = {
+    items: [
+      { menuItemId: 'pizza', name: 'Margherita', description: '', price: 125, category: 'cpizza', imageKey: null,
+        allergens: ['gluten', 'milk'],
+        options: [
+          { name: 'Storlek', required: true, maxChoices: 1,
+            choices: [{ name: 'Normal', price: 0 }, { name: 'Stor', price: 30 }] },
+          { name: 'Extra', required: false, maxChoices: 2,
+            choices: [{ name: 'Ost', price: 10.5 }, { name: 'Skinka', price: 15 }, { name: 'Oliver', price: 5 }] },
+        ] },
+      { menuItemId: 'ipa', name: 'IPA', description: '', price: 79, category: 'col', imageKey: 'k' },
+    ],
+    categories: [{ categoryId: 'cpizza', name: 'Pizzor' }, { categoryId: 'col', name: 'Öl' }],
+  }
+
+  it('groups by the restaurant\'s categories, shows allergens and sends the chosen options', async () => {
+    const user = userEvent.setup()
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url.includes('/ordering')) return json(ordering)
+      if (url.endsWith('/menu')) return json(OPTION_MENU)
+      if (url.endsWith('/order') && init?.method === 'POST') return orderResponse()
+      return json({ error: 'not found' }, 404)
+    })
+    render(
+      <WithSite config={config()} path="/bestall">
+        <Routes>
+          <Route path="bestall" element={<BestallPage />} />
+        </Routes>
+      </WithSite>,
+    )
+    expect(await screen.findByRole('heading', { name: 'Pizzor' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Öl' })).toBeInTheDocument()
+    expect(screen.getByText('Innehåller: Gluten, Mjölk')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Välj tillval och lägg till Margherita' }))
+    const dialog = screen.getByRole('dialog', { name: 'Margherita' })
+    await user.click(within(dialog).getByRole('radio', { name: /Stor/ }))
+    await user.click(within(dialog).getByRole('checkbox', { name: /Ost/ }))
+    await user.click(within(dialog).getByRole('checkbox', { name: /Skinka/ }))
+    // max two extras
+    expect(within(dialog).getByRole('checkbox', { name: /Oliver/ })).toBeDisabled()
+    await user.click(within(dialog).getByRole('button', { name: /Lägg till · 180,50 kr/ }))
+
+    expect(screen.getAllByText('Stor, Ost, Skinka').length).toBeGreaterThan(0)
+    await fill(user)
+    await user.click(screen.getByRole('button', { name: /Till betalning/ }))
+    await waitFor(() => expect(postedOrder()).not.toBeNull())
+    expect(postedOrder().items).toEqual([{
+      menuItemId: 'pizza', quantity: 1,
+      options: [{ group: 'Storlek', choice: 'Stor' }, { group: 'Extra', choice: 'Ost' }, { group: 'Extra', choice: 'Skinka' }],
+    }])
+  })
+
+  it('lets the guest pick and unpick a paid choice in an optional one-choice group', async () => {
+    const user = userEvent.setup()
+    const menu = {
+      items: [{ menuItemId: 'burger', name: 'Burgare', description: '', price: 150, category: 'mains', imageKey: null,
+        options: [{ name: 'Extra', required: false, maxChoices: 1,
+          choices: [{ name: 'Extra ost', price: 15 }, { name: 'Bacon', price: 20 }] }] }],
+    }
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.includes('/ordering')) return json(ordering)
+      if (url.endsWith('/menu')) return json(menu)
+      return json({ error: 'not found' }, 404)
+    })
+    render(<WithSite config={config()} path="/bestall"><BestallPage /></WithSite>)
+    await user.click(await screen.findByRole('button', { name: 'Välj tillval och lägg till Burgare' }))
+    const dialog = screen.getByRole('dialog', { name: 'Burgare' })
+    expect(within(dialog).getByRole('radio', { name: 'Inget' })).toBeChecked()
+    expect(within(dialog).getByRole('button', { name: /Lägg till · 150 kr/ })).toBeEnabled()
+    await user.click(within(dialog).getByRole('radio', { name: /Extra ost/ }))
+    expect(within(dialog).getByRole('button', { name: /Lägg till · 165 kr/ })).toBeInTheDocument()
+    await user.click(within(dialog).getByRole('radio', { name: 'Inget' }))
+    expect(within(dialog).getByRole('radio', { name: /Extra ost/ })).not.toBeChecked()
+    expect(within(dialog).getByRole('button', { name: /Lägg till · 150 kr/ })).toBeEnabled()
+  })
+})

@@ -9,8 +9,18 @@ import { PhoneInput } from '../../shared/PhoneInput'
 import { normalizePhone, validEmail } from '../boka/bookingApi'
 import { TurnstileWidget } from '../boka/TurnstileWidget'
 import { Plate } from '../../shared/Plate'
-import { CATEGORY_LABEL, getPublicMenu, groupByCategory, menuImagePosition, menuImageUrl } from '../meny/menuApi'
-import type { PublicMenuItem } from '../meny/menuApi'
+import {
+  allergenText,
+  DEFAULT_CATEGORIES,
+  getPublicMenuWithCategories,
+  groupByCategory,
+  menuImagePosition,
+  menuImageUrl,
+  optionsOre,
+  validPicks,
+} from '../meny/menuApi'
+import type { MenuCategoryEntry, PublicMenuItem } from '../meny/menuApi'
+import { OptionPicker } from './OptionPicker'
 import {
   MAX_LINES,
   MAX_ORDER_ORE,
@@ -25,7 +35,9 @@ import {
   loadCart,
   loadLineNotes,
   lineExtras,
+  lineKey,
   LINE_TEXT_MAX,
+  parseLineKey,
   saveLineNotes,
   orderErrorMessage,
   rememberToken,
@@ -36,7 +48,7 @@ import {
   vatBreakdown,
   vatRate,
 } from './orderApi'
-import type { Cart, LineNotes, OrderCreated, OrderMode, OrderingState } from './orderApi'
+import type { Cart, LineNotes, OptionPick, OrderCreated, OrderMode, OrderingState } from './orderApi'
 import { checkCode, codeErrorMessage, discounted, normalizeCode } from '../erbjudande/offerApi'
 import type { CodeTerms } from '../erbjudande/offerApi'
 import { useStickyCart } from '../../shared/useStickyCart'
@@ -117,6 +129,9 @@ export default function BestallPage() {
   const [ordering, setOrdering] = useState<OrderingState | null>(null)
   const [stateError, setStateError] = useState<string | null>(null)
   const [menu, setMenu] = useState<PublicMenuItem[] | null>(null)
+  const [categories, setCategories] = useState<MenuCategoryEntry[]>(DEFAULT_CATEGORIES)
+  /** Rätten vars tillval gästen väljer just nu, och knappen som öppnade valet. */
+  const [picking, setPicking] = useState<{ dish: PublicMenuItem; from: HTMLElement } | null>(null)
   const [cart, setCart] = useState<Cart>(() => loadCart(locationId))
   const [guest, setGuest] = useState<Guest>(EMPTY_GUEST)
   const [error, setError] = useState<string | null>(null)
@@ -146,8 +161,12 @@ export default function BestallPage() {
     getOrdering(locationId, tableCode)
       .then((s) => !cancelled && setOrdering(s))
       .catch((err: unknown) => !cancelled && setStateError(orderErrorMessage(err)))
-    getPublicMenu(locationId)
-      .then((items) => !cancelled && setMenu(items))
+    getPublicMenuWithCategories(locationId)
+      .then((res) => {
+        if (cancelled) return
+        setMenu(res.items)
+        setCategories(res.categories)
+      })
       .catch(() => !cancelled && setMenu([]))
     return () => {
       cancelled = true
@@ -162,18 +181,32 @@ export default function BestallPage() {
   }
 
   const byId = useMemo(() => new Map((menu ?? []).map((d) => [d.menuItemId, d])), [menu])
-  // Rätter som försvunnit från menyn (eller alkohol i avhämtning) räknas inte.
+  // Rätter som försvunnit från menyn (eller alkohol i avhämtning, eller
+  // tillval som inte längre finns) räknas inte. En rad = rätt + tillval.
   const lines = Object.entries(cart)
-    .map(([id, quantity]) => ({ dish: byId.get(id), quantity }))
-    .filter((l): l is { dish: PublicMenuItem; quantity: number } =>
-      Boolean(l.dish) && !(mode === 'pickup' && l.dish!.alcohol))
-  const subtotal = lines.reduce((sum, l) => sum + ore(l.dish.price) * l.quantity, 0)
+    .map(([key, quantity]) => {
+      const { menuItemId, picks: raw } = parseLineKey(key)
+      const dish = byId.get(menuItemId)
+      // Valen i menyns ordning (Storlek före Extra), som på bongen.
+      const rank = (p: OptionPick) => {
+        const g = dish?.options?.findIndex((o) => o.name === p.group) ?? -1
+        return g * 100 + (dish?.options?.[g]?.choices.findIndex((c) => c.name === p.choice) ?? 0)
+      }
+      const picks = raw.slice().sort((x, y) => rank(x) - rank(y))
+      return { key, dish, picks, quantity, unit: dish ? ore(dish.price) + optionsOre(dish, picks) : 0 }
+    })
+    .filter((l): l is { key: string; dish: PublicMenuItem; picks: OptionPick[]; quantity: number; unit: number } =>
+      Boolean(l.dish) && !(mode === 'pickup' && l.dish!.alcohol) && validPicks(l.dish!, l.picks))
+  const subtotal = lines.reduce((sum, l) => sum + l.unit * l.quantity, 0)
   const belowMin = Boolean(code && subtotal < code.minOrderOre)
   const applied = code && !belowMin ? code : null
   const total = applied
-    ? lines.reduce((sum, l) => sum + discounted(ore(l.dish.price), applied.percent) * l.quantity, 0)
+    ? lines.reduce((sum, l) => sum + discounted(l.unit, applied.percent) * l.quantity, 0)
     : subtotal
-  const groups = groupByCategory(menu ?? [])
+  const groups = groupByCategory(menu ?? [], categories)
+  /** Antal av en rätt i varukorgen, alla tillval sammanräknade. */
+  const inCart = (menuItemId: string) =>
+    lines.reduce((n, l) => n + (l.dish.menuItemId === menuItemId ? l.quantity : 0), 0)
   // Servern prövar beloppet före rabatten.
   const tooLarge = subtotal > MAX_ORDER_ORE
   const open = Boolean(ordering?.open && ordering[mode])
@@ -318,7 +351,12 @@ export default function BestallPage() {
         locationId,
         mode,
         ...(tableCode ? { tableCode } : {}),
-        items: lines.map((l) => ({ menuItemId: l.dish.menuItemId, quantity: l.quantity, ...lineExtras(lineNotes[l.dish.menuItemId]) })),
+        items: lines.map((l) => ({
+          menuItemId: l.dish.menuItemId,
+          quantity: l.quantity,
+          ...(l.picks.length ? { options: l.picks } : {}),
+          ...lineExtras(lineNotes[l.key]),
+        })),
         name: guest.name.trim(),
         phone: guest.phone.trim(),
         email: guest.email.trim(),
@@ -339,17 +377,23 @@ export default function BestallPage() {
     } catch (err) {
       setError(orderErrorMessage(err))
       if (err instanceof Error && /^discount_/.test(err.message)) setCode(null)
-      if (err instanceof Error && err.message === 'menu_item_unavailable') {
+      if (err instanceof Error && (err.message === 'menu_item_unavailable' || /^option_/.test(err.message))) {
         // En rätt har gått ut eller stängts av sedan menyn hämtades: hämta om
         // menyn så att rätten försvinner ur varukorgen.
         // Bara när en rätt verkligen plockats bort sägs det; annars gäller
         // den neutrala texten.
-        await getPublicMenu(locationId)
-          .then((items) => {
+        await getPublicMenuWithCategories(locationId)
+          .then(({ items, categories: fresh }) => {
             setMenu(items)
-            const ids = new Set(items.map((d) => d.menuItemId))
-            if (Object.keys(cart).some((id) => !ids.has(id))) {
-              setCart((prev) => Object.fromEntries(Object.entries(prev).filter(([id]) => ids.has(id))))
+            setCategories(fresh)
+            const dishes = new Map(items.map((d) => [d.menuItemId, d]))
+            const keep = (key: string) => {
+              const { menuItemId, picks } = parseLineKey(key)
+              const dish = dishes.get(menuItemId)
+              return Boolean(dish && validPicks(dish, picks))
+            }
+            if (Object.keys(cart).some((key) => !keep(key))) {
+              setCart((prev) => Object.fromEntries(Object.entries(prev).filter(([key]) => keep(key))))
               // Tillbaka till brickan, så att gästen ser vad som ändrats.
               go('cart')
               setError(MENU_ITEM_REMOVED)
@@ -387,7 +431,7 @@ export default function BestallPage() {
   const payTotal = payment ? payment.totalAmount : total
   const vat = vatBreakdown(lines.map((l) => ({
     rate: vatRate(Boolean(l.dish.alcohol), mode),
-    total: (applied ? discounted(ore(l.dish.price), applied.percent) : ore(l.dish.price)) * l.quantity,
+    total: (applied ? discounted(l.unit, applied.percent) : l.unit) * l.quantity,
   })))
   const place = mode === 'table'
     ? (tableName ?? 'Ditt bord')
@@ -397,14 +441,15 @@ export default function BestallPage() {
   const summary = (
     <>
       <ul className="sum-lines">
-        {lines.map(({ dish, quantity }) => (
-          <li key={dish.menuItemId}>
+        {lines.map(({ key, dish, picks, quantity, unit }) => (
+          <li key={key}>
             <Plate src={menuImageUrl(dish.imageKey)} position={menuImagePosition(dish.imageFocus)} name={dish.name} size="sm" />
             <span className="sum-line-text">
               <span className="sum-line-name">{dish.name}</span>
-              <span className="sum-line-qty">{kronor(ore(dish.price))} × {quantity}</span>
+              {picks.length > 0 && <span className="sum-line-options">{picks.map((p) => p.choice).join(', ')}</span>}
+              <span className="sum-line-qty">{kronor(unit)} × {quantity}</span>
             </span>
-            <span className="sum-line-price">{kronor(ore(dish.price) * quantity)}</span>
+            <span className="sum-line-price">{kronor(unit * quantity)}</span>
           </li>
         ))}
       </ul>
@@ -656,30 +701,42 @@ export default function BestallPage() {
             <nav className="chip-rail" aria-label="Kategorier">
               {groups.map((g) => (
                 <a key={g.category} className="chip" href={`#bestall-${g.category}`}>
-                  {CATEGORY_LABEL[g.category]}
+                  {g.label}
                   <span className="chip-count">{g.items.length}</span>
                 </a>
               ))}
             </nav>
           )}
           {groups.map((group) => (
-            <section key={group.category} id={`bestall-${group.category}`} className="menu-section" aria-label={CATEGORY_LABEL[group.category]}>
-              <h2 className="menu-section-title">{CATEGORY_LABEL[group.category]}</h2>
+            <section key={group.category} id={`bestall-${group.category}`} className="menu-section" aria-label={group.label}>
+              <h2 className="menu-section-title">{group.label}</h2>
               <ul className="dish-list">
                 {group.items.map((dish) => {
-                  const quantity = cart[dish.menuItemId] ?? 0
+                  const hasOptions = Boolean(dish.options?.length)
+                  const quantity = hasOptions ? inCart(dish.menuItemId) : cart[dish.menuItemId] ?? 0
                   const blocked = mode === 'pickup' && dish.alcohol
+                  const allergens = allergenText(dish.allergens)
                   return (
                     <li className={`dish dish--order${quantity ? ' is-in-cart' : ''}`} key={dish.menuItemId} data-dish={dish.menuItemId}>
                       <Plate src={menuImageUrl(dish.imageKey)} position={menuImagePosition(dish.imageFocus)} name={dish.name} />
                       <div className="dish-text">
                         <h3 className="dish-name">{dish.name}</h3>
                         {dish.description && <p className="dish-desc">{dish.description}</p>}
-                        <span className="dish-price">{kronor(ore(dish.price))}</span>
+                        {allergens && <p className="dish-allergens">{allergens}</p>}
+                        <span className="dish-price">{hasOptions ? `från ${kronor(ore(dish.price))}` : kronor(ore(dish.price))}</span>
                       </div>
                       <div className="dish-action">
                         {blocked ? (
                           <span className="order-only-table">Bara vid bordet</span>
+                        ) : hasOptions ? (
+                          <span className="dish-option-action">
+                            {quantity > 0 && <span className="dish-option-count">{quantity} i brickan</span>}
+                            <button type="button" className="add-btn" disabled={!open}
+                              aria-label={`Välj tillval och lägg till ${dish.name}`}
+                              onClick={(e) => setPicking({ dish, from: e.currentTarget })}>
+                              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+                            </button>
+                          </span>
                         ) : quantity === 0 ? (
                           <button type="button" className="add-btn" disabled={!open}
                             aria-label={`Lägg till ${dish.name}`} onClick={(e) => add(dish.menuItemId, e.currentTarget)}>
@@ -711,8 +768,8 @@ export default function BestallPage() {
           <div className="tray-head">
             <h2 className="checkout-title" ref={titleRef} tabIndex={-1}>{STEP_TITLE.cart}</h2>
             <span className="tray-plates" aria-hidden="true" ref={trayRef}>
-              {lines.slice(0, 5).map(({ dish }) => (
-                <Plate key={dish.menuItemId} src={menuImageUrl(dish.imageKey)} position={menuImagePosition(dish.imageFocus)} name={dish.name} size="sm" />
+              {lines.slice(0, 5).map(({ key, dish }) => (
+                <Plate key={key} src={menuImageUrl(dish.imageKey)} position={menuImagePosition(dish.imageFocus)} name={dish.name} size="sm" />
               ))}
             </span>
           </div>
@@ -723,24 +780,27 @@ export default function BestallPage() {
           <form className="order-form" onSubmit={next} noValidate>
             <div className="checkout-step">
                 <ul className="cart-list">
-                  {lines.map(({ dish, quantity }) => (
-                    <li key={dish.menuItemId}>
-                      <span className="cart-item-name" key={quantity}>{quantity}&nbsp;×&nbsp;{dish.name}</span>
+                  {lines.map(({ key, dish, picks, quantity, unit }, i) => (
+                    <li key={key}>
+                      <span className="cart-item-name" key={quantity}>
+                        {quantity}&nbsp;×&nbsp;{dish.name}
+                        {picks.length > 0 && <span className="cart-item-options">{picks.map((p) => p.choice).join(', ')}</span>}
+                      </span>
                       <span className="cart-qty">
                         <button type="button" aria-label={`En ${dish.name} mindre`}
-                          onClick={() => change(dish.menuItemId, -1)}>−</button>
+                          onClick={() => change(key, -1)}>−</button>
                         <button type="button" aria-label={`En ${dish.name} till`}
-                          disabled={quantity >= MAX_QUANTITY} onClick={() => change(dish.menuItemId, 1)}>+</button>
+                          disabled={quantity >= MAX_QUANTITY} onClick={() => change(key, 1)}>+</button>
                       </span>
-                      <span className="cart-item-price">{kronor(ore(dish.price) * quantity)}</span>
-                      <details className="cart-line-notes" open={Boolean(lineNotes[dish.menuItemId]?.note || lineNotes[dish.menuItemId]?.allergy) || undefined}>
+                      <span className="cart-item-price">{kronor(unit * quantity)}</span>
+                      <details className="cart-line-notes" open={Boolean(lineNotes[key]?.note || lineNotes[key]?.allergy) || undefined}>
                         <summary>Önskemål eller allergi?</summary>
-                        <label htmlFor={`line-note-${dish.menuItemId}`}>Önskemål</label>
-                        <input id={`line-note-${dish.menuItemId}`} maxLength={LINE_TEXT_MAX} placeholder="Till exempel ingen lök"
-                          value={lineNotes[dish.menuItemId]?.note ?? ''} onChange={(e) => setLineNote(dish.menuItemId, 'note', e.target.value)} />
-                        <label htmlFor={`line-allergy-${dish.menuItemId}`}>Allergi</label>
-                        <input id={`line-allergy-${dish.menuItemId}`} maxLength={LINE_TEXT_MAX} placeholder="Till exempel jordnötsallergi"
-                          value={lineNotes[dish.menuItemId]?.allergy ?? ''} onChange={(e) => setLineNote(dish.menuItemId, 'allergy', e.target.value)} />
+                        <label htmlFor={`line-note-${i}`}>Önskemål</label>
+                        <input id={`line-note-${i}`} maxLength={LINE_TEXT_MAX} placeholder="Till exempel ingen lök"
+                          value={lineNotes[key]?.note ?? ''} onChange={(e) => setLineNote(key, 'note', e.target.value)} />
+                        <label htmlFor={`line-allergy-${i}`}>Allergi</label>
+                        <input id={`line-allergy-${i}`} maxLength={LINE_TEXT_MAX} placeholder="Till exempel jordnötsallergi"
+                          value={lineNotes[key]?.allergy ?? ''} onChange={(e) => setLineNote(key, 'allergy', e.target.value)} />
                       </details>
                     </li>
                   ))}
@@ -818,6 +878,18 @@ export default function BestallPage() {
           <strong>Visa beställning</strong>
           <span className="order-mobile-bar-total">{kronor(total)}</span>
         </a>
+      )}
+
+      {picking && (
+        <OptionPicker
+          dish={picking.dish}
+          onClose={() => setPicking(null)}
+          onAdd={(picks) => {
+            const { dish, from } = picking
+            setPicking(null)
+            add(lineKey(dish.menuItemId, picks), from)
+          }}
+        />
       )}
     </>
   )

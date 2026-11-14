@@ -6,6 +6,16 @@ CSS variable or class name a site styles) is a major version.
 
 ## Unreleased
 
+- The restaurant's own menu categories: `getPublicMenuWithCategories()`,
+  `useMenuList().categories`, `groupByCategory(items, categories)` (groups
+  carry a `label`; unknown categories last under Övrigt) and an optional
+  `categories` prop on `CategoryNav`. `MenuCategory` is now a string;
+  `CATEGORY_ORDER`/`CATEGORY_LABEL` stay as the four defaults.
+- Allergens (`PublicMenuItem.allergens`, `allergenText()`) shown on `Menu`
+  and the order page; option groups (`PublicMenuItem.options`) picked in a
+  dialog when ordering, sent as `options` per line (the server prices them).
+- `imageKey` may be null (a dish without photo shows the empty plate).
+
 - `PublicMenuItem.imageFocus` (the dish photo's focal point, set in admin)
   and `menuImagePosition()`; `Menu` and the order pages crop dish photos
   at that point (`Plate` takes a `position`). Missing = the centre.

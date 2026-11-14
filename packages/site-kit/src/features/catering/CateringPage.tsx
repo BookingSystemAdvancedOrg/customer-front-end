@@ -6,7 +6,8 @@ import { useSite } from '../../shared/SiteContext'
 import { PhoneInput } from '../../shared/PhoneInput'
 import { normalizePhone, validEmail } from '../boka/bookingApi'
 import { TurnstileWidget } from '../boka/TurnstileWidget'
-import { CATEGORY_LABEL, getPublicMenu, groupByCategory } from '../meny/menuApi'
+import { DEFAULT_CATEGORIES, getPublicMenuWithCategories, groupByCategory } from '../meny/menuApi'
+import type { MenuCategoryEntry } from '../meny/menuApi'
 import { useStickyCart } from '../../shared/useStickyCart'
 import type { PublicMenuItem } from '../meny/menuApi'
 import {
@@ -119,6 +120,7 @@ export default function CateringPage() {
   const [tiers, setTiers] = useState<Tier[]>([])
   const [cateringMenu, setCateringMenu] = useState<CateringMenu>({ dishes: [], packages: [] })
   const [legacyMenu, setLegacyMenu] = useState<PublicMenuItem[]>([])
+  const [legacyCategories, setLegacyCategories] = useState<MenuCategoryEntry[]>(DEFAULT_CATEGORIES)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [quantities, setQuantities] = useState<Record<string, number>>({})
   const [form, setForm] = useState<Form>(EMPTY)
@@ -137,12 +139,16 @@ export default function CateringPage() {
     Promise.all([getSettings(locationId), getTiers(locationId),
       getCateringMenu(locationId).catch(() => ({ dishes: [], packages: [] }))])
       .then(async ([s, t, m]) => {
-        const legacy = m.dishes.length || m.packages.length ? [] : (await getPublicMenu(locationId)).filter((d) => !d.alcohol)
+        const full = m.dishes.length || m.packages.length
+          ? { items: [], categories: DEFAULT_CATEGORIES }
+          : await getPublicMenuWithCategories(locationId)
+        const legacy = full.items.filter((d) => !d.alcohol)
         if (cancelled) return
         setSettings(s)
         setTiers(t)
         setCateringMenu(m)
         setLegacyMenu(legacy)
+        setLegacyCategories(full.categories)
         setForm((f) => ({ ...f, deliveryDate: f.deliveryDate || firstDate(s.advanceDays),
           fulfilment: s.delivery ? 'delivery' : 'pickup' }))
       })
@@ -359,9 +365,9 @@ export default function CateringPage() {
             </section>
           )}
 
-          {groupByCategory(legacyMenu).map((group) => (
-            <section key={group.category} aria-label={CATEGORY_LABEL[group.category]}>
-              <h2 className="menu-content-title">{CATEGORY_LABEL[group.category]}</h2>
+          {groupByCategory(legacyMenu, legacyCategories).map((group) => (
+            <section key={group.category} aria-label={group.label}>
+              <h2 className="menu-content-title">{group.label}</h2>
               <ul className="catering-dishes">
                 {group.items.map((dish) => (
                   <li key={dish.menuItemId}>

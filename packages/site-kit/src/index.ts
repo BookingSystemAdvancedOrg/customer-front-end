@@ -73,8 +73,11 @@ export { Menu } from './features/meny/Menu'
 export { CategoryNav } from './features/meny/CategoryNav'
 export { DishImage } from './features/meny/DishImage'
 export { Plate } from './shared/Plate'
-export { CATEGORY_LABEL, CATEGORY_ORDER, formatPrice, groupByCategory, menuImagePosition, menuImageUrl } from './features/meny/menuApi'
-export type { MenuCategory, PublicMenuItem } from './features/meny/menuApi'
+export {
+  allergenText, CATEGORY_LABEL, CATEGORY_ORDER, DEFAULT_CATEGORIES, formatPrice, getPublicMenuWithCategories,
+  groupByCategory, menuImagePosition, menuImageUrl,
+} from './features/meny/menuApi'
+export type { MenuCategory, MenuCategoryEntry, OptionGroup, PublicMenuItem } from './features/meny/menuApi'
 
 /* --- Flöden ---------------------------------------------------------- */
 export { default as BookingFlow } from './features/boka/BokaBordPage'

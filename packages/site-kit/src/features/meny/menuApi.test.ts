@@ -134,3 +134,37 @@ describe('formatPrice', () => {
     expect(formatPrice(89.5)).toBe(`89${','}50 kr`)
   })
 })
+
+describe('categories and options', () => {
+  const dish = (over: Record<string, unknown> = {}) => ({
+    menuItemId: 'p', name: 'Pizza', description: '', price: 100, category: 'cpizza', imageKey: null, ...over,
+  }) as import('./menuApi').PublicMenuItem
+
+  it('groups by the given categories in order, unknown ones last under Övrigt', async () => {
+    const { groupByCategory } = await import('./menuApi')
+    const groups = groupByCategory(
+      [dish(), dish({ menuItemId: 'b', name: 'Bira', category: 'col' }), dish({ menuItemId: 'x', category: 'gone' })],
+      [{ categoryId: 'col', name: 'Öl' }, { categoryId: 'cpizza', name: 'Pizzor' }],
+    )
+    expect(groups.map((g) => g.label)).toEqual(['Öl', 'Pizzor', 'Övrigt'])
+  })
+
+  it('prices and checks option picks like the server', async () => {
+    const { optionsOre, validPicks } = await import('./menuApi')
+    const item = dish({ options: [
+      { name: 'Storlek', required: true, maxChoices: 1, choices: [{ name: 'Stor', price: 30 }, { name: 'Normal', price: 0 }] },
+      { name: 'Extra', required: false, maxChoices: 1, choices: [{ name: 'Ost', price: 10.5 }] },
+    ] })
+    expect(optionsOre(item, [{ group: 'Storlek', choice: 'Stor' }, { group: 'Extra', choice: 'Ost' }])).toBe(4050)
+    expect(validPicks(item, [{ group: 'Storlek', choice: 'Stor' }])).toBe(true)
+    expect(validPicks(item, [])).toBe(false)
+    expect(validPicks(item, [{ group: 'Storlek', choice: 'Stor' }, { group: 'Storlek', choice: 'Normal' }])).toBe(false)
+    expect(validPicks(item, [{ group: 'Storlek', choice: 'Jätte' }])).toBe(false)
+  })
+
+  it('reads the restaurant categories with the menu, defaults for an older API', async () => {
+    const { getPublicMenuWithCategories, DEFAULT_CATEGORIES } = await import('./menuApi')
+    expect(DEFAULT_CATEGORIES.map((c) => c.name)).toEqual(['Förrätter', 'Varmrätter', 'Efterrätter', 'Drycker'])
+    expect(typeof getPublicMenuWithCategories).toBe('function')
+  })
+})
