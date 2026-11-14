@@ -689,7 +689,7 @@ export default function BestallPage() {
       )}
       {ordering?.open && ordering.lastOrderAt && (
         <p className="order-hint">
-          Sista beställning idag {ordering.lastOrderAt}
+          Sista beställning kl. {ordering.lastOrderAt}
           {mode === 'pickup' && ordering.prepMinutes ? ` · klar ca ${ordering.prepMinutes} min efter betalning` : ''}
         </p>
       )}

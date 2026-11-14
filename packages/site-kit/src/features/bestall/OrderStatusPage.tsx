@@ -67,7 +67,7 @@ function nextUp(order: GuestOrder): string | null {
     case 'preparing':
       return order.mode === 'pickup' ? 'Snart klart. Du får ett sms när maten går att hämta.' : 'Snart klart. Maten kommer till bordet.'
     case 'ready':
-      return order.mode === 'pickup' ? 'Säg ditt namn eller beställningsnumret i kassan.' : null
+      return order.mode === 'pickup' ? 'Säg ditt namn eller beställningsnumret när du hämtar.' : null
     default:
       return null
   }
