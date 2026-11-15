@@ -324,9 +324,13 @@ function Calendar({
     return () => document.removeEventListener('mousedown', outside)
   }, [anchor, onClose])
 
+  // Fokus till dagen när panelen är placerad. Före det är den osynlig med opacity, inte
+  // visibility: hidden, som med en övergång (t.ex. vid minskad rörelse) gör dagen
+  // ofokuserbar, och då fungerar varken piltangenterna eller Esc.
+  const placed = pos !== null
   useEffect(() => {
-    panel.current?.querySelector<HTMLButtonElement>(`[data-iso="${focus}"]`)?.focus()
-  }, [focus, view])
+    if (placed) panel.current?.querySelector<HTMLButtonElement>(`[data-iso="${focus}"]`)?.focus()
+  }, [focus, view, placed])
 
   const first = new Date(Date.UTC(view.y, view.m - 1, 1))
   const lead = (first.getUTCDay() + 6) % 7
@@ -344,6 +348,8 @@ function Calendar({
     if (e.key === 'Escape') {
       e.preventDefault()
       onClose()
+      // tillbaka till kalenderknappen, annars hamnar fokus på sidan
+      anchor.current?.querySelector<HTMLButtonElement>('.date-input-btn')?.focus()
       return
     }
     if (!step) return
@@ -365,7 +371,7 @@ function Calendar({
       className="date-cal"
       role="dialog"
       aria-label="Välj datum"
-      style={pos ? { top: pos.top, left: pos.left } : { visibility: 'hidden' }}
+      style={pos ? { top: pos.top, left: pos.left } : { top: 0, left: 0, opacity: 0, pointerEvents: 'none' }}
       onKeyDown={onKey}
     >
       <div className="date-cal-head">

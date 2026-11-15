@@ -33,6 +33,16 @@ describe('DateInput', () => {
     expect(screen.getByTestId('value').textContent).toMatch(/^\d{4}-\d{2}-\d{2}$/)
   })
 
+  it('moves focus to a day and closes on Escape', () => {
+    render(<Harness />)
+    fireEvent.click(screen.getByRole('button', { name: 'Öppna kalender' }))
+    const cal = screen.getByRole('dialog', { name: 'Välj datum' })
+    expect(document.activeElement).toHaveClass('date-cal-day')
+    fireEvent.keyDown(cal, { key: 'Escape' })
+    expect(screen.queryByRole('dialog', { name: 'Välj datum' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Öppna kalender' })).toHaveFocus()
+  })
+
   it('stays inside an open dialog so the top layer shows it', () => {
     render(
       <dialog open>

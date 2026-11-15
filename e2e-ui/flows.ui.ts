@@ -19,6 +19,8 @@ for (const vp of SIZES) {
     const open = async (page: Page, path: string) => {
       await page.setViewportSize({ width: vp.width, height: vp.height })
       await setTheme(page, theme)
+      // setTheme turns on reduced motion for the whole suite; these flows need the real motion
+      await page.emulateMedia({ reducedMotion: 'no-preference' })
       await page.clock.setFixedTime(new Date('2026-11-14T10:00:00+01:00'))
       await uiApi(page)
       await page.goto(path)
@@ -63,6 +65,13 @@ for (const vp of SIZES) {
       await cal.locator('.date-cal-day:not(:disabled)').first().click()
       await expect(cal).toBeHidden()
       await expect(details.locator('.date-input input')).toHaveValue(/^\d{2}\/\d{2}\/\d{4}$/)
+      // the keyboard works in the open calendar: a day has focus, Esc closes it
+      await button.click()
+      await expect(cal).toBeVisible()
+      await expect(cal.locator('.date-cal-day:focus')).toHaveCount(1)
+      await page.keyboard.press('Escape')
+      await expect(cal).toBeHidden()
+      await expect(button).toBeFocused()
       const time = details.getByLabel('Tid')
       await time.fill('1130')
       await time.blur()
