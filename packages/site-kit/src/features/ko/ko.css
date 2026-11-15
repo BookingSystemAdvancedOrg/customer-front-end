@@ -4,3 +4,10 @@
 .ko-page form > .bq-btn {
   margin-block: var(--bq-space-3);
 }
+/* Luft mellan inledningen och första fältet, och mellan fälten och integritetsrutan. */
+.ko-page > p + form {
+  margin-top: var(--bq-space-4);
+}
+.ko-page .booking-grid + .guest-notice {
+  margin-top: var(--bq-space-4);
+}

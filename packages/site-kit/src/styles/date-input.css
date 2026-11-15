@@ -154,7 +154,7 @@
 .date-cal-day:disabled,
 .date-cal-today:disabled {
   color: var(--muted);
-  opacity: 0.4;
+  opacity: 0.6;
   cursor: default;
 }
 

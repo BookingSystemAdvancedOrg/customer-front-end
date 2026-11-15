@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type RefObject } from 'react'
+import { createPortal } from 'react-dom'
 
 /**
  * Datum och tid i svenskt format oavsett webbläsarens språk: DD/MM/ÅÅÅÅ och
@@ -354,7 +355,11 @@ function Calendar({
     setView({ y: d.getUTCFullYear(), m: d.getUTCMonth() + 1 })
   }
 
-  return (
+  // I en portal: ett förälderelement med transform (t.ex. kortens inglidning) blir annars
+  // referens för position: fixed och kalendern hamnar långt från fältet. I en öppen
+  // <dialog> (översta lagret) måste den ligga i dialogen för att synas.
+  const host = (anchor.current?.closest('dialog[open]') as HTMLElement | null) ?? document.body
+  return createPortal(
     <div
       ref={panel}
       className="date-cal"
@@ -374,7 +379,7 @@ function Calendar({
           ›
         </button>
       </div>
-      <div className="date-cal-grid" role="grid">
+      <div className="date-cal-grid">
         {WEEKDAYS.map((w) => (
           <span key={w} className="date-cal-wd" aria-hidden="true">
             {w}
@@ -408,6 +413,7 @@ function Calendar({
       >
         Idag
       </button>
-    </div>
+    </div>,
+    host,
   )
 }

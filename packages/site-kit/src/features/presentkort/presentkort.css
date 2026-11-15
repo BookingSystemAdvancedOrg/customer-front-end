@@ -4,7 +4,20 @@
 .presentkort-page form > .bq-btn {
   margin-block: var(--bq-space-3);
 }
-.presentkort-page .bq-bar--tab {
-  max-width: 100%;
-  overflow-x: auto;
+.presentkort-page .booking-grid + .guest-notice {
+  margin-top: var(--bq-space-4);
+}
+/* Beloppsväljaren får aldrig klippa ett belopp: på smala skärmar delar
+   knapparna på bredden och bryts till en andra rad när de inte får plats.
+   Hörnradien gör en rad till en pille och två rader till ett rundat kort. */
+@media (max-width: 560px) {
+  .presentkort-page .bq-bar--tab[data-bq-glide='track'] {
+    flex-wrap: wrap;
+    overflow: visible;
+    border-radius: var(--bq-radius-card);
+  }
+  .presentkort-page .bq-bar--tab[data-bq-glide='track'] .bq-bar__item {
+    flex: 1 1 auto;
+    padding: 0 var(--bq-space-2);
+  }
 }

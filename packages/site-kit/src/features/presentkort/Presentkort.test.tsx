@@ -40,22 +40,32 @@ describe('PresentkortPage', () => {
     expect(await screen.findByText('Kortbetalningen är inte tillgänglig just nu.')).toBeInTheDocument()
   })
 
-  it('refuses a custom amount outside the limits', async () => {
+  it('shows the custom amount field only for Eget belopp and refuses an amount outside the limits', async () => {
     site(<PresentkortPage />)
-    fireEvent.change(await screen.findByLabelText(/Eget belopp/), { target: { value: '50' } })
+    await screen.findByRole('tab', { name: '250 kr' })
+    expect(screen.queryByLabelText(/^Belopp/)).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('tab', { name: 'Eget belopp' }))
+    fireEvent.change(screen.getByLabelText(/^Belopp/), { target: { value: '50' } })
     fireEvent.change(screen.getByLabelText(/Din e-post/), { target: { value: 'kopare@example.se' } })
-    expect(screen.getByRole('tab', { name: 'Eget belopp' })).toHaveAttribute('aria-selected', 'true')
-    expect(screen.getByRole('button', { name: 'Till betalning, 50 kr' })).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Till betalning' }))
+    expect(await screen.findByText('Välj ett belopp mellan 100 och 5000 kr.')).toBeInTheDocument()
+    expect(screen.getByLabelText(/^Belopp/)).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByLabelText(/^Belopp/)).toHaveFocus()
+    expect(api.startCheckout).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('tab', { name: '500 kr' }))
+    expect(screen.queryByLabelText(/^Belopp/)).not.toBeInTheDocument()
   })
 
-  it('chooses the amount with the brand tab bar and the arrow keys', async () => {
+  it('keeps the button active and says the e-mail is missing', async () => {
     site(<PresentkortPage />)
-    const first = await screen.findByRole('tab', { name: '250 kr' })
-    expect(screen.getByRole('tablist', { name: 'Välj belopp' })).toHaveClass('bq-bar--tab')
-    fireEvent.keyDown(first, { key: 'ArrowRight' })
-    expect(screen.getByRole('tab', { name: '500 kr' })).toHaveAttribute('aria-selected', 'true')
-    fireEvent.click(screen.getByRole('tab', { name: 'Eget belopp' }))
-    expect(screen.getByRole('button', { name: 'Till betalning, 0 kr' })).toBeDisabled()
+    const button = await screen.findByRole('button', { name: 'Till betalning, 250 kr' })
+    expect(button).toBeEnabled()
+    fireEvent.click(button)
+    expect(await screen.findByText('Fyll i din e-post.')).toBeInTheDocument()
+    expect(screen.getByLabelText(/Din e-post/)).toHaveFocus()
+    fireEvent.change(screen.getByLabelText(/Din e-post/), { target: { value: 'inte-en-adress' } })
+    expect(screen.getByText('Kontrollera e-postadressen.')).toBeInTheDocument()
+    expect(api.startCheckout).not.toHaveBeenCalled()
   })
 
   it('shows the thank-you page after the 3-D Secure redirect', () => {

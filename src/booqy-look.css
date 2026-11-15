@@ -979,6 +979,10 @@ body::before {
 .combo-pop {
   background-color: color-mix(in srgb, var(--surface) 90%, transparent);
 }
+/* kalendern: tät, siffrorna ligger över fältens text */
+.date-cal {
+  background-color: color-mix(in srgb, var(--surface) 97%, transparent);
+}
 .combo-pop--sheet {
   border-radius: var(--r-panel) var(--r-panel) 0 0;
   background-color: var(--surface);

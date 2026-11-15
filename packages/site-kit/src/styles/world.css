@@ -1386,7 +1386,9 @@ h1, h2, h3, h4 {
 .booking-confirmation,
 .catering-details,
 .page-prose {
-  animation: drop 640ms var(--ease) both;
+  /* `backwards`, inte `both`: en kvarliggande transform gör kortet till
+     referens för position: fixed inuti (kalendern, knappar på mobilen). */
+  animation: drop 640ms var(--ease) backwards;
 }
 
 .booking-step:nth-of-type(2),
@@ -2506,12 +2508,18 @@ h1, h2, h3, h4 {
     padding: 0 16px 16px;
   }
 
+  /* samma kanter som kassakortet (.checkout ligger i sidans --gutter) */
   .checkout-cta {
     position: fixed;
-    left: 12px;
-    right: 12px;
+    left: var(--gutter);
+    right: var(--gutter);
     bottom: max(12px, env(safe-area-inset-bottom));
     z-index: 30;
+  }
+
+  /* längst ner på sidan: sidfoten slutar ovanför den fasta knappen */
+  .site:has(.checkout-cta) .site-footer {
+    margin-bottom: calc(56px + 2 * max(12px, env(safe-area-inset-bottom)));
   }
 
   .checkout-cta .checkout-next {
@@ -2789,6 +2797,14 @@ h1, h2, h3, h4 {
 
 .catering-dishes .dish-price {
   font-size: 0.85rem;
+}
+
+.catering-load-error .bq-btn {
+  margin-top: var(--bq-space-4);
+}
+
+.catering-load-error a {
+  white-space: nowrap;
 }
 
 .catering-details {
