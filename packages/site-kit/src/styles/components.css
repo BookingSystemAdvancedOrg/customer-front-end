@@ -1113,8 +1113,14 @@
 
 .booking-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  /* min(): en kolumn blir aldrig bredare än kortet runt den, även på en smal telefon. */
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
   gap: 12px;
+}
+
+.booking-grid > *,
+.booking-field > * {
+  min-width: 0;
 }
 
 .booking-field {

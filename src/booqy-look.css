@@ -1126,6 +1126,10 @@ body::before {
 .opening-hours-modal-close {
   background: var(--field-bg-focus);
 }
+/* Valt läge i .segmented: mörk text på det ljusa fältet (site-kit ger den pappersfärg för en mörk knapp). */
+.segmented label.on {
+  color: var(--ink);
+}
 .site .notice.error,
 .notice.error {
   background: color-mix(in srgb, var(--danger) 12%, transparent);
