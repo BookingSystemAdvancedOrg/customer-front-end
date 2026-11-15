@@ -99,6 +99,8 @@
      --field-radius och --field-border, där --field-border är en bredd) */
   --field-bg: rgba(226, 214, 199, 0.58);
   --field-bg-focus: rgba(253, 250, 246, 0.86);
+  /* Spåret bakom .segmented: samma beige som fälten, så att det valda ljusa läget syns. */
+  --segmented-bg: var(--field-bg);
   --field-radius: 12px;
   --field-border: 1px;
   --field-line: rgb(58 36 24 / 0.55);
@@ -219,6 +221,7 @@
   --control-line: rgba(213, 196, 174, 0.26);
   --field-bg: rgba(10, 7, 5, 0.46);
   --field-bg-focus: rgba(26, 18, 14, 0.72);
+  --segmented-bg: var(--glass-fill);
   --field-line: rgba(213, 196, 174, 0.5);
   --field-line-hover: rgba(213, 196, 174, 0.74);
   --field-ring: rgba(213, 196, 174, 0.3);
@@ -1129,6 +1132,12 @@ body::before {
 /* Valt läge i .segmented: mörk text på det ljusa fältet (site-kit ger den pappersfärg för en mörk knapp). */
 .segmented label.on {
   color: var(--ink);
+}
+.segmented {
+  background: var(--segmented-bg);
+}
+.segmented label.on {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.14);
 }
 .site .notice.error,
 .notice.error {

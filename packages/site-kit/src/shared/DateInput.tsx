@@ -290,6 +290,13 @@ function Calendar({
         left: Math.max(8, Math.min(a.left, window.innerWidth - w - 8)),
       })
     }
+    // Liten skärm (t.ex. iPhone SE): får kalendern inte plats vare sig under eller ovanför fältet
+    // rullas sidan så att den hamnar under fältet, i stället för att lägga sig över fältet och sidhuvudet.
+    const a = anchor.current?.getBoundingClientRect()
+    const h = panel.current?.offsetHeight ?? 320
+    if (a && a.bottom + 6 + h > window.innerHeight && a.top - 6 - h < 8) {
+      window.scrollBy(0, a.bottom + 6 + h + 8 - window.innerHeight)
+    }
     place()
     window.addEventListener('resize', place)
     window.addEventListener('scroll', place, true)
