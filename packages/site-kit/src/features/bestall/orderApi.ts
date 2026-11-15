@@ -33,14 +33,16 @@ export interface OrderingState {
   closesAt?: string
   lastOrderAt?: string
   pausedUntil?: string
-  forTable?: { label: string }
+  /** Bordet QR-koden hör till, med namnet i den gällande planritningen. */
+  forTable?: { label: string; title?: string }
 }
 
 export interface OrderRequest {
   locationId: string
   mode: OrderMode
   tableCode?: string
-  items: { menuItemId: string; quantity: number }[]
+  /** note ("ingen lök") och allergy ("jordnötsallergi") följer rätten till köksbongen. */
+  items: { menuItemId: string; quantity: number; note?: string; allergy?: string; options?: OptionPick[] }[]
   name: string
   phone: string
   email: string
@@ -79,7 +81,15 @@ export interface GuestOrder {
   paymentStatus?: 'processing' | 'paid' | 'failed' | 'refunded'
   mode: OrderMode
   tableLabel?: string
-  lines: { menuItemId: string; name: string; unitPrice: number; quantity: number; total: number; vatRate: number }[]
+  lines: {
+    menuItemId: string
+    name: string
+    unitPrice: number
+    quantity: number
+    total: number
+    vatRate: number
+    options?: { group: string; choice: string; price: number }[]
+  }[]
   totalAmount: number
   /** Rabattkod (raderna är redan rabatterade). */
   discount?: { code: string; percent: number; amount: number }
@@ -130,7 +140,40 @@ export function recallToken(orderId: string): string | null {
 
 // --- varukorgen (per plats, finns kvar om gästen avbryter betalningen) ---------
 
+/** Nyckeln är rättens id, eller lineKey(id, val) för en rätt med tillval. */
 export type Cart = Record<string, number>
+
+/** Ett val gästen gjort i en tillvalsgrupp. */
+export interface OptionPick {
+  group: string
+  choice: string
+}
+
+/**
+ * Varukorgens nyckel för en rad: samma rätt med olika tillval blir olika
+ * rader ("Pizza, stor" och "Pizza, normal"). Utan tillval är det bara id:t
+ * (servern tillåter aldrig # i ett menuItemId).
+ */
+export function lineKey(menuItemId: string, picks: OptionPick[] = []): string {
+  if (!picks.length) return menuItemId
+  const sorted = picks.slice().sort((a, b) => a.group.localeCompare(b.group) || a.choice.localeCompare(b.choice))
+  return `${menuItemId}#${JSON.stringify(sorted.map((p) => [p.group, p.choice]))}`
+}
+
+export function parseLineKey(key: string): { menuItemId: string; picks: OptionPick[] } {
+  const at = key.indexOf('#')
+  if (at < 0) return { menuItemId: key, picks: [] }
+  try {
+    const raw = JSON.parse(key.slice(at + 1)) as unknown
+    const picks = Array.isArray(raw)
+      ? raw.filter((p): p is [string, string] => Array.isArray(p) && typeof p[0] === 'string' && typeof p[1] === 'string')
+        .map(([group, choice]) => ({ group, choice }))
+      : []
+    return { menuItemId: key.slice(0, at), picks }
+  } catch {
+    return { menuItemId: key.slice(0, at), picks: [] }
+  }
+}
 
 const cartKey = (locationId: string) => `${CART_KEY_PREFIX}${locationId}`
 
@@ -156,7 +199,48 @@ export function saveCart(locationId: string, cart: Cart): void {
   }
 }
 
+/** Önskemål och allergi per rätt i varukorgen (gäller alla av den rätten). */
+export type LineNote = { note?: string; allergy?: string }
+export type LineNotes = Record<string, LineNote>
+export const LINE_TEXT_MAX = 140
+
+const notesKey = (locationId: string) => `${cartKey(locationId)}:notes`
+
+export function loadLineNotes(locationId: string): LineNotes {
+  try {
+    const raw = JSON.parse(sessionStorage.getItem(notesKey(locationId)) ?? '{}') as unknown
+    if (!raw || typeof raw !== 'object') return {}
+    const out: LineNotes = {}
+    for (const [id, v] of Object.entries(raw as Record<string, LineNote>)) {
+      if (v && typeof v === 'object') out[id] = { note: String(v.note ?? ''), allergy: String(v.allergy ?? '') }
+    }
+    return out
+  } catch {
+    return {}
+  }
+}
+
+export function saveLineNotes(locationId: string, notes: LineNotes): void {
+  try {
+    sessionStorage.setItem(notesKey(locationId), JSON.stringify(notes))
+  } catch {
+    // Som ovan.
+  }
+}
+
+/** Det som skickas: trimmat, tomt utelämnat. */
+export function lineExtras(n: LineNote | undefined): LineNote {
+  const note = n?.note?.trim().slice(0, LINE_TEXT_MAX)
+  const allergy = n?.allergy?.trim().slice(0, LINE_TEXT_MAX)
+  return { ...(note ? { note } : {}), ...(allergy ? { allergy } : {}) }
+}
+
 export function clearCart(locationId: string): void {
+  try {
+    sessionStorage.removeItem(notesKey(locationId))
+  } catch {
+    // Som ovan.
+  }
   try {
     sessionStorage.removeItem(cartKey(locationId))
   } catch {
@@ -171,6 +255,12 @@ export function stepQuantity(current: number, delta: number): number {
 
 // --- QR-kod: bordet gästen sitter vid (behålls i fliken) ---------------------
 
+
+/** "Bord 7" för ett nummer, annars bordets namn ("Terrassen"). */
+export function tableTitle(forTable: { label: string; title?: string } | undefined): string | null {
+  if (!forTable) return null
+  return forTable.title || (/^\d/.test(forTable.label) ? `Bord ${forTable.label}` : forTable.label)
+}
 
 export function tableCodeFrom(search: string): string | null {
   const fromUrl = new URLSearchParams(search).get('bord')
@@ -257,7 +347,11 @@ const ORDER_ERRORS: Record<string, string> = {
   ordering_table_off: 'Beställning vid bordet går inte just nu - fråga personalen.',
   menu_item_unavailable: 'En rätt i varukorgen finns inte längre på menyn. Ta bort den och försök igen.',
   alcohol_not_for_pickup: 'Drycker med alkohol kan bara beställas vid bordet.',
+  option_invalid: 'Ett tillval i varukorgen finns inte längre. Ta bort rätten och lägg till den igen.',
+  option_required: 'Välj de tillval som krävs, till exempel storlek, och försök igen.',
   'table code is invalid': 'QR-koden känns inte igen. Skanna koden på bordet igen.',
+  'table code revoked': 'Den här QR-koden gäller inte längre. Fråga personalen så hjälper de dig att beställa.',
+  'table removed': 'Bordet med den här QR-koden finns inte längre. Fråga personalen så hjälper de dig att beställa.',
   payment_unavailable: 'Betalningen är inte tillgänglig just nu. Försök igen om en stund.',
   verification_unavailable: 'Säkerhetskontrollen svarar inte just nu. Försök igen om en stund.',
   too_many_requests: 'För många försök. Vänta en stund och försök igen.',

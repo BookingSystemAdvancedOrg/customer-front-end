@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { SiteProvider, configureSiteKit, installSound } from '@booqy/site-kit'
 import { installGlide } from './shared/glide'
+import { startUpdateNotice } from './shared/updateNotice'
 import sansUrl from './assets/fonts/plus-jakarta-sans-latin.woff2?url'
 import martianUrl from './assets/fonts/martian-mono.woff2?url'
 import App from './App'
@@ -22,6 +23,8 @@ configureSiteKit({
 
 installSound()
 installGlide()
+// "Ny version finns" efter en deploy (bara i bygget, inte i npm run dev).
+if (import.meta.env.PROD) startUpdateNotice()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

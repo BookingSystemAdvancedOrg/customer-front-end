@@ -3,6 +3,8 @@ import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
   OfferCard,
   OpeningHoursModal,
+  PhoneLink,
+  Select,
   SkelCard,
   SoundToggle,
   ThemeToggle,
@@ -86,11 +88,13 @@ export function CustomerLayout() {
       if (e.key === 'Escape') closeMenu()
     }
     document.addEventListener('keydown', onKey)
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
+    // lock the root, not body: overflow on body makes body the scroller and the sticky header scrolls away
+    const root = document.documentElement
+    const prev = root.style.overflow
+    root.style.overflow = 'hidden'
     return () => {
       document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = prev
+      root.style.overflow = prev
     }
   }, [menuOpen])
 
@@ -112,7 +116,7 @@ export function CustomerLayout() {
     <div className="site">
       <header className="site-header" ref={headerRef}>
         <div className="site-header-inner">
-          <Link className="site-header-brand" to="/" aria-label={`${tenant.name} - startsida`}>
+          <Link className="site-header-brand" to="/" aria-label={`${tenant.name} - startsida`} onClick={closeMenu}>
             {tenant.branding.logoUrl ? (
               <img src={tenant.branding.logoUrl} alt="" width={44} height={44} />
             ) : null}
@@ -161,17 +165,12 @@ export function CustomerLayout() {
         {config.locations.length > 1 && (
           <div className="location-picker">
             <label htmlFor="site-location">Restaurang</label>
-            <select
+            <Select
               id="site-location"
               value={current.locationId}
-              onChange={(e) => setLocationId(e.target.value)}
-            >
-              {config.locations.map((l) => (
-                <option key={l.locationId} value={l.locationId}>
-                  {l.name || tenant.name}
-                </option>
-              ))}
-            </select>
+              onChange={setLocationId}
+              options={config.locations.map((l) => ({ value: l.locationId, label: l.name || tenant.name }))}
+            />
           </div>
         )}
       </header>
@@ -244,7 +243,7 @@ export function CustomerLayout() {
           <div>
             <h3>Adress &amp; kontakt</h3>
             {location.address && <p>{location.address}</p>}
-            {location.phone && <p><a href={`tel:${location.phone.replace(/[^\d+]/g, '')}`}>{location.phone}</a></p>}
+            {location.phone && <p><PhoneLink phone={location.phone} /></p>}
             {location.email && <p><a href={`mailto:${location.email}`}>{location.email}</a></p>}
           </div>
         </div>

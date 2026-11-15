@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import BokaBordPage from './BokaBordPage'
 import { WithSite } from '../../test/siteFixture'
 import { guestView, json, partyOf, siteConfig } from '../../test/siteData'
+import { pickOption } from '../../test/select'
 
 // Stripe.js is never loaded in tests: a fake Payment Element and stripe.confirmSetup.
 const confirmSetup = vi.fn()
@@ -71,7 +72,7 @@ afterEach(() => vi.unstubAllGlobals())
 
 async function bookThree(user: ReturnType<typeof userEvent.setup>) {
   render(<WithSite config={config()}><BokaBordPage /></WithSite>)
-  await user.selectOptions(screen.getByLabelText('Antal personer'), '3')
+  await pickOption(user, screen.getByLabelText('Antal personer'), '3 personer')
   await user.click(await screen.findByRole('button', { name: '18:00' }))
   await user.click(screen.getByRole('button', { name: /Bord 1 · 4 platser/ }))
   await user.click(screen.getByRole('button', { name: 'Bekräfta bord' }))
@@ -137,7 +138,7 @@ describe('card guarantee', () => {
   it('a small party books without a card', async () => {
     const user = userEvent.setup()
     render(<WithSite config={config()}><BokaBordPage /></WithSite>)
-    await user.selectOptions(screen.getByLabelText('Antal personer'), '2')
+    await pickOption(user, screen.getByLabelText('Antal personer'), '2 personer')
     await user.click(await screen.findByRole('button', { name: '18:00' }))
     await user.click(screen.getByRole('button', { name: /Bord 1 · 4 platser/ }))
     await user.click(screen.getByRole('button', { name: 'Bekräfta bord' }))

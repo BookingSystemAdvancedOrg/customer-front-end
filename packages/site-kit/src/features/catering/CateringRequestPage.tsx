@@ -19,6 +19,7 @@ import type { CateringPayment, GuestRequest, Line, Totals } from './cateringApi'
 import { useSite } from '../../shared/SiteContext'
 import { PaidStamp, PaymentTicket } from '../../shared/payment/PaymentTicket'
 import { SkelLines } from '../../shared/Skeleton'
+import { PhoneLink } from '../../shared/PhoneLink'
 
 /** BankID: frågan om status en gång i sekunden (QR-koden byts varje sekund). */
 export const SIGN_POLL_MS = 1_000
@@ -163,7 +164,7 @@ export default function CateringRequestPage() {
   async function showQr(data: string | undefined) {
     if (!data) return undefined
     try {
-      return await QRCode.toDataURL(data, { margin: 1, width: 280 })
+      return await QRCode.toDataURL(data, { margin: 1, width: 280, color: { light: '#fdfaf6' } })
     } catch {
       return undefined
     }
@@ -495,7 +496,7 @@ export default function CateringRequestPage() {
             <p className="order-hint"><Link to="/catering">Gör en ny förfrågan</Link></p>
           )}
           {request.location?.phoneNumber && (
-            <p className="cell-muted">Frågor? Ring {request.location.phoneNumber}{request.location.email ? ` eller mejla ${request.location.email}` : ''}.</p>
+            <p className="cell-muted">Frågor? Ring <PhoneLink phone={request.location.phoneNumber} />{request.location.email ? ` eller mejla ${request.location.email}` : ''}.</p>
           )}
         </>
       )}

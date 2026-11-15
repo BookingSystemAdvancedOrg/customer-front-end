@@ -262,14 +262,50 @@ describe('BestallPage', () => {
 
   it('keeps alcohol for table orders and names the table from the QR code', async () => {
     const user = userEvent.setup()
-    ordering = { ...ordering, forTable: { label: '5' } }
+    ordering = { ...ordering, forTable: { label: '5', title: 'Bord 5' } }
     render(<WithSite config={config()} path="/bestall?bord=code-5"><BestallPage /></WithSite>)
     expect(await screen.findByText(/vi serverar vid bord 5/)).toBeInTheDocument()
+    expect(screen.getByLabelText('Ditt bord: Bord 5')).toHaveTextContent('Bord 5')
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/ordering?table=code-5'))).toBe(true)
     await user.click(await screen.findByRole('button', { name: 'Lägg till Rödvin' }))
     await fill(user)
     await user.click(screen.getByRole('button', { name: /Till betalning/ }))
     expect(postedOrder()).toMatchObject({ mode: 'table', tableCode: 'code-5', items: [{ menuItemId: 'wine', quantity: 1 }] })
+  })
+
+  it('sends a dish\'s wish and allergy with the order, for the kitchen ticket', async () => {
+    const user = userEvent.setup()
+    ordering = { ...ordering, forTable: { label: '5', title: 'Bord 5' } }
+    render(<WithSite config={config()} path="/bestall?bord=code-5"><BestallPage /></WithSite>)
+    await user.click(await screen.findByRole('button', { name: 'Lägg till Margherita' }))
+    await user.click(screen.getByText('Önskemål eller allergi?'))
+    await user.type(screen.getByLabelText('Önskemål'), 'ingen lök')
+    await user.type(screen.getByLabelText('Allergi'), 'jordnötsallergi')
+    await fill(user)
+    await user.click(screen.getByRole('button', { name: /Till betalning/ }))
+    expect(postedOrder()).toMatchObject({
+      items: [{ menuItemId: 'pizza', quantity: 1, note: 'ingen lök', allergy: 'jordnötsallergi' }],
+    })
+  })
+
+  it('names a renamed table by its name', async () => {
+    ordering = { ...ordering, forTable: { label: 'Terrassen', title: 'Terrassen' } }
+    render(<WithSite config={config()} path="/bestall?bord=code-t"><BestallPage /></WithSite>)
+    expect(await screen.findByText(/vi serverar vid Terrassen/)).toBeInTheDocument()
+  })
+
+  it.each([
+    ['table code revoked', /QR-koden gäller inte längre/],
+    ['table removed', /Bordet med den här QR-koden finns inte längre/],
+  ])('explains a %s code and blocks ordering', async (error, message) => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.includes('/ordering')) return json({ error }, 400)
+      if (url.endsWith('/menu')) return json(MENU)
+      return json({ error: 'not found' }, 404)
+    })
+    render(<WithSite config={config()} path="/bestall?bord=old-code"><BestallPage /></WithSite>)
+    expect(await screen.findByRole('alert')).toHaveTextContent(message)
+    expect(await screen.findByRole('button', { name: 'Lägg till Margherita' })).toBeDisabled()
   })
 
   it('shows alcohol as table-only for pickup', async () => {
@@ -416,5 +452,84 @@ describe('BestallPage discount code', () => {
     await user.type(screen.getByLabelText('Rabattkod'), 'abcd-efgh')
     await user.click(screen.getByRole('button', { name: 'Använd' }))
     expect(await screen.findByText('Koden är redan använd.')).toBeInTheDocument()
+  })
+})
+
+describe('BestallPage options, allergens and categories', () => {
+  const OPTION_MENU = {
+    items: [
+      { menuItemId: 'pizza', name: 'Margherita', description: '', price: 125, category: 'cpizza', imageKey: null,
+        allergens: ['gluten', 'milk'],
+        options: [
+          { name: 'Storlek', required: true, maxChoices: 1,
+            choices: [{ name: 'Normal', price: 0 }, { name: 'Stor', price: 30 }] },
+          { name: 'Extra', required: false, maxChoices: 2,
+            choices: [{ name: 'Ost', price: 10.5 }, { name: 'Skinka', price: 15 }, { name: 'Oliver', price: 5 }] },
+        ] },
+      { menuItemId: 'ipa', name: 'IPA', description: '', price: 79, category: 'col', imageKey: 'k' },
+    ],
+    categories: [{ categoryId: 'cpizza', name: 'Pizzor' }, { categoryId: 'col', name: 'Öl' }],
+  }
+
+  it('groups by the restaurant\'s categories, shows allergens and sends the chosen options', async () => {
+    const user = userEvent.setup()
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url.includes('/ordering')) return json(ordering)
+      if (url.endsWith('/menu')) return json(OPTION_MENU)
+      if (url.endsWith('/order') && init?.method === 'POST') return orderResponse()
+      return json({ error: 'not found' }, 404)
+    })
+    render(
+      <WithSite config={config()} path="/bestall">
+        <Routes>
+          <Route path="bestall" element={<BestallPage />} />
+        </Routes>
+      </WithSite>,
+    )
+    expect(await screen.findByRole('heading', { name: 'Pizzor' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Öl' })).toBeInTheDocument()
+    expect(screen.getByText('Innehåller: Gluten, Mjölk')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Välj tillval och lägg till Margherita' }))
+    const dialog = screen.getByRole('dialog', { name: 'Margherita' })
+    await user.click(within(dialog).getByRole('radio', { name: /Stor/ }))
+    await user.click(within(dialog).getByRole('checkbox', { name: /Ost/ }))
+    await user.click(within(dialog).getByRole('checkbox', { name: /Skinka/ }))
+    // max two extras
+    expect(within(dialog).getByRole('checkbox', { name: /Oliver/ })).toBeDisabled()
+    await user.click(within(dialog).getByRole('button', { name: /Lägg till · 180,50 kr/ }))
+
+    expect(screen.getAllByText('Stor, Ost, Skinka').length).toBeGreaterThan(0)
+    await fill(user)
+    await user.click(screen.getByRole('button', { name: /Till betalning/ }))
+    await waitFor(() => expect(postedOrder()).not.toBeNull())
+    expect(postedOrder().items).toEqual([{
+      menuItemId: 'pizza', quantity: 1,
+      options: [{ group: 'Storlek', choice: 'Stor' }, { group: 'Extra', choice: 'Ost' }, { group: 'Extra', choice: 'Skinka' }],
+    }])
+  })
+
+  it('lets the guest pick and unpick a paid choice in an optional one-choice group', async () => {
+    const user = userEvent.setup()
+    const menu = {
+      items: [{ menuItemId: 'burger', name: 'Burgare', description: '', price: 150, category: 'mains', imageKey: null,
+        options: [{ name: 'Extra', required: false, maxChoices: 1,
+          choices: [{ name: 'Extra ost', price: 15 }, { name: 'Bacon', price: 20 }] }] }],
+    }
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.includes('/ordering')) return json(ordering)
+      if (url.endsWith('/menu')) return json(menu)
+      return json({ error: 'not found' }, 404)
+    })
+    render(<WithSite config={config()} path="/bestall"><BestallPage /></WithSite>)
+    await user.click(await screen.findByRole('button', { name: 'Välj tillval och lägg till Burgare' }))
+    const dialog = screen.getByRole('dialog', { name: 'Burgare' })
+    expect(within(dialog).getByRole('radio', { name: 'Inget' })).toBeChecked()
+    expect(within(dialog).getByRole('button', { name: /Lägg till · 150 kr/ })).toBeEnabled()
+    await user.click(within(dialog).getByRole('radio', { name: /Extra ost/ }))
+    expect(within(dialog).getByRole('button', { name: /Lägg till · 165 kr/ })).toBeInTheDocument()
+    await user.click(within(dialog).getByRole('radio', { name: 'Inget' }))
+    expect(within(dialog).getByRole('radio', { name: /Extra ost/ })).not.toBeChecked()
+    expect(within(dialog).getByRole('button', { name: /Lägg till · 150 kr/ })).toBeEnabled()
   })
 })

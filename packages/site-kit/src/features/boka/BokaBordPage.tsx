@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { useSite } from '../../shared/SiteContext'
 import { Slot } from '../../shared/slots'
 import { PhoneInput } from '../../shared/PhoneInput'
+import { Select } from '../../shared/Select'
 import { useLocationInfo } from '../../shared/useLocationInfo'
 import AddToCalendar from '../../shared/AddToCalendar'
 import { bookingEvent, restaurantName } from '../../shared/calendar'
@@ -45,6 +46,8 @@ import { Celebrate } from '../../shared/Celebrate'
 import { GuestDataNotice } from '../../shared/GuestDataNotice'
 import { MarketingConsent, NO_CONSENT, consentFields } from '../../shared/MarketingConsent'
 import type { ConsentChoice } from '../../shared/MarketingConsent'
+import { PhoneLink } from '../../shared/PhoneLink'
+import { formatPhoneNational } from '../../shared/phone'
 
 const DEFAULT_MAX_PARTY = 12
 /** Hur ofta lediga tider hämtas om medan gästen väljer (tider inom 30
@@ -363,7 +366,7 @@ export default function BokaBordPage() {
   )
   const hasCombinations = options.some((o) => o.tableIds.length > 1)
   const day = availability?.day ?? null
-  const dayText = dayMessage(day, info.phone)
+  const dayText = dayMessage(day, formatPhoneNational(info.phone))
   const allTables = useMemo(
     () => (floors ?? []).flatMap((g) => g.elements.filter((e): e is LayoutTableElement => e.type === 'table')),
     [floors],
@@ -407,7 +410,7 @@ export default function BokaBordPage() {
       label: labels.get(u.tableId) ?? u.tableId,
       partySize,
       startTime: slot?.startTime ?? '',
-      phone: info.phone,
+      phone: formatPhoneNational(info.phone),
       hasCombinations,
     })
   }
@@ -465,7 +468,7 @@ export default function BokaBordPage() {
       !slot ? 'Välj en tid.'
       : !option ? 'Välj ett bord.'
       : cardNeeded && !config.stripe.publishableKey
-        ? `Onlinebokning för ${partySize} personer kräver kortgaranti, som inte är tillgänglig just nu. Ring oss på ${info.phone || 'restaurangen'}.`
+        ? `Onlinebokning för ${partySize} personer kräver kortgaranti, som inte är tillgänglig just nu. Ring oss på ${formatPhoneNational(info.phone) || 'restaurangen'}.`
       : turnstileSiteKey && !turnstileToken
         ? 'Bekräfta säkerhetskontrollen (rutan ovanför knappen).'
         : null
@@ -589,7 +592,7 @@ export default function BokaBordPage() {
       <section className="page-hero">
         <h1>Boka bord</h1>
         <p className="hero-sub">
-          Ring oss på {info.phone || 'restaurangen'} så hjälper vi dig att boka bord.
+          Ring oss på {info.phone ? <PhoneLink phone={info.phone} /> : 'restaurangen'} så hjälper vi dig att boka bord.
         </p>
       </section>
     )
@@ -681,7 +684,7 @@ export default function BokaBordPage() {
           </div>
         )}
         <p className="cell-muted">
-          Frågor? Ring {info.phone || 'restaurangen'}{info.email ? ` eller mejla ${info.email}` : ''}.
+          Frågor? Ring {info.phone ? <PhoneLink phone={info.phone} /> : 'restaurangen'}{info.email ? ` eller mejla ${info.email}` : ''}.
         </p>
       </section>
       </>
@@ -709,11 +712,15 @@ export default function BokaBordPage() {
                 disabled={partySize <= 1} onClick={() => choosePartySize(partySize - 1)}>
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14" /></svg>
               </button>
-              <select id="party-size" value={partySize} onChange={(e) => choosePartySize(Number(e.target.value))}>
-                {Array.from({ length: maxParty }, (_, i) => i + 1).map((n) => (
-                  <option key={n} value={n}>{n} {n === 1 ? 'person' : 'personer'}</option>
-                ))}
-              </select>
+              <Select
+                id="party-size"
+                value={String(partySize)}
+                onChange={(v) => choosePartySize(Number(v))}
+                options={Array.from({ length: maxParty }, (_, i) => i + 1).map((n) => ({
+                  value: String(n),
+                  label: `${n} ${n === 1 ? 'person' : 'personer'}`,
+                }))}
+              />
               <button type="button" className="party-btn" aria-label="En person till"
                 disabled={partySize >= maxParty} onClick={() => choosePartySize(partySize + 1)}>
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
@@ -721,7 +728,7 @@ export default function BokaBordPage() {
             </div>
           </div>
           <p className="cell-muted">
-            Fler än {maxParty} personer? Ring {info.phone || 'restaurangen'}.
+            Fler än {maxParty} personer? Ring {info.phone ? <PhoneLink phone={info.phone} /> : 'restaurangen'}.
           </p>
           <div className="booking-dates" role="group" aria-label="Välj datum">
             {dates.map((d) => {

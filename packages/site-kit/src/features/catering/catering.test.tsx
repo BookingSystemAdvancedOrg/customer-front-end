@@ -21,10 +21,17 @@ vi.mock('./cateringApi', async (orig) => {
     [k, k in api ? (...a: unknown[]) => (api as Record<string, (...x: unknown[]) => unknown>)[k](...a) : v]))
 })
 const getPublicMenu = vi.fn()
-vi.mock('../meny/menuApi', async (orig) => ({
-  ...(await orig<typeof import('../meny/menuApi')>()),
-  getPublicMenu: (...a: unknown[]) => getPublicMenu(...a),
-}))
+const menuCategories = vi.hoisted(() => ({ list: undefined as undefined | { categoryId: string; name: string }[] }))
+vi.mock('../meny/menuApi', async (orig) => {
+  const real = await orig<typeof import('../meny/menuApi')>()
+  return {
+    ...real,
+    getPublicMenuWithCategories: async (...a: unknown[]) => ({
+      items: await getPublicMenu(...a),
+      categories: menuCategories.list ?? real.DEFAULT_CATEGORIES,
+    }),
+  }
+})
 vi.mock('../../shared/api', async (orig) => ({
   ...(await orig<typeof import('../../shared/api')>()),
   isApiConfigured: () => true,
@@ -85,6 +92,7 @@ beforeEach(() => {
   sessionStorage.clear()
   Object.values(api).forEach((f) => f.mockReset())
   getPublicMenu.mockReset()
+  menuCategories.list = undefined
   assign.mockReset()
   vi.stubGlobal('location', { ...window.location, assign })
 })
@@ -219,6 +227,22 @@ describe('CateringPage', () => {
     await user.type(screen.getByLabelText('Portioner Kycklingspett'), '20')
     const cart = screen.getByRole('complementary', { name: 'Kalkyl' })
     expect(await within(cart).findByText(/utanför restaurangens leveransområde/)).toBeInTheDocument()
+  })
+
+  it("groups the dishes by the restaurant's own categories", async () => {
+    api.getSettings.mockResolvedValue(SETTINGS)
+    api.getTiers.mockResolvedValue(TIERS)
+    api.getCateringMenu.mockResolvedValue({ dishes: [], packages: [] })
+    menuCategories.list = [{ categoryId: 'pizzor', name: 'Pizzor' }, { categoryId: 'mains', name: 'Husmanskost' }]
+    getPublicMenu.mockResolvedValue([
+      { menuItemId: 'p1', name: 'Margherita', description: '', price: 110, category: 'pizzor' },
+      { menuItemId: 'm1', name: 'Lasagne', description: '', price: 50, category: 'mains' },
+    ])
+    renderCalculator()
+    const pizzor = await screen.findByRole('region', { name: 'Pizzor' })
+    expect(within(pizzor).getByText('Margherita')).toBeInTheDocument()
+    expect(within(screen.getByRole('region', { name: 'Husmanskost' })).getByText('Lasagne')).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Övrigt' })).not.toBeInTheDocument()
   })
 
   it('says so when the restaurant has catering switched off', async () => {

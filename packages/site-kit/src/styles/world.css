@@ -685,7 +685,7 @@ svg {
 }
 
 .booking-field input,
-.booking-field select,
+.booking-field .combo,
 .booking-field textarea {
   min-height: 52px;
   padding: 12px 16px;
@@ -698,7 +698,7 @@ svg {
 }
 
 .booking-field input:focus,
-.booking-field select:focus,
+.booking-field .combo:focus,
 .booking-field textarea:focus {
   outline: none;
   background: var(--surface);
@@ -841,7 +841,7 @@ svg {
   cursor: not-allowed;
 }
 
-.party-stepper select {
+.party-stepper .combo {
   min-width: 128px;
   min-height: 50px;
   padding: 0 12px;
@@ -1094,7 +1094,7 @@ svg {
 
 .floor-svg-pick .floor-svg-table.is-selected ~ .floor-svg-table-label,
 .floor-svg-pick .floor-svg-table.is-selected ~ .floor-svg-table-seats {
-  fill: #ffffff;
+  fill: #fdfaf6;
 }
 
 .floor-svg-pick,
@@ -1257,7 +1257,7 @@ body {
 
 ::selection {
   background: var(--ink-red);
-  color: #fff;
+  color: #fdfaf6;
 }
 
 html {
@@ -1297,6 +1297,7 @@ h1, h2, h3, h4 {
 .category-sidebar-kicker,
 .category-dropdown-label,
 .booking-field > span:first-child,
+.booking-field > label:first-child,
 .offer-stub-label,
 .order-only-table,
 .storage-table th,
@@ -1320,7 +1321,7 @@ h1, h2, h3, h4 {
 .chip-count,
 .stepper > span,
 .cart-qty span,
-.party-stepper select,
+.party-stepper .combo,
 .order-mobile-bar-total,
 .order-mobile-bar-count,
 .offer-peek-percent,
@@ -1723,7 +1724,7 @@ h1, h2, h3, h4 {
 }
 
 .booking-field input,
-.booking-field select,
+.booking-field .combo,
 .booking-field textarea,
 .catering-dishes input,
 .cart-code-row input,
@@ -1740,13 +1741,13 @@ h1, h2, h3, h4 {
 }
 
 .booking-field input:hover,
-.booking-field select:hover,
+.booking-field .combo:hover,
 .booking-field textarea:hover {
   border-color: var(--muted);
 }
 
 .booking-field input:focus,
-.booking-field select:focus,
+.booking-field .combo:focus,
 .booking-field textarea:focus,
 .catering-dishes input:focus,
 .cart-code-row input:focus,
@@ -2607,7 +2608,7 @@ h1, h2, h3, h4 {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
 }
 
-.party-stepper select {
+.party-stepper .combo {
   min-height: 44px;
   border-radius: var(--r-md);
   font: 700 1rem/1 var(--mono);
@@ -3104,7 +3105,7 @@ h1, h2, h3, h4 {
   --seat-pick: #2c6a3f;
   --seat-pick-line: #1f4d2d;
   --seat-pick-side: #245735;
-  --seat-pick-ink: #ffffff;
+  --seat-pick-ink: #fdfaf6;
   --seat-taken: #ecc9cb;
   --seat-taken-line: #9e1d26;
   --seat-taken-side: #d9a9ad;
@@ -3175,7 +3176,7 @@ h1, h2, h3, h4 {
   --seat-pick: #2f7a48;
   --seat-pick-line: #7cc695;
   --seat-pick-side: #245735;
-  --seat-pick-ink: #ffffff;
+  --seat-pick-ink: #fdfaf6;
   --seat-taken: #6a3236;
   --seat-taken-line: #ee8a90;
   --seat-taken-side: #4e2528;
@@ -4124,5 +4125,43 @@ a,
 @media (prefers-reduced-motion: reduce) {
   .press-ripple {
     display: none;
+  }
+}
+
+/* Rätter på smala telefoner: mindre foto och priset under texten på menyn,
+   så att namn och beskrivning får bredden. Långa ord bryts i stället för att
+   klippas. */
+.dish-name,
+.dish-desc,
+.dish-allergens {
+  overflow-wrap: break-word;
+}
+
+@media (max-width: 480px) {
+  .dish {
+    gap: 12px;
+  }
+
+  .dish > .plate {
+    --size: 60px;
+  }
+
+  .dish:not(.dish--order) {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .dish:not(.dish--order) > .plate {
+    grid-row: span 2;
+  }
+
+  .dish:not(.dish--order) > .dish-price {
+    grid-column: 2;
+    margin-top: -8px;
+  }
+
+  .dish-action .order-only-table {
+    display: block;
+    max-width: 64px;
+    text-align: right;
   }
 }

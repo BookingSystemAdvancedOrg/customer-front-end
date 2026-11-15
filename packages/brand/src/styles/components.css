@@ -96,11 +96,11 @@
 .glass-refract .bq-card--glass {
   backdrop-filter: url(#booqy-glass) blur(24px) saturate(1.4);
 }
-/* receipt: white thermal paper hanging from a short rail, torn bottom edge, mono print */
+/* receipt: off-white thermal paper hanging from a short rail, torn bottom edge, mono print */
 .bq-card--receipt {
   padding-top: calc(var(--bq-space-5) + 8px);
   padding-bottom: calc(var(--bq-space-5) + 6px);
-  background: var(--bq-white);
+  background: var(--bq-paper);
   color: var(--bq-espresso);
   font-family: var(--bq-font-mono);
   box-shadow: var(--bq-shadow-md);
@@ -108,10 +108,10 @@
   mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / 12px 6px repeat-x, linear-gradient(#000 0 0) top / 100% calc(100% - 6px) no-repeat;
 }
 .bq-card--receipt {
-  /* the paper is always white: its print stays dark in both modes */
+  /* the paper is always off-white: its print stays dark in both modes */
   --bq-ink: var(--bq-espresso);
   --bq-muted: var(--bq-graphite);
-  --bq-surface: var(--bq-white);
+  --bq-surface: var(--bq-paper);
   --bq-surface-2: var(--bq-linen);
   --bq-line: var(--bq-sand);
   --bq-chart-1: var(--bq-espresso);
@@ -162,7 +162,7 @@
   gap: var(--bq-space-2);
 }
 /* ticket: an event ticket stub. Follows the theme; notches and a dashed
-   perforation part the details from the QR stub; the QR sits on white paper
+   perforation part the details from the QR stub; the QR sits on off-white paper
    in both modes so every scanner reads it. */
 .bq-card--ticket {
   --bq-ticket-notch: 12px;
@@ -204,7 +204,7 @@
   width: min(100%, 220px);
   padding: var(--bq-space-3);
   border-radius: var(--bq-radius-inner);
-  background: var(--bq-white);
+  background: var(--bq-paper);
   color: var(--bq-espresso);
   line-height: 0;
 }

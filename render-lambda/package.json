@@ -1,0 +1,11 @@
+{
+  "name": "booqy-site-builder-render",
+  "private": true,
+  "version": "0.1.0",
+  "description": "site-builder-render Lambda (ADR-B): pre-renders a published site version with site-kit's own SitePage.",
+  "type": "module",
+  "scripts": {
+    "build": "node ../node_modules/vite/bin/vite.js build --config vite.config.ts",
+    "test": "node --test test/render.test.mjs"
+  }
+}

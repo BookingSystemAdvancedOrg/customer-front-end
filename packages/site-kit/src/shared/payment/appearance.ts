@@ -22,7 +22,7 @@ const MONO = "'Martian Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospac
 /** Ljusa och mörka värden om CSS-variablerna inte går att läsa (tester). */
 const FALLBACK: Record<Theme, Record<string, string>> = {
   light: {
-    '--surface': '#ffffff',
+    '--surface': '#fdfaf6',
     '--fill': '#f6f1ea',
     '--ink': '#1a120e',
     '--muted': '#4a4a46',

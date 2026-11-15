@@ -69,36 +69,43 @@
 
 :root,
 :root[data-theme='light'] {
-  --paper: #ffffff;
+  --paper: var(--bq-snow);
   --paper-2: #f6f1ea;
   --paper-line: #e3d6c4;
   --print: #1a120e;
-  --print-2: #4a4a46;
+  --print-2: #3b3530;
   --ink-red: #9e1d26;
   --steel: #a88462;
   --steel-lo: #6b4a2e;
   --table: transparent;
   --table-2: rgba(58, 36, 24, 0.06);
   --bg: #f6f1ea;
-  --surface: #ffffff;
+  --surface: var(--bq-snow);
   --fill: #f6f1ea;
-  --surface-glass: rgba(255, 255, 255, 0.7);
+  --surface-glass: rgb(var(--bq-snow-rgb) / 0.7);
   --page-scrim: rgba(246, 241, 234, 0.9);
   --border: #e3d6c4;
   --line: #e3d6c4;
   --ink: #1a120e;
-  --muted: #4a4a46;
+  --muted: #3b3530;
   --accent: #1a120e;
   --accent-ink: #6b4a2e;
   --accent-hover: #3a2418;
   --accent-active: #3a2418;
   --accent-soft: #f6f1ea;
-  --on-accent: #ffffff;
+  --on-accent: var(--bq-snow);
   --focus: rgba(168, 132, 98, 0.45);
-  /* fälten, också Stripes (site-kit payment/appearance.ts läser dem) */
-  --field-bg: var(--surface);
+  /* fälten, också Stripes (site-kit payment/appearance.ts läser --field-bg,
+     --field-radius och --field-border, där --field-border är en bredd) */
+  --field-bg: rgba(226, 214, 199, 0.58);
+  --field-bg-focus: rgba(253, 250, 246, 0.86);
   --field-radius: 12px;
   --field-border: 1px;
+  --field-line: rgb(58 36 24 / 0.55);
+  --field-line-hover: rgb(58 36 24 / 0.78);
+  --field-ring: rgb(107 74 46 / 0.34);
+  --field-inset: inset 0 2px 4px rgb(26 18 14 / 0.14), inset 0 -1px 0 rgb(var(--bq-snow-rgb) / 0.55);
+  --placeholder: #5f5751;
   --tint-accent: rgba(168, 132, 98, 0.16);
   --danger: #9e1d26;
   --danger-ink: #9e1d26;
@@ -122,16 +129,37 @@
   --r-panel: 28px;
   /* den rivna kanten och railen finns inte i admin-looken */
   --tooth-h: 0px;
-  --glass: rgba(255, 255, 255, 0.62);
-  --glass-hi: rgba(255, 255, 255, 0.74);
-  --rim: inset 0 1px 0 rgba(255, 255, 255, 0.9), inset 0 0 0 1px rgba(255, 255, 255, 0.55);
-  --rim-gloss: inset 0 1px 0 rgba(255, 255, 255, 0.95), inset 0 0 0 1px rgba(255, 255, 255, 0.6), inset 0 -1px 0 rgba(58, 36, 24, 0.06);
+  --rim-gloss: inset 0 1px 0 rgb(var(--bq-snow-rgb) / 0.95), inset 0 0 0 1px rgb(var(--bq-snow-rgb) / 0.6), inset 0 -1px 0 rgba(58, 36, 24, 0.06);
   --card-shadow: 0 1px 2px rgba(58, 36, 24, 0.06), 0 14px 34px -22px rgba(58, 36, 24, 0.45);
   --card-shadow-hi: 0 1px 2px rgba(58, 36, 24, 0.08), 0 22px 44px -24px rgba(58, 36, 24, 0.55);
   --backdrop-veil: rgba(246, 241, 234, 0);
   --wall-tint: rgba(58, 36, 24, 0.08);
   --wall-tint-2: rgba(58, 36, 24, 0.14);
   --pill-bg: linear-gradient(180deg, #3a2418, #1a120e);
+  /* Flytande glas (samma värden som Booqy Console, ds.css). Tonerna:
+     paneler (sidhuvud, hero, skenor) 0.44, ytor (sidfot, dialoger, laddning)
+     0.52, kort med brödtext 0.62, inre rutor 0.32. Svagare text i --muted
+     är mörk nog för AA även där en fläck lyser igenom som mest. */
+  --glass-bg: rgb(var(--bq-snow-rgb) / 0.44);
+  --glass-surface: rgb(var(--bq-snow-rgb) / 0.52);
+  --glass-text-bg: rgb(var(--bq-snow-rgb) / 0.62);
+  --glass-fill: rgb(var(--bq-snow-rgb) / 0.32);
+  --glass-pop: rgb(var(--bq-snow-rgb) / 0.52);
+  --glass-blur: 24px;
+  --glass-sat: 1.65;
+  --liquid-edge: inset 0 1px 0 rgb(var(--bq-snow-rgb) / 0.95), inset 0 0 0 1px rgb(var(--bq-snow-rgb) / 0.42), inset 0 -1px 0 rgb(58 36 24 / 0.1), inset 0 12px 28px -18px rgb(var(--bq-snow-rgb) / 0.7);
+  --liquid-sheen: linear-gradient(180deg, rgb(var(--bq-snow-rgb) / 0.46), rgb(var(--bq-snow-rgb) / 0.08) 38%, rgb(var(--bq-snow-rgb) / 0) 62%);
+  --liquid-depth: 0 28px 64px -30px rgb(26 18 14 / 0.5), 0 2px 8px -3px rgb(26 18 14 / 0.14);
+  /* små kontroller på glas (chips, dagar, tider, sekundärknappar) */
+  --control-bg: rgb(var(--bq-snow-rgb) / 0.5);
+  --control-line: rgb(58 36 24 / 0.26);
+  --backdrop-blobs:
+    radial-gradient(40% 48% at 6% 10%, rgb(53 0 1 / 0.66), transparent 72%),
+    radial-gradient(36% 42% at 94% 90%, rgb(107 74 46 / 0.66), transparent 72%),
+    radial-gradient(32% 36% at 84% 6%, rgb(168 132 98 / 0.72), transparent 70%),
+    radial-gradient(30% 34% at 28% 96%, rgb(58 36 24 / 0.55), transparent 70%),
+    radial-gradient(26% 30% at 66% 42%, rgb(158 29 38 / 0.36), transparent 70%),
+    radial-gradient(28% 32% at 40% 60%, rgb(168 132 98 / 0.42), transparent 70%);
   font-family: var(--font);
   font-stretch: 100%;
   color-scheme: light;
@@ -158,7 +186,7 @@
   --muted: #d5c4ae;
   --accent: #f6f1ea;
   --accent-ink: #d5c4ae;
-  --accent-hover: #ffffff;
+  --accent-hover: var(--bq-snow);
   --accent-active: #d5c4ae;
   --accent-soft: #3a2418;
   --on-accent: #1a120e;
@@ -172,16 +200,36 @@
   --shadow: 0 1px 1px rgba(0, 0, 0, 0.3), 0 14px 30px -20px rgba(0, 0, 0, 0.6);
   --shadow-lg: 0 2px 8px -3px rgba(0, 0, 0, 0.4), 0 40px 80px -40px rgba(0, 0, 0, 0.7);
   --plate-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 8px 18px -12px rgba(0, 0, 0, 0.7);
-  --glass: rgba(26, 18, 14, 0.7);
-  --glass-hi: rgba(26, 18, 14, 0.8);
-  --rim: inset 0 1px 0 rgba(213, 196, 174, 0.18), inset 0 0 0 1px rgba(213, 196, 174, 0.1);
   --rim-gloss: inset 0 1px 0 rgba(213, 196, 174, 0.24), inset 0 0 0 1px rgba(213, 196, 174, 0.1);
   --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 14px 34px -22px rgba(0, 0, 0, 0.8);
   --card-shadow-hi: 0 1px 2px rgba(0, 0, 0, 0.35), 0 22px 44px -24px rgba(0, 0, 0, 0.85);
-  --backdrop-veil: rgba(26, 18, 14, 0.86);
+  --backdrop-veil: rgba(26, 18, 14, 0.72);
   --wall-tint: rgba(213, 196, 174, 0.12);
   --wall-tint-2: rgba(213, 196, 174, 0.2);
-  --pill-bg: linear-gradient(180deg, #ffffff, #efe7dc);
+  --pill-bg: linear-gradient(180deg, var(--bq-snow), #efe7dc);
+  --glass-bg: rgba(26, 18, 14, 0.48);
+  --glass-surface: rgba(42, 29, 22, 0.5);
+  --glass-text-bg: rgba(26, 18, 14, 0.66);
+  --glass-fill: rgba(58, 36, 24, 0.42);
+  --glass-pop: rgba(26, 18, 14, 0.6);
+  --liquid-edge: inset 0 1px 0 rgb(246 241 234 / 0.28), inset 0 0 0 1px rgb(213 196 174 / 0.16), inset 0 12px 28px -18px rgb(246 241 234 / 0.14);
+  --liquid-sheen: linear-gradient(180deg, rgb(246 241 234 / 0.12), rgb(246 241 234 / 0.02) 40%, rgb(246 241 234 / 0) 62%);
+  --liquid-depth: 0 30px 70px -30px rgb(0 0 0 / 0.75), 0 2px 8px -3px rgb(0 0 0 / 0.4);
+  --control-bg: rgba(26, 18, 14, 0.42);
+  --control-line: rgba(213, 196, 174, 0.26);
+  --field-bg: rgba(10, 7, 5, 0.46);
+  --field-bg-focus: rgba(26, 18, 14, 0.72);
+  --field-line: rgba(213, 196, 174, 0.5);
+  --field-line-hover: rgba(213, 196, 174, 0.74);
+  --field-ring: rgba(213, 196, 174, 0.3);
+  --field-inset: inset 0 2px 4px rgb(0 0 0 / 0.42), inset 0 -1px 0 rgb(246 241 234 / 0.07);
+  --placeholder: #b3a79f;
+  --backdrop-blobs:
+    radial-gradient(40% 48% at 6% 10%, rgb(158 29 38 / 0.5), transparent 72%),
+    radial-gradient(36% 42% at 94% 90%, rgb(168 132 98 / 0.4), transparent 72%),
+    radial-gradient(32% 36% at 84% 6%, rgb(107 74 46 / 0.6), transparent 70%),
+    radial-gradient(30% 34% at 28% 96%, rgb(53 0 1 / 0.6), transparent 70%),
+    radial-gradient(24% 28% at 56% 46%, rgb(213 196 174 / 0.16), transparent 70%);
   color-scheme: dark;
   accent-color: #f6f1ea;
 }
@@ -199,7 +247,8 @@ body::before {
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background: linear-gradient(var(--backdrop-veil), var(--backdrop-veil)), url('./assets/backdrop.webp') center / cover no-repeat, var(--bg);
+  /* fläckarna överst, sedan slöjan (mörkt läge), fotot och grundfärgen */
+  background: var(--backdrop-blobs), linear-gradient(var(--backdrop-veil), var(--backdrop-veil)), url('./assets/backdrop.webp') center / cover no-repeat, var(--bg);
 }
 
 :focus-visible {
@@ -248,10 +297,6 @@ body::before {
   min-height: 64px;
   padding: 8px 10px 8px 22px;
   border-radius: var(--r-pill);
-  background: var(--glass-hi);
-  box-shadow: var(--rim), var(--shadow);
-  -webkit-backdrop-filter: blur(16px) saturate(1.6);
-  backdrop-filter: blur(16px) saturate(1.6);
 }
 .site .site-header-wordmark {
   font: 800 1.35rem/1 var(--display);
@@ -301,18 +346,12 @@ body::before {
   border-radius: var(--r-md);
   background: var(--ink);
 }
-.site .location-picker select {
-  border-radius: var(--r-pill);
-  background-color: var(--wall-tint);
-  color: var(--ink);
+.site .location-picker .combo {
   font: 600 0.8rem/1 var(--font);
 }
 .mobile-drawer {
+  padding: 12px 20px 24px;
   border-radius: var(--r-panel) 0 0 var(--r-panel);
-  background: var(--glass-hi);
-  -webkit-backdrop-filter: blur(18px) saturate(1.5);
-  backdrop-filter: blur(18px) saturate(1.5);
-  box-shadow: var(--rim), var(--shadow-lg);
 }
 .mobile-drawer-list a,
 .mobile-drawer-hours-trigger {
@@ -331,15 +370,8 @@ body::before {
   padding: 0;
   width: calc(100% - 2 * clamp(12px, 3vw, 24px));
   border-radius: var(--r-panel);
-  background: var(--glass);
   color: var(--ink);
-  box-shadow: var(--rim), var(--shadow-lg);
-  -webkit-backdrop-filter: blur(18px) saturate(1.5);
-  backdrop-filter: blur(18px) saturate(1.5);
   overflow: hidden;
-}
-.home-hero::after {
-  display: none;
 }
 .home-hero-body {
   padding: clamp(36px, 6vw, 72px) clamp(22px, 4vw, 56px);
@@ -363,7 +395,7 @@ body::before {
 .home-hero--photo .home-hero-tagline,
 .home-hero--photo .home-hero-status,
 .home-hero--photo .home-hero-address {
-  color: #ffffff;
+  color: var(--bq-snow);
 }
 
 /* knappar i heron och överallt: piller som i admin */
@@ -385,16 +417,16 @@ body::before {
   box-shadow: 0 16px 30px -14px rgba(26, 18, 14, 0.75);
 }
 .action--secondary {
-  background: var(--glass-hi);
+  background: var(--control-bg) var(--liquid-sheen);
   color: var(--ink);
-  box-shadow: var(--rim), inset 0 0 0 1px var(--wall-tint-2);
+  box-shadow: var(--liquid-edge), inset 0 0 0 1px var(--control-line);
 }
 .action--secondary:hover {
   translate: 0 -2px;
-  background: var(--surface);
+  background-color: var(--field-bg-focus);
 }
 
-/* --- Kort: vitt papper med mjuka skuggor, ingen rail och ingen riven kant -- */
+/* --- Kort: flytande glas (oskärpan på ::before, se längre ned) ------------- */
 
 .menu,
 .order-menu,
@@ -403,24 +435,11 @@ body::before {
 .booking-confirmation,
 .catering-details,
 .page-prose,
-.printing,
 .contact-form,
+.checkout,
 .catering-request > section {
   border: 0;
   border-radius: var(--r-lg);
-  background: linear-gradient(180deg, var(--surface), color-mix(in srgb, var(--surface) 96%, #f6f1ea));
-  box-shadow: var(--rim-gloss), var(--card-shadow);
-}
-:root[data-theme='dark'] .menu,
-:root[data-theme='dark'] .order-menu,
-:root[data-theme='dark'] .order-cart,
-:root[data-theme='dark'] .booking-step,
-:root[data-theme='dark'] .booking-confirmation,
-:root[data-theme='dark'] .catering-details,
-:root[data-theme='dark'] .page-prose,
-:root[data-theme='dark'] .printing,
-:root[data-theme='dark'] .contact-form {
-  background: linear-gradient(180deg, #2a1d16, #22170f);
 }
 .menu::after,
 .order-menu::after,
@@ -431,20 +450,12 @@ body::before {
 .page-prose::after,
 .printing::after,
 .contact-form::after,
-.menu::before,
-.order-menu::before,
-.order-cart::before,
-.booking-step::before,
-.booking-confirmation::before,
-.catering-details::before,
-.page-prose::before {
+.checkout::after {
   display: none;
 }
 .page > .order-hint {
   border: 0;
   border-radius: var(--r-lg);
-  background: var(--glass-hi);
-  box-shadow: var(--rim), var(--shadow);
 }
 /* tips inne i ett kort (varukorg, bokningssteg, cateringofferten) är bara text;
    bara sidans egna tips (.page > .order-hint) är ett glaspiller */
@@ -506,9 +517,9 @@ body::before {
 .btn-secondary,
 .btn.ghost,
 .btn.small {
-  background: var(--surface);
+  background: var(--control-bg);
   color: var(--ink);
-  box-shadow: inset 0 0 0 1px var(--border);
+  box-shadow: inset 0 0 0 1px var(--control-line);
 }
 .btn-secondary:hover:not(:disabled),
 .btn.ghost:hover:not(:disabled),
@@ -534,9 +545,9 @@ body::before {
   min-height: 36px;
   padding: 0 14px;
   border-radius: var(--r-pill);
-  background: var(--surface);
+  background: var(--control-bg);
   color: var(--ink);
-  box-shadow: inset 0 0 0 1px var(--border);
+  box-shadow: inset 0 0 0 1px var(--control-line);
   font: 600 0.9rem/1 var(--font);
   font-stretch: 100%;
 }
@@ -560,9 +571,9 @@ body::before {
 .booking-times button,
 .party-btn {
   border-radius: var(--r-md);
-  background: var(--surface);
+  background: var(--control-bg);
   color: var(--ink);
-  box-shadow: inset 0 0 0 1px var(--border);
+  box-shadow: inset 0 0 0 1px var(--control-line);
   font-family: var(--font);
   font-stretch: 100%;
 }
@@ -580,32 +591,6 @@ body::before {
   background: var(--pill-bg);
   color: var(--on-accent);
   box-shadow: 0 8px 18px -10px rgba(26, 18, 14, 0.65);
-}
-
-/* --- Fält: som admins formulär -------------------------------------------- */
-
-.site input:not([type='checkbox']):not([type='radio']):not([type='range']),
-.site select,
-.site textarea {
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  background-color: var(--surface);
-  color: var(--ink);
-  font-family: var(--font);
-  box-shadow: none;
-  transition: border-color 160ms var(--ease), box-shadow 160ms var(--ease);
-}
-.site input:not([type='checkbox']):not([type='radio']):not([type='range']):hover,
-.site select:hover,
-.site textarea:hover {
-  border-color: var(--accent-ink);
-}
-.site input:not([type='checkbox']):not([type='radio']):not([type='range']):focus,
-.site select:focus,
-.site textarea:focus {
-  outline: none;
-  border-color: var(--ink);
-  box-shadow: 0 0 0 3px var(--focus);
 }
 
 /* --- Rätter och tallrikar --------------------------------------------------- */
@@ -656,11 +641,7 @@ body::before {
   margin: clamp(28px, 5vw, 56px) auto 14px;
   width: calc(100% - 2 * clamp(12px, 3vw, 24px));
   border-radius: var(--r-panel);
-  background: var(--glass-hi);
   color: var(--muted);
-  box-shadow: var(--rim), var(--shadow);
-  -webkit-backdrop-filter: blur(16px) saturate(1.6);
-  backdrop-filter: blur(16px) saturate(1.6);
 }
 .site .site-footer a {
   color: var(--ink);
@@ -741,15 +722,18 @@ body::before {
   scrollbar-width: none;
   border: 0 !important;
   border-radius: var(--r-pill) !important;
-  /* nästan vit, så att skenan ser likadan ut på papper och på glas */
-  background: rgba(255, 255, 255, 0.9) !important;
-  -webkit-backdrop-filter: blur(10px) saturate(1.5);
-  backdrop-filter: blur(10px) saturate(1.5);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), inset 0 0 0 1px rgba(58, 36, 24, 0.12), 0 6px 16px -12px rgba(58, 36, 24, 0.35) !important;
+  /* flytande glas med en synlig kant */
+  background: var(--control-bg) var(--liquid-sheen) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(var(--glass-sat));
+  backdrop-filter: blur(14px) saturate(var(--glass-sat));
+  box-shadow: var(--liquid-edge), inset 0 0 0 1px var(--control-line), 0 6px 16px -12px rgba(58, 36, 24, 0.35) !important;
 }
 
+/* Bara Chromium (brand/effects/glass.ts sätter .glass-refract där): ljuset
+   bryts genom SVG-filtret. Safari får aldrig klassen och behåller oskärpan
+   från regeln ovan (både -webkit- och standardraden). */
 .glass-refract [data-glide='track'] {
-  backdrop-filter: url(#booqy-glass) blur(10px) saturate(1.5);
+  backdrop-filter: url(#booqy-glass) blur(14px) saturate(var(--glass-sat));
 }
 
 [data-glide='track']::-webkit-scrollbar {
@@ -777,7 +761,7 @@ body::before {
 }
 
 [data-glide] > :is(button, a):is(.active, .on, .is-active, [aria-pressed='true'], [aria-selected='true'], [aria-checked='true']) {
-  color: #ffffff !important;
+  color: var(--bq-snow) !important;
 }
 
 [data-glide='bare'] {
@@ -812,7 +796,7 @@ body::before {
   translate: var(--glide-x, 0) var(--glide-y, 0);
   border-radius: var(--r-pill);
   background: linear-gradient(180deg, #3a2418, #1a120e);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 4px 10px -6px rgba(26, 18, 14, 0.6);
+  box-shadow: inset 0 1px 0 rgb(var(--bq-snow-rgb) / 0.2), 0 4px 10px -6px rgba(26, 18, 14, 0.6);
   opacity: 0;
   pointer-events: none;
   will-change: translate, width;
@@ -831,8 +815,7 @@ body::before {
 }
 
 :root[data-theme='dark'] [data-glide='track'] {
-  background: rgba(255, 255, 255, 0.06) !important;
-  box-shadow: inset 0 1px 0 rgba(213, 196, 174, 0.22), inset 0 0 0 1px rgba(213, 196, 174, 0.12), 0 6px 16px -12px rgba(0, 0, 0, 0.6) !important;
+  box-shadow: var(--liquid-edge), inset 0 0 0 1px var(--control-line), 0 6px 16px -12px rgba(0, 0, 0, 0.6) !important;
 }
 
 :root[data-theme='dark'] [data-glide='track'] > :is(button, a) {
@@ -844,8 +827,8 @@ body::before {
 }
 
 :root[data-theme='dark'] [data-glide]::before {
-  background: linear-gradient(180deg, #ffffff, #efe7dc);
-  box-shadow: inset 0 1px 0 #ffffff, 0 4px 10px -6px rgba(0, 0, 0, 0.6);
+  background: linear-gradient(180deg, var(--bq-snow), #efe7dc);
+  box-shadow: inset 0 1px 0 var(--bq-snow), 0 4px 10px -6px rgba(0, 0, 0, 0.6);
 }
 
 @media (hover: hover) {
@@ -897,8 +880,6 @@ body::before {
 .site .booking-summary {
   border: 0;
   border-radius: var(--r-md);
-  background: var(--fill);
-  box-shadow: inset 0 0 0 1px var(--wall-tint);
 }
 .site .hero-kicker {
   font-size: 1.05rem;
@@ -908,9 +889,6 @@ body::before {
 /* namnet till vänster, knapparna till höger, även när menyn är dold */
 .site .site-header-brand {
   margin-right: auto;
-}
-.page > .order-hint {
-  border-radius: var(--r-lg);
 }
 
 /* kategoriraden stannar under sidhuvudet även som glidskena */
@@ -928,9 +906,9 @@ body::before {
 }
 .site .stepper button {
   border-radius: var(--r-pill);
-  background: var(--surface);
+  background: var(--control-bg);
   color: var(--ink);
-  box-shadow: inset 0 0 0 1px var(--border);
+  box-shadow: inset 0 0 0 1px var(--control-line);
 }
 .site .stepper > span {
   font-family: var(--mono);
@@ -949,9 +927,433 @@ body::before {
   color: var(--ink);
 }
 
-/* den fästa kategoriraden är frostat glas, så rätterna inte syns igenom */
-.chip-rail {
-  background: var(--glass-hi);
-  -webkit-backdrop-filter: blur(14px) saturate(1.5);
-  backdrop-filter: blur(14px) saturate(1.5);
+/* ============================================================================
+   Flytande glas (2026-11-13, efter en titt i Safari): rummet är fotot med
+   kraftiga vinröda och bruna fläckar ovanpå, och varje yta är glas med en
+   tänd kant (--liquid-edge), en glans uppifrån (--liquid-sheen) och djup
+   (--liquid-depth). Samma värden som Booqy Console. Varje backdrop-filter har
+   en -webkit-rad bredvid sig med bara blur() och saturate(), så att Safari
+   alltid får oskärpan; SVG-filtret (url(#booqy-glass)) bara i egna regler för
+   Chromium. Inget massivt papper kvar: biljetten och utskriften är glaslappar,
+   bara QR-koden har en liten ljus tyst zon så att den går att skanna.
+   ========================================================================== */
+
+/* --- Paneler som bär oskärpan själva ---------------------------------------- */
+.site .site-header-inner,
+.home-hero,
+.mobile-drawer,
+.page > .order-hint,
+.site .site-footer,
+.opening-hours-modal-panel,
+.date-cal,
+.combo-pop,
+.cart-panel,
+.hold-banner,
+.printing,
+.offer-ticket,
+.bq-card__main,
+.bq-card__stub {
+  border: 0;
+  background: var(--glass-surface) var(--liquid-sheen);
+  box-shadow: var(--liquid-edge), var(--liquid-depth);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+}
+/* tunnast där texten är stor: sidhuvudet och heron */
+.site .site-header-inner,
+.home-hero {
+  background-color: var(--glass-bg);
+}
+/* tätast där brödtexten är liten eller sidan syns tvärs igenom: tipset,
+   kupongen, mobilmenyn och dialogen */
+.page > .order-hint,
+.offer-ticket,
+.mobile-drawer,
+.opening-hours-modal-panel {
+  background-color: var(--glass-text-bg);
+}
+/* rullistans lista: nästan tät, raderna ska gå att läsa över vad som helst */
+.combo-pop {
+  background-color: color-mix(in srgb, var(--surface) 90%, transparent);
+}
+.combo-pop--sheet {
+  border-radius: var(--r-panel) var(--r-panel) 0 0;
+  background-color: var(--surface);
+}
+/* biljetten ligger på ett glaskort: tunnare, så att färgen syns igenom */
+.bq-card__main,
+.bq-card__stub {
+  background-color: var(--glass-bg);
+}
+.opening-hours-modal-panel {
+  border-radius: var(--r-lg);
+  -webkit-mask: none;
+  mask: none;
+}
+.hold-banner {
+  border-top: 4px solid var(--ok);
+}
+
+/* --- Kort: oskärpan ligger på ett eget lager (::before) och inte på kortet,
+   så att fasta element inuti (datumkalendern, mobilens beställningsrad och
+   kassans knapp) fortfarande räknas från fönstret. Korten är redan
+   position: relative (brickan sticky) i site-kit; cateringens sektioner får
+   det här. Kanten ligger på lagret, djupet på kortet. --------------------- */
+.catering-request > section {
+  position: relative;
+}
+.menu,
+.order-menu,
+.order-cart,
+.booking-step,
+.booking-confirmation,
+.catering-details,
+.page-prose,
+.contact-form,
+.checkout,
+.catering-request > section {
+  isolation: isolate;
+  background: transparent;
+  box-shadow: var(--liquid-depth);
+}
+.menu::before,
+.order-menu::before,
+.order-cart::before,
+.booking-step::before,
+.booking-confirmation::before,
+.catering-details::before,
+.page-prose::before,
+.contact-form::before,
+.checkout::before,
+.catering-request > section::before {
+  content: '';
+  display: block;
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--glass-text-bg) var(--liquid-sheen);
+  box-shadow: var(--liquid-edge);
+  pointer-events: none;
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+}
+
+/* --- Biljetten: två glaslappar med hack och perforering. Ett filter på
+   biljetten skulle stänga glaset (oskärpan ser då bara biljetten), så djupet
+   är en vanlig skugga runt den. QR-koden behåller sin ljusa tysta zon. ---- */
+.bq-card--ticket {
+  filter: none;
+  border-radius: var(--bq-radius-card);
+  box-shadow: var(--liquid-depth);
+}
+.bq-card__main,
+.bq-card__stub {
+  box-shadow: var(--liquid-edge);
+}
+.bq-card__stub {
+  border-top-color: var(--control-line);
+  background-image: none;
+}
+
+/* --- Flikskenan från @booqy/brand (presentkort): samma glas som skenorna */
+.bq-bar--tab[data-bq-glide='track'] {
+  background: var(--control-bg) var(--liquid-sheen);
+  box-shadow: var(--liquid-edge), inset 0 0 0 1px var(--control-line), 0 6px 16px -12px rgba(58, 36, 24, 0.35);
+  -webkit-backdrop-filter: blur(14px) saturate(var(--glass-sat));
+  backdrop-filter: blur(14px) saturate(var(--glass-sat));
+}
+
+/* --- Välkomstkupongen: samma glas; skuggan på kortet runt den ------------- */
+.offer-card {
+  filter: none;
+  border-radius: var(--r-md);
+  box-shadow: var(--liquid-depth);
+}
+.offer-ticket {
+  box-shadow: var(--liquid-edge);
+}
+
+/* --- Laddningen: en utskrift på en glaslapp ------------------------------- */
+.printing {
+  border-radius: var(--r-lg);
+}
+.printing__label {
+  border-bottom-color: var(--control-line);
+}
+.printing i {
+  background: var(--control-line);
+}
+
+/* --- Inre rutor och listor i ett glaskort: en tunn ton, ingen egen oskärpa */
+.site .catering-offer,
+.site .catering-documents,
+.site .booking-summary,
+.booking-summary-line,
+.checkout-card,
+.checkout-peek,
+.guarantee-notice,
+.segmented,
+.bankid-box,
+.hold-bar,
+.next-up,
+.catering-dishes li,
+.consent-option,
+.glass-panel,
+.glass-quote,
+.parking-card,
+.floor-wrap,
+.floor-svg-frame,
+.f3d-scene,
+.floor-view-toggle,
+.order-only-table,
+.equipment-return .booking-check,
+.guest-notice,
+.site .evenemang-item,
+.site .evenemang-date,
+.site .evenemang-type {
+  background: var(--glass-fill);
+}
+.site .catering-offer,
+.site .catering-documents,
+.site .booking-summary,
+.site .evenemang-item,
+.site .evenemang-date,
+.site .evenemang-type {
+  box-shadow: var(--liquid-edge);
+}
+.segmented label.on,
+.opening-hours-modal-close {
+  background: var(--field-bg-focus);
+}
+.site .notice.error,
+.notice.error {
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+}
+.site-boot {
+  background: transparent;
+}
+
+/* --- Fält: varje input, rullista (.combo) och textarea på sajten är ett synligt
+   glasfält (ton, 1 px kant, inre skugga, fokusring), i alla formulär. Den
+   enda fältregeln; :root ger den företräde framför site-kit:s fältregler. -- */
+:root {
+  --combo-chevron: #3a2418;
+}
+:root[data-theme='dark'] {
+  --combo-chevron: #d5c4ae;
+}
+:root :is(input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='hidden']):not([type='file']):not([type='submit']):not([type='button']):not([type='color']), .combo, textarea) {
+  border: 1px solid var(--field-line);
+  border-radius: var(--r-md);
+  background-color: var(--field-bg);
+  box-shadow: var(--field-inset);
+  color: var(--ink);
+  font-family: var(--font);
+  transition: border-color 160ms var(--ease), background-color 160ms var(--ease), box-shadow 160ms var(--ease);
+}
+:root :is(input, textarea)::placeholder {
+  color: var(--placeholder);
+  opacity: 1;
+}
+:root :is(input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='hidden']):not([type='file']):not([type='submit']):not([type='button']):not([type='color']), .combo, textarea):hover {
+  border-color: var(--field-line-hover);
+}
+:root :is(input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='hidden']):not([type='file']):not([type='submit']):not([type='button']):not([type='color']), .combo, textarea):focus {
+  outline: none;
+  border-color: var(--ink);
+  background-color: var(--field-bg-focus);
+  box-shadow: var(--field-inset), 0 0 0 3px var(--field-ring);
+}
+:root :is(input, textarea)[aria-invalid='true'],
+:root .combo[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+:root .combo {
+  padding-right: 36px;
+  cursor: pointer;
+}
+:root :is(input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='hidden']):not([type='file']):not([type='submit']):not([type='button']):not([type='color']), .combo, textarea):is(:disabled, [readonly]) {
+  border-style: dashed;
+  border-color: var(--field-line);
+  background-color: transparent;
+  box-shadow: none;
+}
+:root :is(input, textarea):disabled,
+:root .combo:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* --- Dialoger och mobilmenyn: slöjan täcker hela fönstret jämnt (dialogen
+   portas till <body>, mobilmenyn ligger utanför sidhuvudets glas, så inget
+   backdrop-filter fångar position: fixed) och panelen står i mitten. ----- */
+.opening-hours-modal-root {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  place-items: center;
+}
+.opening-hours-modal-backdrop {
+  position: fixed;
+  inset: 0;
+}
+.opening-hours-modal-backdrop,
+.mobile-drawer-backdrop {
+  background: var(--scrim);
+  -webkit-backdrop-filter: blur(6px) saturate(1.2);
+  backdrop-filter: blur(6px) saturate(1.2);
+}
+.opening-hours-modal-panel {
+  margin: auto;
+}
+
+/* --- Utan backdrop-filter: tätt, i stället för genomskinligt utan oskärpa */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .site .site-header-inner,
+  .mobile-drawer,
+  .home-hero,
+  .page > .order-hint,
+  .site .site-footer,
+  .opening-hours-modal-panel,
+  .date-cal,
+  .combo-pop,
+  .cart-panel,
+  .hold-banner,
+  .printing,
+  .offer-ticket,
+  .bq-card__main,
+  .bq-card__stub,
+  .menu::before,
+  .order-menu::before,
+  .order-cart::before,
+  .booking-step::before,
+  .booking-confirmation::before,
+  .catering-details::before,
+  .page-prose::before,
+  .contact-form::before,
+  .checkout::before,
+  .catering-request > section::before {
+    background: var(--surface);
+  }
+  [data-glide='track'] {
+    background: var(--surface) !important;
+  }
+  .bq-bar--tab[data-bq-glide='track'] {
+    background: var(--surface);
+  }
+}
+
+/* --- Mindre genomskinlighet: inga fläckar, inget glas, täta ytor ---------- */
+@media (prefers-reduced-transparency: reduce) {
+  body::before {
+    background: var(--bg);
+  }
+  .site .site-header-inner,
+  .mobile-drawer,
+  .home-hero,
+  .page > .order-hint,
+  .site .site-footer,
+  .opening-hours-modal-panel,
+  .date-cal,
+  .combo-pop,
+  .cart-panel,
+  .hold-banner,
+  .printing,
+  .offer-ticket,
+  .bq-card__main,
+  .bq-card__stub,
+  .menu::before,
+  .order-menu::before,
+  .order-cart::before,
+  .booking-step::before,
+  .booking-confirmation::before,
+  .catering-details::before,
+  .page-prose::before,
+  .contact-form::before,
+  .checkout::before,
+  .catering-request > section::before {
+    background: var(--surface);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .bq-bar--tab[data-bq-glide='track'] {
+    background: var(--surface);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .opening-hours-modal-backdrop,
+  .mobile-drawer-backdrop {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .site .catering-offer,
+  .site .catering-documents,
+  .site .booking-summary,
+  .booking-summary-line,
+  .checkout-card,
+  .checkout-peek,
+  .guarantee-notice,
+  .segmented,
+  .bankid-box,
+  .hold-bar,
+  .next-up,
+  .catering-dishes li,
+  .consent-option,
+  .glass-panel,
+  .glass-quote,
+  .parking-card,
+  .floor-wrap,
+  .floor-svg-frame,
+  .f3d-scene,
+  .floor-view-toggle,
+  .order-only-table,
+  .equipment-return .booking-check,
+  .guest-notice,
+  .site .evenemang-item,
+  .site .evenemang-date,
+  .site .evenemang-type,
+  .action--secondary {
+    background: var(--fill);
+  }
+  :root :is(input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='hidden']):not([type='file']):not([type='submit']):not([type='button']):not([type='color']), .combo, textarea),
+  .segmented label.on,
+  .opening-hours-modal-close,
+  .chip,
+  .date-tile,
+  .booking-times button,
+  .party-btn,
+  .btn-secondary,
+  .btn.ghost,
+  .btn.small,
+  .site .stepper button {
+    background-color: var(--surface);
+  }
+}
+
+/* --- Telefon: varje knapp och länk är minst 44 px att trycka på ---------- */
+@media (max-width: 640px) {
+  .site .site-header-brand {
+    min-height: 44px;
+  }
+  .site .site-header-theme {
+    width: 44px;
+    height: 44px;
+  }
+  .site-footer-legal a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  .site .site-footer-sound {
+    min-height: 44px;
+  }
+  .chip,
+  [data-glide='track'] > :is(button, a) {
+    min-height: 44px;
+  }
+  .site .bq-btn--sm {
+    min-height: 44px;
+  }
 }

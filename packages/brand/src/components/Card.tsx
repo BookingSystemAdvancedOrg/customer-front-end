@@ -7,12 +7,12 @@ export interface CardProps {
   actions?: ReactNode
   children: ReactNode
   /**
-   * glass: a panel on the room; paper: a white card; receipt: a ticket with rail, torn edge and mono print;
+   * glass: a panel on the room; paper: an off-white card; receipt: a ticket with rail, torn edge and mono print;
    * ticket: an event ticket stub with mono details, a perforation and the QR stub (follows the theme).
    */
   surface?: 'glass' | 'paper' | 'receipt' | 'ticket'
   tone?: 'danger'
-  /** ticket: the QR code (an <svg> or <img>), shown on a white plate with a quiet zone in both modes. */
+  /** ticket: the QR code (an <svg> or <img>), shown on an off-white plate with a quiet zone in both modes. */
   qr?: ReactNode
   /** ticket: the code under the QR, in mono, for typing at the door. */
   code?: ReactNode

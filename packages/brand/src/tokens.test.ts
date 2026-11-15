@@ -51,8 +51,8 @@ describe('tokens', () => {
     })
   }
 
-  it('ticket QR: dark modules on the white plate in both modes (7:1)', () => {
-    expect(contrast(tokens.palette.espresso, tokens.palette.white)).toBeGreaterThanOrEqual(7)
+  it('ticket QR: dark modules on the off-white plate in both modes (7:1)', () => {
+    expect(contrast(tokens.palette.espresso, tokens.palette.paper)).toBeGreaterThanOrEqual(7)
   })
 
   it('the restaurant theme falls back to the Booqy values', () => {

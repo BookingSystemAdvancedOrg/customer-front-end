@@ -4,6 +4,7 @@ import { clearCart, clock, getOrder, kronor, orderErrorMessage, recallToken } fr
 import type { GuestOrder } from './orderApi'
 import { FlowSteps } from '../../shared/FlowSteps'
 import { Celebrate } from '../../shared/Celebrate'
+import { PhoneLink } from '../../shared/PhoneLink'
 
 /** Hur ofta sidan frågar om beställningen medan gästen väntar. */
 export const STATUS_POLL_MS = 5_000
@@ -67,7 +68,7 @@ function nextUp(order: GuestOrder): string | null {
     case 'preparing':
       return order.mode === 'pickup' ? 'Snart klart. Du får ett sms när maten går att hämta.' : 'Snart klart. Maten kommer till bordet.'
     case 'ready':
-      return order.mode === 'pickup' ? 'Säg ditt namn eller beställningsnumret i kassan.' : null
+      return order.mode === 'pickup' ? 'Säg ditt namn eller beställningsnumret när du hämtar.' : null
     default:
       return null
   }
@@ -174,9 +175,14 @@ export default function OrderStatusPage() {
             </p>
           )}
           <ul className="cart-list order-status-lines">
-            {order.lines.map((line) => (
-              <li key={line.menuItemId}>
-                <span className="cart-item-name">{line.quantity} × {line.name}</span>
+            {order.lines.map((line, i) => (
+              <li key={`${line.menuItemId}-${i}`}>
+                <span className="cart-item-name">
+                  {line.quantity} × {line.name}
+                  {line.options?.length ? (
+                    <span className="cart-item-options">{line.options.map((o) => o.choice).join(', ')}</span>
+                  ) : null}
+                </span>
                 <span />
                 <span className="cart-item-price">{kronor(line.total)}</span>
               </li>
@@ -193,7 +199,7 @@ export default function OrderStatusPage() {
             <span>{kronor(order.totalAmount)}</span>
           </div>
           {order.location?.phoneNumber && (
-            <p className="cell-muted">Frågor? Ring {order.location.phoneNumber}.</p>
+            <p className="cell-muted">Frågor? Ring <PhoneLink phone={order.location.phoneNumber} />.</p>
           )}
         </>
       )}

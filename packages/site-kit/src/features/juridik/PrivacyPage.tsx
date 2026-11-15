@@ -1,5 +1,6 @@
 import { useSite } from '../../shared/SiteContext'
 import { NoticeText } from './NoticeText'
+import { PhoneLink } from '../../shared/PhoneLink'
 import { STORAGE_REGISTRY } from '../../shared/storageRegistry'
 import type { StorageKind } from '../../shared/storageRegistry'
 
@@ -19,7 +20,14 @@ const KIND_LABEL: Record<StorageKind, string> = {
 export default function PrivacyPage() {
   const { config } = useSite()
   const { legal, tenant } = config
-  const contact = [legal.contactEmail, legal.contactPhone].filter(Boolean).join(', ')
+  // E-post och nummer; numret visas "08-123 456 78" och ringer i E.164.
+  const contact = legal.contactEmail || legal.contactPhone ? (
+    <>
+      {legal.contactEmail}
+      {legal.contactEmail && legal.contactPhone ? ', ' : null}
+      {legal.contactPhone ? <PhoneLink phone={legal.contactPhone} /> : null}
+    </>
+  ) : null
   return (
     <article className="page-prose">
       <h1>Integritetspolicy</h1>
@@ -33,7 +41,7 @@ export default function PrivacyPage() {
         {legal.legalName}
         {legal.orgNumber ? ` (org.nr ${legal.orgNumber})` : ''}
         {typeof legal.address === 'string' && legal.address ? `, ${legal.address}` : ''} ansvarar för behandlingen av dina personuppgifter.
-        {contact ? ` Kontakt: ${contact}.` : ''}
+        {contact ? <> Kontakt: {contact}.</> : null}
       </p>
 
       <h2>Vilka uppgifter vi behandlar och varför</h2>
@@ -128,7 +136,7 @@ export default function PrivacyPage() {
       <p>
         Du har rätt att få veta vilka uppgifter vi har om dig, få dem rättade eller raderade, begränsa
         behandlingen, invända och få ut dina uppgifter (dataportabilitet). Kontakta oss
-        {contact ? ` på ${contact}` : ''}. Du kan också klaga hos Integritetsskyddsmyndigheten (IMY),
+        {contact ? <> på {contact}</> : null}. Du kan också klaga hos Integritetsskyddsmyndigheten (IMY),
         www.imy.se.
       </p>
       </>)}
