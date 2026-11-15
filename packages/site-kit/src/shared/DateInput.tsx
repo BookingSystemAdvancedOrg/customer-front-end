@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type RefObject } from 'react'
+import { createPortal } from 'react-dom'
 
 /**
  * Datum och tid i svenskt format oavsett webbläsarens språk: DD/MM/ÅÅÅÅ och
@@ -290,6 +291,13 @@ function Calendar({
         left: Math.max(8, Math.min(a.left, window.innerWidth - w - 8)),
       })
     }
+    // Liten skärm (t.ex. iPhone SE): får kalendern inte plats vare sig under eller ovanför fältet
+    // rullas sidan så att den hamnar under fältet, i stället för att lägga sig över fältet och sidhuvudet.
+    const a = anchor.current?.getBoundingClientRect()
+    const h = panel.current?.offsetHeight ?? 320
+    if (a && a.bottom + 6 + h > window.innerHeight && a.top - 6 - h < 8) {
+      window.scrollBy(0, a.bottom + 6 + h + 8 - window.innerHeight)
+    }
     place()
     window.addEventListener('resize', place)
     window.addEventListener('scroll', place, true)
@@ -316,9 +324,13 @@ function Calendar({
     return () => document.removeEventListener('mousedown', outside)
   }, [anchor, onClose])
 
+  // Fokus till dagen när panelen är placerad. Före det är den osynlig med opacity, inte
+  // visibility: hidden, som med en övergång (t.ex. vid minskad rörelse) gör dagen
+  // ofokuserbar, och då fungerar varken piltangenterna eller Esc.
+  const placed = pos !== null
   useEffect(() => {
-    panel.current?.querySelector<HTMLButtonElement>(`[data-iso="${focus}"]`)?.focus()
-  }, [focus, view])
+    if (placed) panel.current?.querySelector<HTMLButtonElement>(`[data-iso="${focus}"]`)?.focus()
+  }, [focus, view, placed])
 
   const first = new Date(Date.UTC(view.y, view.m - 1, 1))
   const lead = (first.getUTCDay() + 6) % 7
@@ -336,6 +348,8 @@ function Calendar({
     if (e.key === 'Escape') {
       e.preventDefault()
       onClose()
+      // tillbaka till kalenderknappen, annars hamnar fokus på sidan
+      anchor.current?.querySelector<HTMLButtonElement>('.date-input-btn')?.focus()
       return
     }
     if (!step) return
@@ -347,13 +361,17 @@ function Calendar({
     setView({ y: d.getUTCFullYear(), m: d.getUTCMonth() + 1 })
   }
 
-  return (
+  // I en portal: ett förälderelement med transform (t.ex. kortens inglidning) blir annars
+  // referens för position: fixed och kalendern hamnar långt från fältet. I en öppen
+  // <dialog> (översta lagret) måste den ligga i dialogen för att synas.
+  const host = (anchor.current?.closest('dialog[open]') as HTMLElement | null) ?? document.body
+  return createPortal(
     <div
       ref={panel}
       className="date-cal"
       role="dialog"
       aria-label="Välj datum"
-      style={pos ? { top: pos.top, left: pos.left } : { visibility: 'hidden' }}
+      style={pos ? { top: pos.top, left: pos.left } : { top: 0, left: 0, opacity: 0, pointerEvents: 'none' }}
       onKeyDown={onKey}
     >
       <div className="date-cal-head">
@@ -367,7 +385,7 @@ function Calendar({
           ›
         </button>
       </div>
-      <div className="date-cal-grid" role="grid">
+      <div className="date-cal-grid">
         {WEEKDAYS.map((w) => (
           <span key={w} className="date-cal-wd" aria-hidden="true">
             {w}
@@ -401,6 +419,7 @@ function Calendar({
       >
         Idag
       </button>
-    </div>
+    </div>,
+    host,
   )
 }

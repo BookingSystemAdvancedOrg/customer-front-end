@@ -890,7 +890,7 @@
   max-width: 34rem;
   margin: 0 auto clamp(28px, 4vw, 48px);
   padding: clamp(20px, 3vw, 28px) clamp(20px, 3vw, 28px) calc(24px + var(--tooth-h));
-  animation: drop 640ms var(--ease) both;
+  animation: drop 640ms var(--ease) backwards;
 }
 
 .contact-form-field label {

@@ -149,11 +149,16 @@
   font-size: var(--bq-text-sm);
   color: var(--bq-muted);
 }
+/* Samma uppställning på varje biljettrad: namn, pris och innehåll till
+   vänster, väljaren (eller "Slutsåld") till höger, överst i raden. På
+   smala rader hamnar väljaren under texten, också den på varje rad. */
+.evenemang-types {
+  container-type: inline-size;
+}
 .evenemang-type {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
   gap: var(--bq-space-3);
   padding: var(--bq-space-3) var(--bq-space-4);
   border-radius: var(--bq-radius-inner);
@@ -173,6 +178,17 @@
 .evenemang-type__price {
   font-family: var(--bq-font-mono);
   font-size: var(--bq-text-sm);
+}
+.evenemang-type__sold-out {
+  justify-self: end;
+}
+@container (max-width: 359px) {
+  .evenemang-type {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .evenemang-type__sold-out {
+    justify-self: start;
+  }
 }
 .evenemang-qty {
   display: inline-flex;

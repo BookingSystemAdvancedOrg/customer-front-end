@@ -245,6 +245,21 @@ describe('CateringPage', () => {
     expect(screen.queryByRole('region', { name: 'Övrigt' })).not.toBeInTheDocument()
   })
 
+  it('says who acts when the form cannot load, and tries again in place', async () => {
+    const user = userEvent.setup()
+    const { ApiError } = await import('../../shared/api')
+    api.getSettings.mockRejectedValueOnce(new ApiError(503, 'unavailable')).mockResolvedValue(SETTINGS)
+    api.getTiers.mockResolvedValue([])
+    api.getCateringMenu.mockResolvedValue({ dishes: [{ dishId: 'd1', name: 'Kycklingspett', pricePerPortion: 85 }], packages: [] })
+    renderCalculator()
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent(/Cateringformuläret kunde inte laddas\. Försök igen, eller ring .+ på /)
+    expect(within(alert).getByRole('link')).toHaveAttribute('href', expect.stringMatching(/^tel:/))
+    await user.click(screen.getByRole('button', { name: 'Försök igen' }))
+    expect(await screen.findByLabelText('Antal gäster')).toBeInTheDocument()
+    expect(api.getSettings).toHaveBeenCalledTimes(2)
+  })
+
   it('says so when the restaurant has catering switched off', async () => {
     api.getSettings.mockResolvedValue({ ...SETTINGS, enabled: false })
     api.getTiers.mockResolvedValue([])

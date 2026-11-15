@@ -271,20 +271,23 @@ function Purchase({ event, onPaid, onStale }: { event: PublicEvent; onPaid: (p: 
             const max = maxFor(t, occurrence, event.perOrderMax, seats - n)
             const id = `typ-${t.typeId}`
             return (
-              <li key={t.typeId} className="evenemang-type">
+              <li key={t.typeId} className={`evenemang-type${!t.available && n === 0 ? ' is-sold-out' : ''}`}>
                 <div className="evenemang-type__info">
                   <span className="evenemang-type__name" id={`${id}-namn`}>{t.name}</span>
                   <span className="evenemang-type__price">{t.priceSek ? kr(t.priceSek) : 'Gratis'}</span>
                   {t.includes ? <span className="cell-muted">{t.includes}</span> : null}
-                  {!t.available ? <Chip tone="warning">Slut</Chip> : null}
                 </div>
-                <div className="evenemang-qty" role="group" aria-labelledby={`${id}-namn`}>
-                  <Button size="sm" aria-label={`En ${t.name} färre`} disabled={n === 0}
-                    onClick={() => chooseSeats(() => setQty((q) => ({ ...q, [t.typeId]: n - 1 })))}>−</Button>
-                  <output className="evenemang-qty__n" aria-live="polite" aria-label={`Antal ${t.name}`}>{n}</output>
-                  <Button size="sm" aria-label={`En ${t.name} till`} disabled={n >= max}
-                    onClick={() => chooseSeats(() => setQty((q) => ({ ...q, [t.typeId]: n + 1 })))}>+</Button>
-                </div>
+                {!t.available && n === 0 ? (
+                  <Chip tone="warning" className="evenemang-type__sold-out">Slutsåld</Chip>
+                ) : (
+                  <div className="evenemang-qty" role="group" aria-labelledby={`${id}-namn`}>
+                    <Button size="sm" aria-label={`En ${t.name} färre`} disabled={n === 0}
+                      onClick={() => chooseSeats(() => setQty((q) => ({ ...q, [t.typeId]: n - 1 })))}>−</Button>
+                    <output className="evenemang-qty__n" aria-live="polite" aria-label={`Antal ${t.name}`}>{n}</output>
+                    <Button size="sm" aria-label={`En ${t.name} till`} disabled={n >= max}
+                      onClick={() => chooseSeats(() => setQty((q) => ({ ...q, [t.typeId]: n + 1 })))}>+</Button>
+                  </div>
+                )}
               </li>
             )
           })}

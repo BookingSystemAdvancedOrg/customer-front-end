@@ -28,6 +28,24 @@ const slots = ['17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '2
   startTime: t, endTime: `${20 + (i % 3)}:00`, layoutVersion: 1, tables: [{ tableId: 'T1', seats: 4 }, { tableId: 'T2', seats: 6 }], options: [{ tableIds: ['T1'], seats: 4 }, { tableIds: ['T2'], seats: 6 }],
 }))
 
+const cateringSettings = {
+  enabled: true, minPortions: 10, maxPortions: 300, advanceDays: 4, pickup: true, delivery: true, deliveryArea: 'Stockholm', maxDistanceKm: 25,
+  priceWithinLimit: 395, priceBeyondLimit: 795, allowOutsideArea: false, cleaningFee: 300, terms: 'Villkor', offerValidDays: 7, paymentTermsDays: 30, minGuests: 10,
+}
+const cateringMenu = {
+  packages: [{ packageId: 'p1', name: 'Buffé Roma', description: 'Lasagne, sallad och bröd.', pricePerGuest: 245, dishIds: ['d1', 'd2'], minGuests: 10 }],
+  dishes: [
+    { dishId: 'd1', name: 'Lasagne', description: 'Med bechamel och parmesan.', pricePerPortion: 125, allergens: ['gluten', 'milk'] },
+    { dishId: 'd2', name: 'Grönsallad', description: 'Säsongens grönt.', pricePerPortion: 45, dietary: ['vegan'] },
+  ],
+}
+const cateringQuote = {
+  lines: [{ kind: 'package', packageId: 'p1', name: 'Buffé Roma', unitPrice: 24500, quantity: 20, vatRate: 12 }],
+  guests: 20, portions: 20, tierName: null, subtotal: 490000, discountPercent: 0, discount: 0, deliveryFee: 0, cleaningFee: 0,
+  total: 490000, vat: 52500, vatRate: 12, serviceIncluded: false, distanceKm: null, deliveryFeeManual: false, earliestDate: '2026-11-18',
+}
+const giftOffer = { amountsSek: [300, 500, 1000], customMinSek: 100, customMaxSek: 5000, validityMonths: 24 }
+
 /** All guest-site features on, with data on every page. Falls back to the e2e fakeApi for events and tickets. */
 export async function uiApi(page: Page) {
   await fakeApi(page)
@@ -46,6 +64,11 @@ export async function uiApi(page: Page) {
     if (p === `/locations/${LOCATION_ID}/availability`) return route.fulfill(json({ locationId: LOCATION_ID, date: u.searchParams.get('date'), timezone: 'Europe/Stockholm', slots }))
     if (p === `/locations/${LOCATION_ID}/ordering`) return route.fulfill(json({ open: true, pickup: true, table: true, prepMinutes: 20, closesAt: '22:00' }))
     if (p === `/locations/${LOCATION_ID}/layout/active`) return route.fulfill(json({ layout: null }, 404))
+    if (p === `/locations/${LOCATION_ID}/catering/settings`) return route.fulfill(json(cateringSettings))
+    if (p === `/locations/${LOCATION_ID}/catering/discount-tiers`) return route.fulfill(json({ tiers: [] }))
+    if (p === `/locations/${LOCATION_ID}/catering/menu`) return route.fulfill(json(cateringMenu))
+    if (p === `/locations/${LOCATION_ID}/catering/quote`) return route.fulfill(json(cateringQuote))
+    if (p === `/public/locations/${LOCATION_ID}/gift-cards/offer`) return route.fulfill(json(giftOffer))
     if (p === `/public/locations/${LOCATION_ID}/events`) return route.fulfill(json(EVENTS))
     if (p === `/public/tickets/${TICKET_TOKEN}`) return route.fulfill(json(ticketPage(false, false)))
     return route.fallback()
