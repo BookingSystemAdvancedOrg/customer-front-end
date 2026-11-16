@@ -34,6 +34,7 @@ export default function SaldoPage() {
         : giftErrorMessage(err, 'Det gick inte att se saldot just nu.'))
     } finally {
       setBusy(false)
+      setTurnstileToken(null)
       setTurnstileReset((n) => n + 1)
     }
   }

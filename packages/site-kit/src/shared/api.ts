@@ -116,7 +116,10 @@ async function request<T>(
   if (!res.ok) {
     throw await toApiError(res)
   }
-  return (await res.json()) as T
+  // 204 eller tom kropp (t.ex. lämna kön): inget att tolka, anropet lyckades ändå.
+  if (res.status === 204 || res.headers.get('content-length') === '0') return undefined as T
+  const text = await res.text()
+  return (text ? JSON.parse(text) : undefined) as T
 }
 
 /**

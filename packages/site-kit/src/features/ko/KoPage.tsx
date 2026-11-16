@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Bar, Button } from '@booqy/brand'
+import { Bar, Button, Printing } from '@booqy/brand'
 import './ko.css'
 import { ApiError } from '../../shared/api'
 import { PhoneInput } from '../../shared/PhoneInput'
@@ -41,16 +41,21 @@ export default function KoPage() {
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [booked, setBooked] = useState(false)
+  // Statusen gick inte att hämta (nät, 429, 5xx): gästen får försöka igen i stället för anmälan.
+  const [loadFailed, setLoadFailed] = useState(false)
 
   const refresh = useCallback(async () => {
     if (!token) return
     try {
       setStatus(await queueStatus(token))
+      setLoadFailed(false)
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) {
         storeToken(location.locationId, null)
         setToken(null)
         setStatus(null)
+      } else {
+        setLoadFailed(true)
       }
     }
   }, [token, location.locationId])
@@ -118,6 +123,24 @@ export default function KoPage() {
     )
   }
 
+  if (token) {
+    return (
+      <section className="page-hero page-prose ko-page" data-bq-theme="restaurant" aria-live="polite">
+        <h1>Din plats i kön</h1>
+        {loadFailed ? (
+          <>
+            <p role="alert">
+              Vi kunde inte hämta din plats i kön. Försök igen, eller fråga personalen.
+            </p>
+            <Button variant="primary" onClick={() => { setLoadFailed(false); void refresh() }}>Försök igen</Button>
+          </>
+        ) : (
+          <Printing label="Hämtar din plats i kön" />
+        )}
+      </section>
+    )
+  }
+
   return <JoinForm onJoined={(t) => { window.location.hash = t; setToken(t) }} />
 }
 
@@ -145,6 +168,7 @@ function JoinForm({ onJoined }: { onJoined: (token: string) => void }) {
       onJoined(out.token)
     } catch (err) {
       setError(message(err, 'Det gick inte att ställa dig i kö. Försök igen.'))
+      setTurnstileToken(null)
       setTurnstileReset((n) => n + 1)
     } finally {
       setBusy(false)

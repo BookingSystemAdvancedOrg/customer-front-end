@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { Bar, Button } from '@booqy/brand'
+import { Bar, Button, Printing } from '@booqy/brand'
 import './presentkort.css'
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js'
+import { ApiError } from '../../shared/api'
+import { PhoneLink } from '../../shared/PhoneLink'
+import { useLocationInfo } from '../../shared/useLocationInfo'
 import { useSite } from '../../shared/SiteContext'
 import { useTheme } from '../../shared/theme'
 import { paymentAppearance, paymentFonts } from '../../shared/payment/appearance'
@@ -45,15 +48,19 @@ export default function PresentkortPage() {
   const { config, location } = useSite()
   const [offer, setOffer] = useState<Offer | null>(null)
   const [missing, setMissing] = useState(false)
+  // Tillfälligt fel (nät, 429, 5xx): gästen får försöka igen, vi säger inte att presentkort saknas.
+  const [loadFailed, setLoadFailed] = useState(false)
+  const [attempt, setAttempt] = useState(0)
   const [checkout, setCheckout] = useState<Checkout | null>(null)
   const [returned] = useState(returnedFromStripe)
   const [paid, setPaid] = useState<Paid | null>(returned.paid)
+  const info = useLocationInfo()
 
   useEffect(() => {
     getOffer(location.locationId)
       .then((o) => (Array.isArray(o?.amountsSek) ? setOffer(o) : setMissing(true)))
-      .catch(() => setMissing(true))
-  }, [location.locationId])
+      .catch((err) => (err instanceof ApiError && err.status === 404 ? setMissing(true) : setLoadFailed(true)))
+  }, [location.locationId, attempt])
 
   useEffect(() => {
     if (!returned.failed) return
@@ -70,7 +77,26 @@ export default function PresentkortPage() {
       </section>
     )
   }
-  if (!offer) return <section className="page-hero page-prose presentkort-page" data-bq-theme="restaurant"><h1>Presentkort</h1><p className="cell-muted">Hämtar…</p></section>
+  if (loadFailed) {
+    return (
+      <section className="page-hero page-prose presentkort-page" data-bq-theme="restaurant">
+        <h1>Presentkort</h1>
+        <p role="alert">
+          Vi kunde inte hämta presentkorten just nu. Försök igen, eller ring {info.name}
+          {info.phone ? <> på <PhoneLink phone={info.phone} /></> : null}.
+        </p>
+        <Button variant="primary" onClick={() => { setLoadFailed(false); setAttempt((n) => n + 1) }}>Försök igen</Button>
+      </section>
+    )
+  }
+  if (!offer) {
+    return (
+      <section className="page-hero page-prose presentkort-page" data-bq-theme="restaurant">
+        <h1>Presentkort</h1>
+        <Printing label="Hämtar presentkorten" />
+      </section>
+    )
+  }
 
   return (
     <section className="page-hero page-prose presentkort-page" data-bq-theme="restaurant">
@@ -136,6 +162,7 @@ function Details({ offer, onCheckout }: { offer: Offer; onCheckout: (c: Checkout
       onCheckout(out)
     } catch (err) {
       setError(giftErrorMessage(err, 'Det gick inte att starta köpet. Försök igen.'))
+      setTurnstileToken(null)
       setTurnstileReset((n) => n + 1)
     } finally {
       setBusy(false)
@@ -180,11 +207,14 @@ function Details({ offer, onCheckout }: { offer: Offer; onCheckout: (c: Checkout
           <input maxLength={80} value={recipientName} onChange={(e) => setRecipientName(e.target.value)} />
         </label>
         <label className="booking-field">
-          <span>Mottagarens e-post (valfritt, koden skickas dit)</span>
+          <span>Mottagarens e-post (valfritt)</span>
           <input ref={recipientRef} type="email" value={recipientEmail}
-            aria-invalid={recipientError || undefined} aria-describedby={recipientError ? 'gift-recipient-error' : undefined}
+            aria-invalid={recipientError || undefined}
+            aria-describedby={recipientError ? 'gift-recipient-error' : 'gift-recipient-hint'}
             onChange={(e) => setRecipientEmail(e.target.value)} />
-          {recipientError ? <small id="gift-recipient-error" className="field-hint error">Kontrollera e-postadressen.</small> : null}
+          {recipientError
+            ? <small id="gift-recipient-error" className="field-hint error">Kontrollera e-postadressen.</small>
+            : <small id="gift-recipient-hint" className="field-hint">Koden skickas dit.</small>}
         </label>
         <label className="booking-field booking-field--wide">
           <span>Hälsning (valfritt)</span>

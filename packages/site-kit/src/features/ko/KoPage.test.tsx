@@ -4,6 +4,7 @@ import { WithSite } from '../../test/siteFixture'
 import { siteConfig } from '../../test/siteData'
 import KoPage from './KoPage'
 import * as api from './koApi'
+import { ApiError } from '../../shared/api'
 
 vi.mock('./koApi', async (orig) => ({
   ...(await orig<typeof import('./koApi')>()),
@@ -69,5 +70,32 @@ describe('KoPage', () => {
     page()
     expect(await screen.findByText(/Tiden för bordet gick ut/)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Lämna kön' })).toBeNull()
+  })
+
+  it('prints a receipt, not the join form, while the queue link loads', () => {
+    window.location.hash = '#tok.mac'
+    vi.mocked(api.queueStatus).mockReturnValue(new Promise(() => {}))
+    page()
+    expect(screen.getByRole('status')).toHaveTextContent('Hämtar din plats i kön')
+    expect(screen.queryByRole('button', { name: 'Ställ mig i kö' })).toBeNull()
+  })
+
+  it('offers a retry instead of the join form when the status fails to load', async () => {
+    window.location.hash = '#tok.mac'
+    vi.mocked(api.queueStatus)
+      .mockRejectedValueOnce(new ApiError(503, 'unavailable', { error: 'unavailable' }))
+      .mockResolvedValueOnce({ status: 'waiting', position: 2, locationName: 'Bistro' })
+    page()
+    expect(await screen.findByText(/Vi kunde inte hämta din plats i kön/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Ställ mig i kö' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Försök igen' }))
+    expect(await screen.findByText(/Du är nummer/)).toBeInTheDocument()
+  })
+
+  it('shows the join form again when the queue entry is gone (404)', async () => {
+    window.location.hash = '#tok.mac'
+    vi.mocked(api.queueStatus).mockRejectedValue(new ApiError(404, 'not_found', { error: 'not_found' }))
+    page()
+    expect(await screen.findByRole('button', { name: 'Ställ mig i kö' })).toBeInTheDocument()
   })
 })
