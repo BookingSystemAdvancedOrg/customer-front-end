@@ -24,4 +24,15 @@ describe('TermsPage', () => {
     expect(screen.queryByRole('heading', { name: 'Betalning' })).toBeNull()
     expect(screen.getByText('Du kan avboka kostnadsfritt fram till bokad tid.')).toBeInTheDocument()
   })
+
+  it('shows the phone number as a tel: link that never breaks at the hyphen', () => {
+    render(<WithSite><TermsPage /></WithSite>)
+    const links = screen.getAllByRole('link', { name: '08-123 456 78' })
+    expect(links.length).toBeGreaterThan(0)
+    for (const link of links) {
+      expect(link).toHaveAttribute('href', 'tel:+46812345678')
+      expect(link).toHaveStyle({ whiteSpace: 'nowrap' })
+    }
+    expect(links[0].closest('li')).toHaveTextContent('Ring oss gärna på 08-123 456 78 om du blir sen.')
+  })
 })

@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useSite } from '../../shared/SiteContext'
 import { STORAGE_REGISTRY } from '../../shared/storageRegistry'
+import { StorageName } from './StorageName'
 import type { StorageCategory, StorageKind } from '../../shared/storageRegistry'
 
 const KIND_LABEL: Record<StorageKind, string> = {
@@ -53,7 +54,7 @@ export default function CookiesPage() {
             {STORAGE_REGISTRY.map((entry) => (
               <tr key={entry.name}>
                 <td>
-                  <code>{entry.name}</code>
+                  <StorageName entry={entry} />
                   <span className="storage-kind">{KIND_LABEL[entry.kind]}</span>
                 </td>
                 <td>
@@ -83,8 +84,8 @@ export default function CookiesPage() {
 
       <h2>Så rensar du</h2>
       <p>
-        Du kan ta bort allt detta i webbläsarens inställningar. Då glöms bara vald plats, ljust eller
-        mörkt läge och en eventuell varukorg; inget annat på sajten påverkas.
+        Du kan ta bort allt detta i webbläsarens inställningar. Då glöms dina val på sajten (plats,
+        ljust/mörkt läge, klickljud, varukorg och plats i kön); inget annat på sajten påverkas.
       </p>
       <p>
         Mer om hur dina personuppgifter behandlas finns i <Link to="/integritetspolicy">integritetspolicyn</Link>.
