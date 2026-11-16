@@ -244,7 +244,7 @@ svg {
   color: var(--muted);
 }
 
-@media (max-width: 760px) {
+@media (max-width: 900px) {
   .dish-list {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -1772,10 +1772,73 @@ h1, h2, h3, h4 {
   font-size: 0.95rem;
 }
 
-.booking-check input {
+/* Egen kryssruta i Booqys stil: glasruta, espressofyllning med bock när vald. */
+.booking-check input[type='checkbox'] {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: none;
+  display: grid;
+  place-items: center;
   width: 20px;
   height: 20px;
-  accent-color: var(--ink);
+  margin: 1px 0 0;
+  border: 0;
+  border-radius: 6px;
+  background: var(--field-bg, var(--control-bg));
+  box-shadow: inset 0 0 0 1.5px var(--field-line, var(--control-line));
+  cursor: pointer;
+  transition: background 160ms var(--ease), box-shadow 160ms var(--ease);
+}
+
+.booking-check input[type='checkbox']::after {
+  content: '';
+  width: 12px;
+  height: 12px;
+  background: var(--on-accent);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2l2.4 2.4 4.6-5' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2l2.4 2.4 4.6-5' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 140ms var(--ease), transform 140ms var(--ease);
+}
+
+.booking-check input[type='checkbox']:hover:not(:disabled) {
+  box-shadow: inset 0 0 0 1.5px var(--field-line-hover, var(--ink));
+}
+
+.booking-check input[type='checkbox']:checked {
+  background: var(--pill-bg, var(--accent));
+  box-shadow: none;
+}
+
+.booking-check input[type='checkbox']:checked::after {
+  opacity: 1;
+  transform: none;
+}
+
+.booking-check input[type='checkbox']:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 1.5px var(--field-line, var(--control-line)), 0 0 0 4px var(--focus);
+}
+
+.booking-check input[type='checkbox']:checked:focus-visible {
+  box-shadow: 0 0 0 4px var(--focus);
+}
+
+.booking-check input[type='checkbox'][aria-invalid='true'] {
+  box-shadow: inset 0 0 0 1.5px var(--danger), 0 0 0 3px color-mix(in srgb, var(--danger) 22%, transparent);
+}
+
+.booking-check input[type='checkbox']:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .booking-check input[type='checkbox'],
+  .booking-check input[type='checkbox']::after {
+    transition: none;
+  }
 }
 
 .notice {
@@ -2165,65 +2228,6 @@ h1, h2, h3, h4 {
   object-fit: cover;
 }
 
-.crumbs {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  font: 600 0.92rem/1.3 var(--font);
-}
-
-.crumb {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--muted);
-}
-
-.crumb.is-done,
-.crumb.is-current {
-  color: var(--ink);
-}
-
-.crumb.is-current {
-  font-weight: 800;
-}
-
-.crumb-link {
-  min-height: 32px;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: inherit;
-  font: inherit;
-  text-decoration: underline;
-  text-decoration-color: var(--paper-line);
-  text-underline-offset: 0.25em;
-  cursor: pointer;
-}
-
-.crumb-link:hover {
-  text-decoration-color: currentColor;
-}
-
-.crumb-sep {
-  width: 14px;
-  height: 14px;
-  fill: none;
-  stroke: var(--muted);
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-/* På varukorgssidan står smulorna under rubriken. */
-.page-head .crumbs {
-  margin-top: 10px;
-}
-
 .checkout-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
@@ -2532,20 +2536,6 @@ h1, h2, h3, h4 {
   .checkout-bar {
     flex-direction: column;
     align-items: flex-start;
-  }
-
-  .crumbs {
-    gap: 2px 4px;
-    font-size: 0.8rem;
-  }
-
-  .crumb {
-    gap: 4px;
-  }
-
-  .crumb-sep {
-    width: 12px;
-    height: 12px;
   }
 
 }
@@ -3297,7 +3287,16 @@ a,
   padding-bottom: 0;
 }
 
-.page-head--rail .flow {
+/* Beställ: raden står under rubriken och bredvid märket i kassaraden. */
+.page-head .flow {
+  margin-top: 10px;
+}
+
+.checkout-bar .flow {
+  margin-top: 0;
+}
+
+.page-head.page-head--rail .flow {
   margin-top: 0;
 }
 
@@ -4177,7 +4176,8 @@ a,
 
   .dish-action .order-only-table {
     display: block;
-    max-width: 64px;
+    white-space: nowrap;
+    letter-spacing: 0.02em;
     text-align: right;
   }
 }

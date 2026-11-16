@@ -1156,7 +1156,8 @@
   box-shadow: 0 0 0 4px var(--focus);
 }
 
-.booking-field .combo {
+/* Kort väljare bara i bokningens steg; i övriga formulär (t.ex. Kö) fyller den kolumnen. */
+.booking-step .booking-field .combo {
   max-width: 240px;
 }
 
@@ -2018,7 +2019,16 @@
 
 .storage-table code {
   font-size: 12.5px;
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+/* Bred tabell: namnkolumnen får plats så att namnen inte bryts mitt i ord. */
+@media (min-width: 601px) {
+  .storage-table th:first-child,
+  .storage-table td:first-child {
+    width: 11rem;
+  }
 }
 
 .storage-kind {
