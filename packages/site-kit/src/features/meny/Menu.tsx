@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
+import { Button } from '@booqy/brand'
 import { Plate } from '../../shared/Plate'
 import { useMenuList } from './useMenuList'
 import { allergenText, formatPrice, groupByCategory, menuImagePosition, menuImageUrl } from './menuApi'
@@ -10,8 +11,12 @@ import { SkelDishes } from '../../shared/Skeleton'
  * med en klistrig kategorirad som hoppar dit och visar var man är. Sajten
  * lägger sin egen hero ovanför (se site-template:s MenyPage).
  */
-export function Menu() {
-  const { configured, loading, error, items, categories } = useMenuList()
+export function Menu({ hideHeading = false }: {
+  /** Rubriken finns redan ovanför (blocket i webbplatsbyggaren): ingen egen "Meny". */
+  hideHeading?: boolean
+} = {}) {
+  const { configured, loading, error, retry, items, categories } = useMenuList()
+  const headingId = useId()
   const groups = groupByCategory(items, categories)
   const [active, setActive] = useState<MenuCategory | null>(null)
   const sectionRefs = useRef(new Map<MenuCategory, HTMLElement>())
@@ -36,15 +41,20 @@ export function Menu() {
   }
 
   return (
-    <section className="menu" aria-labelledby="menu-heading">
-      <h2 id="menu-heading" className="menu-heading">Meny</h2>
+    <section className="menu" aria-labelledby={hideHeading ? undefined : headingId}>
+      {!hideHeading && <h2 id={headingId} className="menu-heading">Meny</h2>}
 
       {!configured && (
         <p className="notice" role="status">
           Menyn är inte tillgänglig just nu - titta gärna förbi lite senare.
         </p>
       )}
-      {error && <p className="notice error" role="alert">{error}</p>}
+      {error && (
+        <div className="notice error notice--stack" role="alert">
+          <p>{error}</p>
+          <Button variant="secondary" onClick={retry}>Försök igen</Button>
+        </div>
+      )}
       {loading && !error && <SkelDishes />}
       {!loading && !error && configured && groups.length === 0 && (
         <p className="notice" role="status">Menyn är tom just nu.</p>

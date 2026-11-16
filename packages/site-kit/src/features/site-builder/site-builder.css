@@ -1,7 +1,6 @@
 /* A page from Webbplats (SitePage) and the preview around it. Brand tokens
    only; the nav is the brand nav Bar (bq-bar--nav), the blocks reuse the
-   site's page-hero / page-prose. The restaurant's colour arrives through
-   themeStyle() as --tenant-accent on .builder-site. */
+   site's page-hero / page-prose. One Booqy look: no colours of its own. */
 .builder-site {
   display: flex;
   flex-direction: column;

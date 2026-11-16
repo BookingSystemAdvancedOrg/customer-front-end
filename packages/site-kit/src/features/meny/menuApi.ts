@@ -123,7 +123,8 @@ function toFriendlyMenuError(err: unknown): Error {
     return new Error('Menyn tog för lång tid att hämta - försök igen.')
   }
   if (!(err instanceof ApiError)) {
-    return err instanceof Error ? err : new Error('Ett okänt fel inträffade.')
+    // Nätverksfel ("Failed to fetch", "Load failed") och annat: aldrig webbläsarens engelska text.
+    return new Error('Menyn kunde inte hämtas. Kontrollera anslutningen och försök igen.')
   }
 
   console.error(`[Menu] ${err.status}: ${err.message}`)

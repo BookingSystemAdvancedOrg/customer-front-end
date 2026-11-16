@@ -38,6 +38,22 @@ describe('SiteProvider', () => {
     expect(document.title).toBe('Testkrogen')
   })
 
+  it('keeps the SEO title of a page pre-rendered by the site builder', async () => {
+    window.history.replaceState(null, '', '/?restaurang=testkrogen')
+    vi.stubGlobal('fetch', vi.fn(async () => json(siteConfig())))
+    document.title = 'Om oss | Testkrogen'
+    const embed = document.createElement('script')
+    embed.id = 'booqy-site'
+    embed.type = 'application/json'
+    document.body.appendChild(embed)
+
+    renderSite()
+
+    expect(await screen.findByText('Testkrogen / loc-1')).toBeInTheDocument()
+    expect(document.title).toBe('Om oss | Testkrogen')
+    embed.remove()
+  })
+
   it('an unknown or suspended restaurant shows a neutral page, nothing else', async () => {
     window.history.replaceState(null, '', '/?restaurang=nobody')
     vi.stubGlobal('fetch', vi.fn(async () => json({ error: 'not found' }, 404)))

@@ -84,6 +84,19 @@ describe('getPublicMenu', () => {
   })
 })
 
+describe('getPublicMenu network errors', () => {
+  it('never shows the browser text (Failed to fetch), only Swedish with what to do', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
+    const { getPublicMenu } = await loadMenuApi({
+      VITE_API_BASE_URL: 'https://api.example.com',
+    })
+
+    await expect(getPublicMenu('loc-1')).rejects.toThrow(
+      'Menyn kunde inte hämtas. Kontrollera anslutningen och försök igen.',
+    )
+  })
+})
+
 describe('menuImagePosition', () => {
   it('ger restaurangens fokuspunkt, annars mitten', async () => {
     const { menuImagePosition } = await loadMenuApi({})

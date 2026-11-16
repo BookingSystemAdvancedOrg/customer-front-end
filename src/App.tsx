@@ -1,10 +1,12 @@
 import { lazy } from 'react'
-import { Navigate, Route, Routes } from 'react-router-dom'
+import type { ReactNode } from 'react'
+import { Route, Routes } from 'react-router-dom'
 import { sitePages, useSite } from '@booqy/site-kit'
 import { CustomerLayout } from './shared/CustomerLayout'
 import MenyPage from './features/meny/MenyPage'
 import KontaktPage from './features/kontakt/KontaktPage'
 import OmOssPage from './features/om/OmOssPage'
+import NotFoundPage from './features/notfound/NotFoundPage'
 
 // Flödena hämtas först när gästen öppnar dem (menyn, startsidan, är med från
 // början); CustomerLayout visar laddningen under tiden.
@@ -52,31 +54,40 @@ function App() {
   const siteBuilder = config.tenant.features.siteBuilder
   const events = config.tenant.features.events
   const builder = siteBuilder && config.tenant.site?.mode === 'builder' && config.tenant.site.version > 0
+  // Fliken och sökträffen säger vilken sida det är ("Boka bord - Bistro X");
+  // React 19 lyfter <title> till <head>. Byggarens sidor sätter sin egen.
+  const name = config.tenant.name
+  const t = (label: string, el: ReactNode) => (
+    <>
+      <title>{`${label} - ${name}`}</title>
+      {el}
+    </>
+  )
   return (
     <Routes>
       <Route element={<CustomerLayout />}>
-        <Route index element={builder ? <BuilderPage /> : <MenyPage />} />
-        <Route path="meny" element={<MenyPage />} />
-        {reservations && <Route path="boka-bord" element={<BookingFlow />} />}
-        {reservations && <Route path="bokningsvillkor" element={<BookingTermsPage />} />}
-        <Route path="bokning/:locationId/:reservationId" element={<ManageBooking />} />
-        {ordering && <Route path="bestall" element={<OrderFlow />} />}
-        <Route path="bestallning/:locationId/:orderId" element={<OrderStatus />} />
-        {catering && <Route path="catering" element={<CateringFlow />} />}
-        <Route path="catering/:locationId/:requestId" element={<CateringRequest />} />
-        <Route path="om-oss" element={<OmOssPage />} />
-        <Route path="kontakt" element={<KontaktPage />} />
-        <Route path="integritetspolicy" element={<PrivacyPolicy />} />
-        <Route path="cookies" element={<CookiePolicy />} />
-        {giftCards && <Route path="presentkort" element={<GiftCards />} />}
-        {giftCards && <Route path="presentkort/saldo" element={<GiftCardBalance />} />}
-        {queue && <Route path="ko" element={<Queue />} />}
-        {siteBuilder && <Route path="forhandsvisning" element={<SitePreview />} />}
-        {events && <Route path="evenemang" element={<Events />} />}
-        {events && <Route path="evenemang/:eventId" element={<EventDetail />} />}
-        {events && <Route path="biljett" element={<Tickets />} />}
-        {events && <Route path="biljett/ta-emot" element={<TicketReceive />} />}
-        <Route path="*" element={builder ? <BuilderPage /> : <Navigate to="/" replace />} />
+        <Route index element={builder ? <BuilderPage /> : <><title>{name}</title><MenyPage /></>} />
+        <Route path="meny" element={t('Meny', <MenyPage />)} />
+        {reservations && <Route path="boka-bord" element={t('Boka bord', <BookingFlow />)} />}
+        {reservations && <Route path="bokningsvillkor" element={t('Bokningsvillkor', <BookingTermsPage />)} />}
+        <Route path="bokning/:locationId/:reservationId" element={t('Din bokning', <ManageBooking />)} />
+        {ordering && <Route path="bestall" element={t('Beställ', <OrderFlow />)} />}
+        <Route path="bestallning/:locationId/:orderId" element={t('Din beställning', <OrderStatus />)} />
+        {catering && <Route path="catering" element={t('Catering', <CateringFlow />)} />}
+        <Route path="catering/:locationId/:requestId" element={t('Din cateringförfrågan', <CateringRequest />)} />
+        <Route path="om-oss" element={t('Om oss', <OmOssPage />)} />
+        <Route path="kontakt" element={t('Kontakt', <KontaktPage />)} />
+        <Route path="integritetspolicy" element={t('Integritetspolicy', <PrivacyPolicy />)} />
+        <Route path="cookies" element={t('Cookies', <CookiePolicy />)} />
+        {giftCards && <Route path="presentkort" element={t('Presentkort', <GiftCards />)} />}
+        {giftCards && <Route path="presentkort/saldo" element={t('Saldo på presentkort', <GiftCardBalance />)} />}
+        {queue && <Route path="ko" element={t('Kö', <Queue />)} />}
+        {siteBuilder && <Route path="forhandsvisning" element={t('Förhandsvisning', <SitePreview />)} />}
+        {events && <Route path="evenemang" element={t('Evenemang', <Events />)} />}
+        {events && <Route path="evenemang/:eventId" element={t('Evenemang', <EventDetail />)} />}
+        {events && <Route path="biljett" element={t('Dina biljetter', <Tickets />)} />}
+        {events && <Route path="biljett/ta-emot" element={t('Ta emot biljett', <TicketReceive />)} />}
+        <Route path="*" element={builder ? <BuilderPage /> : t('Sidan finns inte', <NotFoundPage reservations={!!reservations} events={!!events} />)} />
       </Route>
     </Routes>
   )
