@@ -426,3 +426,70 @@ describe('TaEmotPage', () => {
     expect(await screen.findByText(/gåvan har ångrats/)).toBeInTheDocument()
   })
 })
+
+describe('loading, retry and stale state', () => {
+  it('EvenemangPage shows the printing loader and retries a failed load with Försök igen', async () => {
+    vi.mocked(api.listEvents).mockRejectedValueOnce(new ApiError(500, 'boom'))
+      .mockResolvedValueOnce({ events: [{ eventId: 'ev1abcdef', title: 'Vinprovning', nextOccurrence: '2026-11-20T18:00:00Z', fromPriceSek: 350, soldOut: false }] })
+    site('/evenemang', '/evenemang', <EvenemangPage />)
+    expect(screen.getByRole('status')).toHaveTextContent('Hämtar evenemang')
+    fireEvent.click(await screen.findByRole('button', { name: 'Försök igen' }))
+    expect(screen.queryByText(/Ladda om/)).not.toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: 'Vinprovning' })).toBeInTheDocument()
+    expect(api.listEvents).toHaveBeenCalledTimes(2)
+  })
+
+  it('EvenemangDetaljPage retries a failed load with Försök igen', async () => {
+    vi.mocked(api.getEvent).mockRejectedValueOnce(new ApiError(500, 'boom'))
+    site('/evenemang/ev1abcdef', '/evenemang/:eventId', <EvenemangDetaljPage />)
+    expect(screen.getByRole('status')).toHaveTextContent('Hämtar evenemanget')
+    fireEvent.click(await screen.findByRole('button', { name: 'Försök igen' }))
+    expect(await screen.findByRole('heading', { name: 'Vinprovning' })).toBeInTheDocument()
+  })
+
+  it('BiljettPage retries a failed load with Försök igen', async () => {
+    vi.mocked(api.getTickets).mockRejectedValueOnce(new ApiError(500, 'boom')).mockResolvedValueOnce(TICKETS)
+    site('/biljett#abc.def', '/x', <span />)
+    expect(screen.getByRole('status')).toHaveTextContent('Hämtar biljetterna')
+    fireEvent.click(await screen.findByRole('button', { name: 'Försök igen' }))
+    expect(await screen.findByText('Vinprovning')).toBeInTheDocument()
+  })
+
+  it('marks and focuses the e-mail field on invalid_email', async () => {
+    vi.mocked(api.checkout).mockRejectedValueOnce(new ApiError(400, 'invalid_email', { code: 'invalid_email' }))
+    site('/evenemang/ev1abcdef', '/evenemang/:eventId', <EvenemangDetaljPage />)
+    fireEvent.click(await screen.findByRole('button', { name: 'En Vuxen till' }))
+    fillBuyer()
+    fireEvent.click(screen.getByRole('button', { name: 'Till betalning, 450 kr' }))
+    const email = screen.getByLabelText(/^E-post/)
+    await waitFor(() => expect(email).toHaveFocus())
+    expect(email).toHaveAttribute('aria-invalid', 'true')
+    expect(email).toHaveAccessibleDescription('Kontrollera e-postadressen.')
+    fireEvent.change(email, { target: { value: 'sara@example.com' } })
+    expect(email).not.toHaveAttribute('aria-invalid')
+  })
+
+  it('drops the spent Turnstile token after a failed checkout', async () => {
+    const config = { ...siteConfig({ features: FEATURES }), turnstile: { siteKey: 'site-key' } }
+    vi.mocked(api.checkout).mockRejectedValueOnce(new ApiError(500, 'boom'))
+    site('/evenemang/ev1abcdef', '/evenemang/:eventId', <EvenemangDetaljPage />, config)
+    fireEvent.click(await screen.findByRole('button', { name: 'En Vuxen till' }))
+    fillBuyer()
+    fireEvent.click(screen.getByRole('button', { name: 'turnstile 0' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Till betalning, 450 kr' }))
+    expect(await screen.findByText('Det gick inte att starta köpet. Försök igen.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Till betalning, 450 kr' })).toBeDisabled()
+  })
+
+  it('refetches the ticket in place when a gift hits invalid_state', async () => {
+    vi.mocked(api.getTickets).mockResolvedValue(TICKETS)
+    vi.mocked(api.giveTicket).mockRejectedValueOnce(new ApiError(409, 'invalid_state', { code: 'invalid_state' }))
+    site('/biljett#abc.def', '/x', <span />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Ge bort biljetten' }))
+    fireEvent.change(screen.getByLabelText(/Mottagarens e-post/), { target: { value: 'van@example.se' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Skicka biljetten' }))
+    expect(await screen.findByText('Biljetten har ändrats. Vi har hämtat det senaste läget.')).toBeInTheDocument()
+    await waitFor(() => expect(api.getTickets).toHaveBeenCalledTimes(2))
+    expect(screen.queryByText(/Ladda om/)).not.toBeInTheDocument()
+  })
+})

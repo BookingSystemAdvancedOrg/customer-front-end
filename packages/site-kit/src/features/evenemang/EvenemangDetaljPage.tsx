@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { Bar, Button, Chip, Field, Input } from '@booqy/brand'
+import { Bar, Button, Chip, Printing } from '@booqy/brand'
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js'
 import './evenemang.css'
 import { useSite } from '../../shared/SiteContext'
@@ -94,10 +94,13 @@ export default function EvenemangDetaljPage() {
     return (
       <section className="page-hero page-prose evenemang-page" data-bq-theme="restaurant">
         <h1>Evenemang</h1>
-        {load.kind === 'loading' ? <p className="cell-muted" role="status">Hämtar evenemanget…</p> : null}
+        {load.kind === 'loading' ? <Printing label="Hämtar evenemanget" /> : null}
         {load.kind === 'missing' ? <p>Evenemanget finns inte eller säljs inte längre här.</p> : null}
         {load.kind === 'error' ? (
-          <Bar variant="banner" tone="danger">Evenemanget gick inte att hämta just nu. Ladda om sidan om en stund.</Bar>
+          <>
+            <Bar variant="banner" tone="danger">Evenemanget gick inte att hämta just nu. Kontrollera anslutningen och försök igen.</Bar>
+            <Button variant="primary" onClick={() => { setLoad({ kind: 'loading' }); reload() }}>Försök igen</Button>
+          </>
         ) : null}
         <p><Link to="/evenemang">Alla evenemang</Link></p>
       </section>
@@ -155,8 +158,10 @@ function Purchase({ event, onPaid, onStale }: { event: PublicEvent; onPaid: (p: 
   const [turnstileReset, setTurnstileReset] = useState(0)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [emailError, setEmailError] = useState<string | null>(null)
   const [held, setHeld] = useState<TicketCheckout | null>(null)
   const errorRef = useRef<HTMLDivElement>(null)
+  const emailRef = useRef<HTMLInputElement>(null)
   const siteKey = config.turnstile?.siteKey ?? null
 
   const occurrence = event.occurrences.find((o) => o.occurrenceId === occurrenceId)
@@ -186,6 +191,9 @@ function Purchase({ event, onPaid, onStale }: { event: PublicEvent; onPaid: (p: 
   useEffect(() => {
     if (error) errorRef.current?.focus()
   }, [error])
+  useEffect(() => {
+    if (emailError) emailRef.current?.focus()
+  }, [emailError])
 
   if (!event.occurrences.length) {
     return <p>Det finns inga kommande tillfällen just nu.</p>
@@ -196,6 +204,7 @@ function Purchase({ event, onPaid, onStale }: { event: PublicEvent; onPaid: (p: 
     if (!occurrence || (!lines.length && !picked.length) || busy) return
     setBusy(true)
     setError(null)
+    setEmailError(null)
     try {
       const out = await checkout(location.locationId, {
         orderId, occurrenceId,
@@ -211,9 +220,13 @@ function Purchase({ event, onPaid, onStale }: { event: PublicEvent; onPaid: (p: 
       rememberPurchase({ orderId, eventId: event.eventId, title: event.title, amountSek: out.amountSek, qty: total })
       setHeld(out)
     } catch (err) {
-      setError(eventsErrorMessage(err, 'Det gick inte att starta köpet. Försök igen.'))
-      setTurnstileReset((n) => n + 1)
       const code = codeOf(err)
+      const msg = eventsErrorMessage(err, 'Det gick inte att starta köpet. Försök igen.')
+      if (code === 'invalid_email') setEmailError(msg)
+      else setError(msg)
+      // En Turnstile-token gäller en gång: en ny kontroll innan nästa försök.
+      setTurnstileToken(null)
+      setTurnstileReset((n) => n + 1)
       if (code && ['sold_out', 'type_sold_out', 'sales_closed', 'changed_retry', 'resale_taken'].includes(code)) {
         setOrderId(newId())
         if (code === 'resale_taken') setPicked([])
@@ -330,16 +343,24 @@ function Purchase({ event, onPaid, onStale }: { event: PublicEvent; onPaid: (p: 
 
       <fieldset className="evenemang-fieldset">
         <legend>Dina uppgifter</legend>
-        <div className="evenemang-fields">
-          <Field label="Namn" required>
-            <Input autoComplete="name" maxLength={80} value={buyerName} onChange={(e) => setBuyerName(e.target.value)} />
-          </Field>
-          <Field label="E-post" required hint="Biljetterna och kvittot skickas hit.">
-            <Input type="email" autoComplete="email" value={buyerEmail} onChange={(e) => setBuyerEmail(e.target.value)} />
-          </Field>
-          <Field label="Telefon (valfritt)">
-            <Input type="tel" autoComplete="tel" maxLength={20} value={buyerPhone} onChange={(e) => setBuyerPhone(e.target.value)} />
-          </Field>
+        <div className="booking-grid">
+          <label className="booking-field">
+            <span>Namn</span>
+            <input autoComplete="name" maxLength={80} required value={buyerName} onChange={(e) => setBuyerName(e.target.value)} />
+          </label>
+          <label className="booking-field">
+            <span>E-post</span>
+            <input ref={emailRef} type="email" autoComplete="email" required value={buyerEmail}
+              aria-invalid={emailError ? true : undefined} aria-describedby={emailError ? 'evenemang-email-error' : 'evenemang-email-hint'}
+              onChange={(e) => { setBuyerEmail(e.target.value); setEmailError(null) }} />
+            {emailError
+              ? <small id="evenemang-email-error" className="field-hint error">{emailError}</small>
+              : <small id="evenemang-email-hint" className="field-hint">Biljetterna och kvittot skickas hit.</small>}
+          </label>
+          <label className="booking-field">
+            <span>Telefon (valfritt)</span>
+            <input type="tel" autoComplete="tel" maxLength={20} value={buyerPhone} onChange={(e) => setBuyerPhone(e.target.value)} />
+          </label>
         </div>
       </fieldset>
 

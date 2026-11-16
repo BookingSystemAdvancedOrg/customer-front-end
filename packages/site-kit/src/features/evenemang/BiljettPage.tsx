@@ -2,12 +2,13 @@ import { useCallback, useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useLocation } from 'react-router-dom'
 import QRCode from 'qrcode'
-import { Bar, Button, Card, Chip, Field, Input, LinkButton, tokens } from '@booqy/brand'
+import { Bar, Button, Card, Chip, Field, Input, LinkButton, Printing, tokens } from '@booqy/brand'
 import type { ChipTone } from '@booqy/brand'
 import './evenemang.css'
 import { useSite } from '../../shared/SiteContext'
 import {
   cancelGift,
+  codeOf,
   eventsErrorMessage,
   getTickets,
   giveTicket,
@@ -72,10 +73,13 @@ export default function BiljettPage() {
       <section className="page-hero page-prose evenemang-page" data-bq-theme="restaurant">
         <h1>Dina biljetter</h1>
         {!token ? <p>Öppna länken i mejlet med dina biljetter för att visa dem här.</p> : null}
-        {token && load.kind === 'loading' ? <p className="cell-muted" role="status">Hämtar biljetterna…</p> : null}
+        {token && load.kind === 'loading' ? <Printing label="Hämtar biljetterna" /> : null}
         {token && load.kind === 'missing' ? <p>Länken gäller inte. Kontrollera att du har öppnat hela länken från mejlet.</p> : null}
         {token && load.kind === 'error' ? (
-          <Bar variant="banner" tone="danger">Biljetterna gick inte att hämta just nu. Ladda om sidan om en stund.</Bar>
+          <>
+            <Bar variant="banner" tone="danger">Biljetterna gick inte att hämta just nu. Kontrollera anslutningen och försök igen.</Bar>
+            <Button variant="primary" onClick={() => { setLoad({ kind: 'loading' }); reload() }}>Försök igen</Button>
+          </>
         ) : null}
       </section>
     )
@@ -206,6 +210,11 @@ function Transfer({ token, ticket, giftOpen, resaleOpen, onChanged }: {
     } catch (err) {
       setError(eventsErrorMessage(err, fallback))
       setTransferId(newId())
+      // Biljetten har ändrats någon annanstans: hämta det senaste läget på plats.
+      if (codeOf(err) === 'invalid_state') {
+        setMode('idle')
+        onChanged()
+      }
     } finally {
       setBusy(false)
     }

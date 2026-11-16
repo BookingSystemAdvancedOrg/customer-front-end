@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Bar, Chip } from '@booqy/brand'
+import { Bar, Button, Chip, Printing } from '@booqy/brand'
 import './evenemang.css'
 import { useSite } from '../../shared/SiteContext'
 import { eventImage, isNotFound, kr, listEvents, when, type PublicEventSummary } from './eventsApi'
@@ -14,6 +14,7 @@ type State = { kind: 'loading' } | { kind: 'ready'; events: PublicEventSummary[]
 export default function EvenemangPage() {
   const { config, location } = useSite()
   const [state, setState] = useState<State>({ kind: 'loading' })
+  const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
     let live = true
@@ -23,14 +24,17 @@ export default function EvenemangPage() {
     return () => {
       live = false
     }
-  }, [location.locationId])
+  }, [location.locationId, reloadKey])
 
   return (
     <section className="page-hero page-prose evenemang-page" data-bq-theme="restaurant">
       <h1>Evenemang</h1>
-      {state.kind === 'loading' ? <p className="cell-muted" role="status">Hämtar evenemang…</p> : null}
+      {state.kind === 'loading' ? <Printing label="Hämtar evenemang" /> : null}
       {state.kind === 'error' ? (
-        <Bar variant="banner" tone="danger">Evenemangen gick inte att hämta just nu. Ladda om sidan om en stund.</Bar>
+        <>
+          <Bar variant="banner" tone="danger">Evenemangen gick inte att hämta just nu. Kontrollera anslutningen och försök igen.</Bar>
+          <Button variant="primary" onClick={() => { setState({ kind: 'loading' }); setReloadKey((n) => n + 1) }}>Försök igen</Button>
+        </>
       ) : null}
       {state.kind === 'ready' && state.events.length === 0 ? (
         <p>{config.tenant.name} har inga evenemang till salu just nu. Titta in igen snart.</p>

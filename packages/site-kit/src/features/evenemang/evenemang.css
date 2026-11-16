@@ -14,6 +14,15 @@
 .evenemang-description {
   white-space: pre-line;
 }
+/* Samma pillerknapp som sajtens andra formulär, inte en sträckt rad. */
+.evenemang-form > .bq-btn,
+.evenemang-pay > .bq-btn,
+.evenemang-page > .bq-btn {
+  justify-self: start;
+}
+.evenemang-page .evenemang-list {
+  margin-top: var(--bq-space-4);
+}
 
 /* Listan */
 .evenemang-list,
@@ -227,11 +236,6 @@
   min-width: 2ch;
   text-align: center;
   font: 700 var(--bq-text-lg)/1 var(--bq-font-mono);
-}
-.evenemang-fields {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
-  gap: var(--bq-space-3);
 }
 .evenemang-error:focus {
   outline: none;

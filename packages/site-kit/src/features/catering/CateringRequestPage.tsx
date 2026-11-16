@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import QRCode from 'qrcode'
+import { Printing } from '@booqy/brand'
 import {
   acceptOffer,
   bankIdMessage,
@@ -18,7 +19,6 @@ import {
 import type { CateringPayment, GuestRequest, Line, Totals } from './cateringApi'
 import { useSite } from '../../shared/SiteContext'
 import { PaidStamp, PaymentTicket } from '../../shared/payment/PaymentTicket'
-import { SkelLines } from '../../shared/Skeleton'
 import { PhoneLink } from '../../shared/PhoneLink'
 
 /** BankID: frågan om status en gång i sekunden (QR-koden byts varje sekund). */
@@ -93,6 +93,9 @@ export default function CateringRequestPage() {
   const params = new URLSearchParams(search)
   const { config } = useSite()
   const [payment, setPayment] = useState<CateringPayment | null>(null)
+  // Signeringen var inte registrerad efter returen: gästen kan fråga igen på plats.
+  const [returnCheck, setReturnCheck] = useState(0)
+  const [signPending, setSignPending] = useState(false)
   // Betald här på sidan (eller tillbaka från Swish/Klarna): Stripes webhook bekräftar strax.
   const [justPaid, setJustPaid] = useState(false)
   const awaitingConfirm = (justPaid || params.get('betalning') === 'klar') && request?.status === 'signed'
@@ -140,7 +143,10 @@ export default function CateringRequestPage() {
         }
         setSigning(null)
         if (state.status === 'failed') setError(bankIdMessage(state.hintCode, isMobile()))
-        else if (state.status === 'pending') setError('Signeringen är inte klar än. Ladda om sidan om en liten stund.')
+        else if (state.status === 'pending') {
+          setError('Signeringen är inte klar än. Vänta en liten stund och försök igen.')
+          setSignPending(true)
+        }
         if (state.request) setRequest(state.request)
       } catch (err) {
         if (!active) return
@@ -152,7 +158,7 @@ export default function CateringRequestPage() {
     return () => {
       active = false
     }
-  }, [returnedFromSigning, request?.status, locationId, requestId, token])
+  }, [returnedFromSigning, request?.status, locationId, requestId, token, returnCheck])
 
   // Tillbaka från betalningen: Stripe bekräftar via webhook - fråga några gånger.
   useEffect(() => {
@@ -197,6 +203,7 @@ export default function CateringRequestPage() {
 
   async function sign() {
     setError(null)
+    setSignPending(false)
     setBusy(true)
     try {
       const start = await startSigning(locationId, requestId, token)
@@ -218,6 +225,7 @@ export default function CateringRequestPage() {
 
   async function pay() {
     setError(null)
+    setSignPending(false)
     setBusy(true)
     try {
       setPayment(await startCheckout(locationId, requestId, token))
@@ -230,6 +238,7 @@ export default function CateringRequestPage() {
 
   async function openDocument(docId: 'offer' | 'signed') {
     setError(null)
+    setSignPending(false)
     try {
       // Same tab: a window opened after an await is blocked by iOS Safari. The link lives 5 minutes.
       window.location.assign((await documentLink(locationId, requestId, token, docId)).url)
@@ -240,6 +249,7 @@ export default function CateringRequestPage() {
 
   async function send() {
     setError(null)
+    setSignPending(false)
     const company = request?.customerType === 'company'
     if (mode === 'accept') {
       if (!acceptForm.name.trim()) return setError('Fyll i ditt namn.')
@@ -269,12 +279,19 @@ export default function CateringRequestPage() {
   return (
     <section className="booking-confirmation catering-request">
       <h1>Catering</h1>
-      {!request && !error && (
-        <div className="skel" role="status" aria-label="Hämtar förfrågan" aria-busy="true">
-          <SkelLines n={6} />
-        </div>
-      )}
+      {!request && !error && <Printing label="Hämtar förfrågan" />}
       {error && <p className="notice error" role="alert">{error}</p>}
+      {error && token && (!request || signPending) && (
+        <button type="button" className="btn-primary" onClick={() => {
+          setError(null)
+          if (signPending) {
+            setSignPending(false)
+            setReturnCheck((n) => n + 1)
+          } else void load()
+        }}>
+          Försök igen
+        </button>
+      )}
       {request && (
         <>
           <p className="booking-status" aria-live="polite">{HEADLINE[request.status]}</p>
