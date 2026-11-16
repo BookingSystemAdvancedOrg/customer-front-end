@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { stockholmDate, vatBreakdown, vatRate } from './orderApi'
+import { ApiError } from '../../shared/api'
+import { isGiftCardError, knownOrderError, orderErrorMessage, stockholmDate, vatBreakdown, vatRate } from './orderApi'
 
 describe('vatRate (same rule as the server)', () => {
   it('uses 25 % for alcohol and 12 % at the table', () => {
@@ -41,5 +42,34 @@ describe('lineKey', () => {
     expect(a).toBe(b)
     expect(parseLineKey(a)).toEqual({ menuItemId: 'pizza', picks: [{ group: 'Extra', choice: 'Ost' }, { group: 'Storlek', choice: 'Stor' }] })
     expect(parseLineKey('pizza#not json')).toEqual({ menuItemId: 'pizza', picks: [] })
+  })
+})
+
+describe('gift card errors at checkout', () => {
+  it.each([
+    ['gift_card_not_found', 409, 'Presentkortskoden känns inte igen'],
+    ['card_expired', 409, 'har gått ut'],
+    ['card_void', 409, 'spärrat'],
+    ['insufficient_balance', 409, 'upp till 30 minuter'],
+    ['gift_card_min_order', 409, 'minst 3 kr'],
+    ['gift_cards_off', 400, 'Presentkort kan inte användas här'],
+    ['gift_card_unavailable', 503, 'Booqys fel'],
+  ])('explains %s and flags the gift card field', (code, status, text) => {
+    const err = new ApiError(status, code)
+    expect(orderErrorMessage(err)).toContain(text)
+    expect(isGiftCardError(err)).toBe(true)
+  })
+
+  it('does not flag other errors as gift card errors', () => {
+    expect(isGiftCardError(new ApiError(409, 'ordering_paused'))).toBe(false)
+    expect(isGiftCardError(new Error('gift_card_not_found'))).toBe(false)
+  })
+})
+
+describe('knownOrderError', () => {
+  it('keeps the own answer for a known code and leaves other load failures to the page', () => {
+    expect(knownOrderError(new ApiError(400, 'table code revoked'))).toMatch(/QR-koden gäller inte längre/)
+    expect(knownOrderError(new ApiError(500, 'boom'))).toBeNull()
+    expect(knownOrderError(new TypeError('Failed to fetch'))).toBeNull()
   })
 })

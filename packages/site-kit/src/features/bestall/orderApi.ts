@@ -65,12 +65,16 @@ export interface OrderRequest {
 export interface OrderCreated {
   orderId: string
   locationId: string
-  /** Checkout Sessionens hemlighet för Payment Element. */
-  clientSecret: string
-  /** Restaurangens Stripe-konto (acct_...). */
-  stripeAccount: string
+  /** Checkout Sessionens hemlighet för Payment Element (saknas när presentkortet täcker allt). */
+  clientSecret?: string
+  /** Restaurangens Stripe-konto (acct_...), saknas som ovan. */
+  stripeAccount?: string
   statusToken: string
   totalAmount: number
+  /** Presentkortet som drogs: sista fyra tecknen och beloppet i öre. */
+  giftCard?: { last4: string; debitedOre: number }
+  /** Det som återstår att betala med kort (öre); 0 = presentkortet täckte allt och beställningen är betald. */
+  chargedAmount?: number
 }
 
 export interface GuestOrder {
@@ -364,6 +368,33 @@ const ORDER_ERRORS: Record<string, string> = {
   discount_used: 'Rabattkoden är redan använd.',
   discount_min_order: 'Beställningen är under minsta beloppet för rabattkoden.',
   discount_other_email: 'Rabattkoden gäller bara med e-postadressen den skickades till.',
+  gift_card_not_found: 'Presentkortskoden känns inte igen. Kontrollera koden.',
+  card_expired: 'Presentkortet har gått ut. Ta bort koden och betala med kort.',
+  card_void: 'Presentkortet är spärrat. Ta bort koden och betala med kort, eller kontakta restaurangen.',
+  insufficient_balance:
+    'Presentkortet har inget saldo kvar (det kan vara reserverat för en obetald beställning i upp till 30 minuter). Ta bort koden och betala med kort.',
+  gift_card_min_order:
+    'Presentkortet kan inte användas för det här beloppet: det som blir kvar att betala måste vara minst 3 kr. Lägg till något mer eller ta bort koden.',
+  gift_card_refused: 'Presentkortet kan inte användas. Kontrollera koden eller ta bort den och betala med kort.',
+  gift_cards_off: 'Presentkort kan inte användas här just nu. Ta bort koden och betala med kort.',
+  'giftCardCode must be text': 'Presentkortskoden känns inte igen. Kontrollera koden.',
+  gift_card_unavailable:
+    'Presentkort går inte att använda just nu (Booqys fel). Försök igen om en stund, eller ta bort koden och betala med kort.',
+}
+
+const GIFT_CARD_ERRORS = new Set([
+  'gift_card_not_found', 'card_expired', 'card_void', 'insufficient_balance', 'gift_card_min_order',
+  'gift_card_refused', 'gift_cards_off', 'giftCardCode must be text', 'gift_card_unavailable',
+])
+
+/** Felet gäller presentkortskoden (fältet ska markeras). */
+export function isGiftCardError(err: unknown): boolean {
+  return err instanceof ApiError && GIFT_CARD_ERRORS.has(err.message)
+}
+
+/** Ett fel från servern med eget svar (t.ex. QR-koden); null = hämtningen misslyckades. */
+export function knownOrderError(err: unknown): string | null {
+  return err instanceof ApiError && ORDER_ERRORS[err.message] ? ORDER_ERRORS[err.message] : null
 }
 
 export function orderErrorMessage(err: unknown): string {

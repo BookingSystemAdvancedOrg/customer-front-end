@@ -395,8 +395,9 @@ describe('BestallPage', () => {
     // Inget av gästens uppgifter sparas innan beställningen skickas.
     expect(JSON.stringify({ ...sessionStorage })).not.toContain('Anna')
     expect(postedOrder()).toBeNull()
-    // Brödsmulan Varukorg leder tillbaka till brickan bredvid menyn.
-    await user.click(screen.getByRole('button', { name: 'Varukorg' }))
+    // Ett klick från sista steget leder tillbaka till brickan bredvid menyn
+    // (knappen finns både i sidospalten och i mobilens utfällbara sammanfattning).
+    await user.click(screen.getAllByRole('button', { name: 'Ändra varukorgen' })[0])
     expect(screen.getByRole('heading', { name: 'Din beställning' })).toHaveFocus()
     const tray = screen.getByRole('complementary', { name: 'Din beställning' })
     expect(within(tray).getByText('1 × Cola')).toBeInTheDocument()
@@ -531,5 +532,124 @@ describe('BestallPage options, allergens and categories', () => {
     await user.click(within(dialog).getByRole('radio', { name: 'Inget' }))
     expect(within(dialog).getByRole('radio', { name: /Extra ost/ })).not.toBeChecked()
     expect(within(dialog).getByRole('button', { name: /Lägg till · 150 kr/ })).toBeEnabled()
+  })
+})
+
+describe('BestallPage gift card, field errors and loading', () => {
+  function giftConfig() {
+    const c = config()
+    c.tenant.features = { ...c.tenant.features, giftCards: true }
+    return c
+  }
+
+  it('goes straight to the status page when the gift card covers the whole order', async () => {
+    const user = userEvent.setup()
+    orderResponse = () => json({ orderId: 'o'.repeat(32), locationId: 'loc-1', statusToken: 'tok', totalAmount: 12500,
+      giftCard: { last4: '1234', debitedOre: 12500 }, chargedAmount: 0 }, 201)
+    render(
+      <WithSite config={config()} path="/bestall">
+        <Routes>
+          <Route path="bestall" element={<BestallPage />} />
+          <Route path="bestallning/:locationId/:orderId" element={<p>Statussidan</p>} />
+        </Routes>
+      </WithSite>,
+    )
+    await user.click(await screen.findByRole('button', { name: 'Lägg till Margherita' }))
+    await fill(user)
+    await user.click(screen.getByRole('button', { name: 'Till betalning · 125 kr' }))
+    expect(await screen.findByText('Statussidan')).toBeInTheDocument()
+    expect(stripe.provider).not.toHaveBeenCalled()
+    expect(sessionStorage.getItem('order-cart:loc-1')).toBeNull()
+    expect(sessionStorage.getItem(`order-token:${'o'.repeat(32)}`)).toBe('tok')
+  })
+
+  it('charges only the rest after a partial gift card and shows the card in the summary', async () => {
+    const user = userEvent.setup()
+    orderResponse = () => json({ orderId: 'o'.repeat(32), locationId: 'loc-1', clientSecret: 'cs_test_secret',
+      stripeAccount: 'acct_1', statusToken: 'tok', totalAmount: 12500,
+      giftCard: { last4: '1234', debitedOre: 10000 }, chargedAmount: 2500 }, 201)
+    render(<WithSite config={config()} path="/bestall"><BestallPage /></WithSite>)
+    await user.click(await screen.findByRole('button', { name: 'Lägg till Margherita' }))
+    await fill(user)
+    await user.click(screen.getByRole('button', { name: 'Till betalning · 125 kr' }))
+    expect(await screen.findByRole('button', { name: 'Betala 25 kr' })).toBeInTheDocument()
+    const side = screen.getByRole('complementary', { name: 'Din beställning' })
+    expect(within(side).getByText('Presentkort ****1234').nextSibling).toHaveTextContent('-100 kr')
+    expect(within(side).getByText('Totalt').nextSibling).toHaveTextContent('25 kr')
+  })
+
+  it('names a refused gift card and puts the guest back in the code field', async () => {
+    const user = userEvent.setup()
+    orderResponse = () => json({ error: 'gift_card_not_found' }, 409)
+    render(<WithSite config={giftConfig()} path="/bestall"><BestallPage /></WithSite>)
+    await user.click(await screen.findByRole('button', { name: 'Lägg till Cola' }))
+    await fill(user)
+    await user.click(await screen.findByRole('button', { name: 'Har du ett presentkort?' }))
+    await user.type(screen.getByLabelText(/Presentkortskod/), 'abcd-efgh-ijkl-mnop')
+    await user.click(screen.getByRole('button', { name: /Till betalning/ }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Presentkortskoden känns inte igen. Kontrollera koden.')
+    const field = screen.getByLabelText(/Presentkortskod/)
+    await waitFor(() => expect(field).toHaveFocus())
+    expect(field).toHaveAttribute('aria-invalid', 'true')
+    expect(field).toHaveAttribute('aria-describedby', 'order-error')
+  })
+
+  it('marks and focuses the field that is missing', async () => {
+    const user = userEvent.setup()
+    render(<WithSite config={config()} path="/bestall"><BestallPage /></WithSite>)
+    await user.click(await screen.findByRole('button', { name: 'Lägg till Cola' }))
+    await forward(user)
+    await forward(user)
+    const name = screen.getByLabelText('Namn')
+    expect(name).toHaveFocus()
+    expect(name).toHaveAttribute('aria-invalid', 'true')
+    expect(name).toHaveAttribute('aria-describedby', 'order-error')
+    expect(screen.getByRole('alert')).toHaveAttribute('id', 'order-error')
+    await user.type(name, 'Anna')
+    await forward(user)
+    const phone = screen.getByLabelText(/Mobilnummer/)
+    expect(phone).toHaveFocus()
+    expect(phone).toHaveAttribute('aria-invalid', 'true')
+    expect(name).not.toHaveAttribute('aria-invalid')
+  })
+
+  it('offers to try again in place when the menu cannot be loaded', async () => {
+    const user = userEvent.setup()
+    let menuFails = true
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.includes('/ordering')) return json(ordering)
+      if (url.endsWith('/menu')) return menuFails ? json({ error: 'down' }, 503) : json(MENU)
+      return json({ error: 'not found' }, 404)
+    })
+    render(<WithSite config={config()} path="/bestall"><BestallPage /></WithSite>)
+    expect(await screen.findByRole('alert')).toHaveTextContent('Vi kunde inte hämta menyn just nu. Försök igen')
+    menuFails = false
+    await user.click(screen.getByRole('button', { name: 'Försök igen' }))
+    expect(await screen.findByRole('button', { name: 'Lägg till Margherita' })).toBeEnabled()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('does not blame sending when the ordering state cannot be loaded', async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.includes('/ordering')) return json({ error: 'boom' }, 500)
+      if (url.endsWith('/menu')) return json(MENU)
+      return json({ error: 'not found' }, 404)
+    })
+    render(<WithSite config={config()} path="/bestall"><BestallPage /></WithSite>)
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('Vi kunde inte hämta menyn just nu')
+    expect(alert).not.toHaveTextContent('skickas')
+    expect(within(alert).getByRole('button', { name: 'Försök igen' })).toBeInTheDocument()
+  })
+
+  it('shows the step rail and marks the first category chip as current', async () => {
+    render(<WithSite config={config()} path="/bestall"><BestallPage /></WithSite>)
+    const rail = screen.getByRole('list', { name: 'Beställning: steg 1 av 4' })
+    expect(rail).toHaveClass('flow')
+    const nav = await screen.findByRole('navigation', { name: 'Kategorier' })
+    const chips = within(nav).getAllByRole('link')
+    expect(chips[0]).toHaveClass('is-active')
+    expect(chips[0]).toHaveAttribute('aria-current', 'true')
+    expect(chips[1]).not.toHaveClass('is-active')
   })
 })
