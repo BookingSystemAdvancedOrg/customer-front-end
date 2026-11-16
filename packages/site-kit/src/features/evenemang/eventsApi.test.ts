@@ -1,12 +1,21 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { configureSiteKit } from '../../config'
 import { ApiError } from '../../shared/api'
-import { cancelGift, checkout, eventsErrorMessage, getTickets, kr, maxFor, passUrl, time, tokenFromHash, when } from './eventsApi'
+import { cancelGift, checkout, eventImage, eventsErrorMessage, getTickets, kr, maxFor, passUrl, time, tokenFromHash, when } from './eventsApi'
 import type { PublicOccurrence, PublicTicketType } from './eventsApi'
 
 afterEach(() => vi.unstubAllGlobals())
 
 describe('eventsApi', () => {
+  it('encodes each segment of the image key and keeps the slashes', () => {
+    configureSiteKit({ apiBaseUrl: 'https://api.test', menuImageBaseUrl: 'https://cdn.test/' })
+    expect(eventImage({ imageKey: 'menu-images/t1/a b?#.webp', imageAlt: 'Bord' }))
+      .toEqual({ src: 'https://cdn.test/menu-images/t1/a%20b%3F%23.webp', alt: 'Bord' })
+    expect(eventImage({ imageKey: 'menu-images/t1/x.webp' })?.src).toBe('https://cdn.test/menu-images/t1/x.webp')
+    expect(eventImage({})).toBeNull()
+    configureSiteKit({ menuImageBaseUrl: '' })
+  })
+
   it('calls the public routes on the API base, never with credentials', async () => {
     configureSiteKit({ apiBaseUrl: 'https://api.test' })
     const fetchMock = vi.fn(async () => new Response(JSON.stringify({ amountSek: 0, expiresAt: 'x' }), { status: 200 }))

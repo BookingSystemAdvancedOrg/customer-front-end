@@ -5,9 +5,9 @@ import { API, CDN, EVENT, EVENT_ID, IMAGE_ALT, IMAGE_KEY, TICKET_TOKEN, fakeApi 
 /**
  * Evenemangsbilder (K15/K16) och Wallet-knapparna på /biljett (K18/K19).
  * Med SCREENSHOTS=1 skrivs även skärmbilderna, ljust och mörkt, mobil (390)
- * och dator (1280), till docs/screenshots/run-2d-k-media/customer-front-end/.
+ * och dator (1280), till test-results/screenshots/ (checkas inte in).
  */
-const OUT = 'docs/screenshots/run-2d-k-media/customer-front-end'
+const OUT = 'test-results/screenshots'
 
 test.describe('Evenemangsbilder och Wallet', () => {
   test('the list and the event page show the event image with its alt text', async ({ page }) => {
@@ -19,6 +19,15 @@ test.describe('Evenemangsbilder och Wallet', () => {
     expect(await card.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true)
     // Bara evenemanget med bild har en bild; kortet går fortfarande att öppna.
     await expect(page.locator('.evenemang-item__img')).toHaveCount(1)
+    // Tangentbord: fokusringen runt bildkortet klipps inte av kortet.
+    const link = page.getByRole('link', { name: EVENT.title })
+    await link.focus()
+    await page.keyboard.press('Shift+Tab')
+    await page.keyboard.press('Tab')
+    await expect(link).toBeFocused()
+    const imageCard = page.locator('.evenemang-item--image')
+    expect(await imageCard.evaluate((el) => getComputedStyle(el).overflow)).toBe('visible')
+    expect(await link.evaluate((el) => getComputedStyle(el, '::after').boxShadow)).not.toBe('none')
     await page.getByRole('link', { name: EVENT.title }).click()
     await expect(page.getByRole('heading', { level: 1, name: EVENT.title })).toBeVisible()
     await expect(page.getByRole('img', { name: IMAGE_ALT })).toBeVisible()

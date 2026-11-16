@@ -153,7 +153,9 @@ export const acceptGift = (transferToken: string, name: string) =>
 
 /** Evenemangets bild, eller null utan bild eller utan bild-CDN (då visas ingen bild). */
 export function eventImage(ev: { imageKey?: string; imageAlt?: string }): { src: string; alt: string } | null {
-  const src = ev.imageKey ? menuImageUrl(ev.imageKey) : null
+  // Varje del av nyckeln kodas för sig, så att ett konstigt tecken aldrig ändrar URL:en.
+  const key = ev.imageKey?.split('/').map(encodeURIComponent).join('/')
+  const src = key ? menuImageUrl(key) : null
   return src ? { src, alt: ev.imageAlt ?? '' } : null
 }
 
