@@ -28,6 +28,6 @@ export default defineConfig({
     url: `http://localhost:${PORT}`,
     reuseExistingServer: false,
     timeout: 180_000,
-    env: { VITE_API_BASE_URL: 'https://api.e2e.test', VITE_DEV_TENANT_SLUG: 'testkrogen' },
+    env: { VITE_API_BASE_URL: 'https://api.e2e.test', VITE_DEV_TENANT_SLUG: 'testkrogen', VITE_MENU_IMAGE_BASE_URL: 'https://cdn.e2e.test' },
   },
 })

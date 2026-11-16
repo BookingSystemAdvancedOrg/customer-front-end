@@ -276,3 +276,28 @@
   gap: var(--bq-space-2);
   margin: 0;
 }
+
+/* Evenemangets bild (samma bild-CDN som menyn) */
+.evenemang-item--image {
+  padding-top: 0;
+}
+.evenemang-item__img {
+  display: block;
+  width: calc(100% + 2 * var(--bq-space-5));
+  max-width: none;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  margin: 0 calc(-1 * var(--bq-space-5)) var(--bq-space-3);
+  /* Kortet klipper inte (fokusringen ligger utanför), bilden rundar själv sina övre hörn. */
+  border-radius: var(--bq-radius-card) var(--bq-radius-card) 0 0;
+  object-fit: cover;
+}
+.evenemang-hero-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  margin-block: var(--bq-space-3) var(--bq-space-4);
+  border-radius: var(--bq-radius-card);
+  object-fit: cover;
+}

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { Bar, Chip } from '@booqy/brand'
 import './evenemang.css'
 import { useSite } from '../../shared/SiteContext'
-import { isNotFound, kr, listEvents, when, type PublicEventSummary } from './eventsApi'
+import { eventImage, isNotFound, kr, listEvents, when, type PublicEventSummary } from './eventsApi'
 
 type State = { kind: 'loading' } | { kind: 'ready'; events: PublicEventSummary[] } | { kind: 'error' }
 
@@ -39,8 +39,11 @@ export default function EvenemangPage() {
         <>
           <p>Quiz, vinmiddagar och andra kvällar hos {config.tenant.name}. Välj ett evenemang för att köpa biljetter.</p>
           <ul className="evenemang-list">
-            {state.events.map((ev) => (
-              <li key={ev.eventId} className="evenemang-item">
+            {state.events.map((ev) => {
+              const image = eventImage(ev)
+              return (
+              <li key={ev.eventId} className={`evenemang-item${image ? ' evenemang-item--image' : ''}`}>
+                {image ? <img className="evenemang-item__img" src={image.src} alt={image.alt} loading="lazy" width={640} height={360} /> : null}
                 <h2 className="evenemang-item__title">
                   <Link to={`/evenemang/${encodeURIComponent(ev.eventId)}`}>{ev.title}</Link>
                 </h2>
@@ -49,7 +52,8 @@ export default function EvenemangPage() {
                   {ev.soldOut ? <Chip tone="warning">Slutsålt</Chip> : <span>{ev.fromPriceSek > 0 ? `Från ${kr(ev.fromPriceSek)}` : 'Gratis'}</span>}
                 </p>
               </li>
-            ))}
+              )
+            })}
           </ul>
         </>
       ) : null}
