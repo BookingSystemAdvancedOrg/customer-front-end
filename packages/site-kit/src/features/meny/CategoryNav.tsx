@@ -1,5 +1,6 @@
-import { CATEGORY_LABEL, CATEGORY_ORDER } from './menuApi'
-import type { MenuCategory } from './menuApi'
+import { Select } from '../../shared/Select'
+import { DEFAULT_CATEGORIES } from './menuApi'
+import type { MenuCategory, MenuCategoryEntry } from './menuApi'
 
 /**
  * Kategorival för Meny och Beställ mat. Renderar BÅDA varianterna samtidigt
@@ -15,16 +16,19 @@ import type { MenuCategory } from './menuApi'
 export function CategoryNav({
   filter,
   onSelect,
+  categories = DEFAULT_CATEGORIES,
 }: {
   filter: MenuCategory
   onSelect: (category: MenuCategory) => void
+  /** Platsens kategorier (useMenuList); standard utan. */
+  categories?: MenuCategoryEntry[]
 }) {
   return (
     <>
       <nav className="category-sidebar" aria-label="Filtrera på kategori">
         <p className="category-sidebar-kicker">Kategori</p>
         <ul>
-          {CATEGORY_ORDER.map((category) => (
+          {categories.map(({ categoryId: category, name }) => (
             <li key={category}>
               <button
                 type="button"
@@ -32,7 +36,7 @@ export function CategoryNav({
                 aria-pressed={filter === category}
                 onClick={() => onSelect(category)}
               >
-                {CATEGORY_LABEL[category]}
+                {name}
               </button>
             </li>
           ))}
@@ -43,17 +47,12 @@ export function CategoryNav({
         <label htmlFor="category-select" className="category-dropdown-label">
           Välj kategori
         </label>
-        <select
+        <Select
           id="category-select"
           value={filter}
-          onChange={(e) => onSelect(e.target.value as MenuCategory)}
-        >
-          {CATEGORY_ORDER.map((category) => (
-            <option key={category} value={category}>
-              {CATEGORY_LABEL[category]}
-            </option>
-          ))}
-        </select>
+          onChange={(v) => onSelect(v as MenuCategory)}
+          options={categories.map(({ categoryId, name }) => ({ value: categoryId, label: name }))}
+        />
       </div>
     </>
   )

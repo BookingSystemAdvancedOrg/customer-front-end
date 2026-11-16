@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { Bar, Button } from '@booqy/brand'
@@ -10,6 +10,7 @@ import { paymentAppearance, paymentFonts } from '../../shared/payment/appearance
 import { SecureNote } from '../../shared/payment/PaymentTicket'
 import { stripeFor } from '../../shared/payment/stripe'
 import { TurnstileWidget } from '../boka/TurnstileWidget'
+import { validEmail } from '../boka/bookingApi'
 import {
   getOffer,
   giftErrorMessage,
@@ -103,11 +104,24 @@ function Details({ offer, onCheckout }: { offer: Offer; onCheckout: (c: Checkout
   const [turnstileReset, setTurnstileReset] = useState(0)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Fältfelen visas först när gästen har försökt gå vidare, inte medan hen skriver.
+  const [tried, setTried] = useState(false)
+  const customRef = useRef<HTMLInputElement>(null)
+  const emailRef = useRef<HTMLInputElement>(null)
+  const recipientRef = useRef<HTMLInputElement>(null)
   const siteKey = config.turnstile?.siteKey ?? null
   const chosen = choice === CUSTOM ? Number(custom || 0) : Number(choice)
+  const customOk = choice !== CUSTOM || (chosen >= offer.customMinSek && chosen <= offer.customMaxSek && Number.isInteger(chosen))
+  const emailOk = validEmail(buyerEmail)
+  const recipientOk = !recipientEmail.trim() || validEmail(recipientEmail)
 
   async function submit(e: FormEvent) {
     e.preventDefault()
+    if (!customOk || !emailOk || !recipientOk) {
+      setTried(true)
+      ;(!customOk ? customRef : !emailOk ? emailRef : recipientRef).current?.focus()
+      return
+    }
     setBusy(true)
     setError(null)
     try {
@@ -128,21 +142,38 @@ function Details({ offer, onCheckout }: { offer: Offer; onCheckout: (c: Checkout
     }
   }
 
-  const customOk = choice !== CUSTOM || (chosen >= offer.customMinSek && chosen <= offer.customMaxSek && Number.isInteger(chosen))
   const amountTabs = [...offer.amountsSek.map((a) => ({ key: String(a), label: kr(a) })), { key: CUSTOM, label: 'Eget belopp' }]
+  const customError = tried && !customOk
+  const emailError = tried && !emailOk
+  const recipientError = tried && !recipientOk
   return (
     <form onSubmit={submit} noValidate>
       <Bar variant="tab" label="Välj belopp" items={amountTabs} value={choice}
         onChange={(key) => { setChoice(key); if (key !== CUSTOM) setCustom('') }} />
       <div className="booking-grid">
-        <label className="booking-field">
-          <span>Eget belopp ({offer.customMinSek}-{offer.customMaxSek} kr)</span>
-          <input inputMode="numeric" value={custom}
-            onChange={(e) => { setCustom(e.target.value.replace(/\D/g, '')); setChoice(CUSTOM) }} />
-        </label>
+        {choice === CUSTOM ? (
+          <label className="booking-field">
+            <span>Belopp ({offer.customMinSek}-{offer.customMaxSek} kr)</span>
+            <input ref={customRef} inputMode="numeric" value={custom} aria-invalid={customError || undefined}
+              aria-describedby={customError ? 'gift-custom-error' : undefined}
+              onChange={(e) => setCustom(e.target.value.replace(/\D/g, ''))} />
+            {customError ? (
+              <small id="gift-custom-error" className="field-hint error">
+                {`Välj ett belopp mellan ${offer.customMinSek} och ${offer.customMaxSek} kr.`}
+              </small>
+            ) : null}
+          </label>
+        ) : null}
         <label className="booking-field">
           <span>Din e-post (kvitto{recipientEmail ? '' : ' och koden'})</span>
-          <input type="email" autoComplete="email" required value={buyerEmail} onChange={(e) => setBuyerEmail(e.target.value)} />
+          <input ref={emailRef} type="email" autoComplete="email" required value={buyerEmail}
+            aria-invalid={emailError || undefined} aria-describedby={emailError ? 'gift-email-error' : undefined}
+            onChange={(e) => setBuyerEmail(e.target.value)} />
+          {emailError ? (
+            <small id="gift-email-error" className="field-hint error">
+              {buyerEmail.trim() ? 'Kontrollera e-postadressen.' : 'Fyll i din e-post.'}
+            </small>
+          ) : null}
         </label>
         <label className="booking-field">
           <span>Mottagarens namn (valfritt)</span>
@@ -150,7 +181,10 @@ function Details({ offer, onCheckout }: { offer: Offer; onCheckout: (c: Checkout
         </label>
         <label className="booking-field">
           <span>Mottagarens e-post (valfritt, koden skickas dit)</span>
-          <input type="email" value={recipientEmail} onChange={(e) => setRecipientEmail(e.target.value)} />
+          <input ref={recipientRef} type="email" value={recipientEmail}
+            aria-invalid={recipientError || undefined} aria-describedby={recipientError ? 'gift-recipient-error' : undefined}
+            onChange={(e) => setRecipientEmail(e.target.value)} />
+          {recipientError ? <small id="gift-recipient-error" className="field-hint error">Kontrollera e-postadressen.</small> : null}
         </label>
         <label className="booking-field booking-field--wide">
           <span>Hälsning (valfritt)</span>
@@ -166,8 +200,8 @@ function Details({ offer, onCheckout }: { offer: Offer; onCheckout: (c: Checkout
       {siteKey ? <TurnstileWidget siteKey={siteKey} resetKey={turnstileReset} onToken={setTurnstileToken} /> : null}
       {error ? <Bar variant="banner" tone="danger">{error}</Bar> : null}
       <Button type="submit" variant="primary" busy={busy} busyLabel="Startar…"
-        disabled={!buyerEmail.trim() || !customOk || Boolean(siteKey && !turnstileToken)}>
-        {`Till betalning, ${kr(chosen || 0)}`}
+        disabled={Boolean(siteKey && !turnstileToken)}>
+        {choice === CUSTOM && !customOk ? 'Till betalning' : `Till betalning, ${kr(chosen)}`}
       </Button>
     </form>
   )

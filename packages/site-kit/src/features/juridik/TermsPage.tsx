@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { bookingTerms } from '../../shared/bookingTerms'
 import { useSite } from '../../shared/SiteContext'
 import { useLocationInfo } from '../../shared/useLocationInfo'
+import { formatPhoneNational } from '../../shared/phone'
 
 /**
  * Bokningsvillkor för den valda platsen, byggda från dess riktiga
@@ -15,7 +16,7 @@ export default function TermsPage() {
   const sections = bookingTerms(location.guarantee ?? null, {
     legalName: config.legal.legalName,
     graceMinutes: location.gracePeriodMinutes,
-    phone: info.phone,
+    phone: formatPhoneNational(info.phone),
     email: info.email,
   })
   return (

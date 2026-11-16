@@ -114,7 +114,7 @@ export function pourLiquid(host: HTMLElement, canvas: HTMLCanvasElement, { delay
   }
   const liquid = new Liquid(COLUMNS)
   const styles = getComputedStyle(host)
-  const color = styles.getPropertyValue('--bq-liquid').trim() || '255, 255, 255'
+  const color = styles.getPropertyValue('--bq-liquid').trim() || '253, 250, 246'
   const alpha = Number(styles.getPropertyValue('--bq-liquid-alpha')) || 0.4
   const edge = styles.getPropertyValue('--bq-liquid-edge').trim() || color
   const edgeAlpha = Math.min(1, alpha * 4)

@@ -4,6 +4,35 @@ All notable changes to `@booqy/site-kit`. Semver: removing or renaming
 anything exported from `index.ts`, `testing.ts` or `styles.css` (including a
 CSS variable or class name a site styles) is a major version.
 
+## Unreleased
+
+- `Select`: a dropdown in the site's look instead of the system menu
+  (ARIA select-only combobox, list in a portal, a sheet from the bottom on
+  phones). Every dropdown in the kit uses it (`CategoryNav`, party size in
+  `BookingFlow`, the waitlist); the `.party-stepper select`,
+  `.booking-field select` rules now style `.combo`.
+- The restaurant's own menu categories: `getPublicMenuWithCategories()`,
+  `useMenuList().categories`, `groupByCategory(items, categories)` (groups
+  carry a `label`; unknown categories last under Övrigt) and an optional
+  `categories` prop on `CategoryNav`. `MenuCategory` is now a string;
+  `CATEGORY_ORDER`/`CATEGORY_LABEL` stay as the four defaults.
+- Allergens (`PublicMenuItem.allergens`, `allergenText()`) shown on `Menu`
+  and the order page; option groups (`PublicMenuItem.options`) picked in a
+  dialog when ordering, sent as `options` per line (the server prices them).
+- `imageKey` may be null (a dish without photo shows the empty plate).
+- Phone numbers: a Swedish mobile number typed without the 0 ("70 174 06 05")
+  becomes +46701740605 in `PhoneInput`/`toE164` and is accepted by
+  `normalizePhone`, which now lives in `shared/phone` and also refuses
+  Swedish numbers of the wrong length (same rules as the server). New
+  `formatPhoneNational` ("070-174 06 05"), `phoneHref` ("tel:+46701740605")
+  and `PhoneLink`; the guest pages (also the privacy policy contact) show
+  restaurant numbers that way. 010 and 020 numbers get a 2-digit prefix,
+  and only the mobile series (070, 072, 073, 076, 079) are split as 07x, so
+  "+46771123456" shows as "0771-12 34 56".
+- `PublicMenuItem.imageFocus` (the dish photo's focal point, set in admin)
+  and `menuImagePosition()`; `Menu` and the order pages crop dish photos
+  at that point (`Plate` takes a `position`). Missing = the centre.
+
 ## 0.1.0 (2026-10-27)
 
 First version, extracted from `customer-front-end` with no visible change to

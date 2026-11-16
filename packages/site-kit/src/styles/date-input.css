@@ -154,7 +154,7 @@
 .date-cal-day:disabled,
 .date-cal-today:disabled {
   color: var(--muted);
-  opacity: 0.4;
+  opacity: 0.6;
   cursor: default;
 }
 
@@ -176,4 +176,33 @@
 /* I kundsidans formulär fyller tidsfältet sin kolumn. */
 .booking-field .time-input {
   width: 100%;
+}
+
+/* --- Skyddsnät för inbyggda datum- och tidsfält ----------------------------
+   Sajten använder DateInput/TimeInput ovan. Skulle ett inbyggt fält ändå
+   dyka upp (ny kod, ett inbäddat formulär) får det aldrig sticka ut ur
+   kortet: iOS/WebKit ger <input type="date"> en egen minsta bredd och
+   centrerad text, så width: 100% ignoreras. Kalenderikonen i Chrome och
+   Edge (::-webkit-calendar-picker-indicator) ligger kvar. */
+input:is([type='date'], [type='time'], [type='datetime-local'], [type='month'], [type='week']) {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+  text-align: left;
+}
+
+:is(.booking-field, .offer-field) > input:is([type='date'], [type='time'], [type='datetime-local'], [type='month'], [type='week']) {
+  width: 100%;
+}
+
+input:is([type='date'], [type='time'], [type='datetime-local'], [type='month'], [type='week'])::-webkit-date-and-time-value {
+  min-width: 0;
+  margin: 0;
+  text-align: left;
+}
+
+input:is([type='date'], [type='time'], [type='datetime-local'], [type='month'], [type='week'])::-webkit-datetime-edit {
+  padding: 0;
 }

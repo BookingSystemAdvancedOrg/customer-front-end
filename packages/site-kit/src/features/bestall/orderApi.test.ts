@@ -30,3 +30,16 @@ describe('stockholmDate', () => {
     expect(stockholmDate(new Date('2026-12-31T23:30:00Z'))).toBe('2027-01-01')
   })
 })
+
+describe('lineKey', () => {
+  it('round-trips picks and keeps plain dishes as their id', async () => {
+    const { lineKey, parseLineKey } = await import('./orderApi')
+    expect(lineKey('pizza')).toBe('pizza')
+    expect(parseLineKey('pizza')).toEqual({ menuItemId: 'pizza', picks: [] })
+    const a = lineKey('pizza', [{ group: 'Storlek', choice: 'Stor' }, { group: 'Extra', choice: 'Ost' }])
+    const b = lineKey('pizza', [{ group: 'Extra', choice: 'Ost' }, { group: 'Storlek', choice: 'Stor' }])
+    expect(a).toBe(b)
+    expect(parseLineKey(a)).toEqual({ menuItemId: 'pizza', picks: [{ group: 'Extra', choice: 'Ost' }, { group: 'Storlek', choice: 'Stor' }] })
+    expect(parseLineKey('pizza#not json')).toEqual({ menuItemId: 'pizza', picks: [] })
+  })
+})

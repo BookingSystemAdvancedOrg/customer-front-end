@@ -2,15 +2,15 @@ import { describe, expect, it } from 'vitest'
 import { accentPair, deepenForLight, liftForDark, textOn } from './SiteProvider'
 
 describe('textOn', () => {
-  it('uses white on dark colours and near-black on light ones', () => {
-    expect(textOn('#350001')).toBe('#ffffff')
-    expect(textOn('#0071e3')).toBe('#ffffff')
+  it('uses off-white on dark colours and near-black on light ones', () => {
+    expect(textOn('#350001')).toBe('#fdfaf6')
+    expect(textOn('#0071e3')).toBe('#fdfaf6')
     expect(textOn('#e8d4b8')).toBe('#1d1a1a')
-    expect(textOn('#fff')).toBe('#1d1a1a')
+    expect(textOn('#fdfaf6')).toBe('#1d1a1a')
   })
 
-  it('falls back to white for values that are not hex colours', () => {
-    expect(textOn('red')).toBe('#ffffff')
+  it('falls back to off-white for values that are not hex colours', () => {
+    expect(textOn('red')).toBe('#fdfaf6')
   })
 })
 
@@ -54,7 +54,7 @@ describe('accentPair', () => {
   const ratio = (a: string, b: string) => (Math.max(lum(a), lum(b)) + 0.05) / (Math.min(lum(a), lum(b)) + 0.05)
 
   it('keeps a readable brand colour as it is in light mode', () => {
-    expect(accentPair('#350001', 'light')).toEqual({ accent: '#350001', onAccent: '#ffffff' })
+    expect(accentPair('#350001', 'light')).toEqual({ accent: '#350001', onAccent: '#fdfaf6' })
     expect(accentPair('#ffd60a', 'light')).toEqual({ accent: '#ffd60a', onAccent: '#1d1a1a' })
   })
 
@@ -69,6 +69,6 @@ describe('accentPair', () => {
   })
 
   it('leaves invalid input untouched', () => {
-    expect(accentPair('nope', 'light')).toEqual({ accent: 'nope', onAccent: '#ffffff' })
+    expect(accentPair('nope', 'light')).toEqual({ accent: 'nope', onAccent: '#fdfaf6' })
   })
 })

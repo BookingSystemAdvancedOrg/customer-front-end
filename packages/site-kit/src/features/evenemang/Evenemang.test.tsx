@@ -133,7 +133,9 @@ describe('EvenemangDetaljPage', () => {
     for (let i = 0; i < 3; i++) fireEvent.click(more)
     expect(screen.getByLabelText('Antal Vuxen')).toHaveTextContent('3')
     expect(more).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'En Tidig fågel till' })).toBeDisabled()
+    // a sold-out ticket shows one clear badge instead of a dead stepper
+    expect(screen.queryByRole('button', { name: 'En Tidig fågel till' })).not.toBeInTheDocument()
+    expect(screen.getByText('Slutsåld')).toHaveClass('bq-chip')
     expect(screen.getByText('Totalt 1 350 kr')).toBeInTheDocument()
   })
 

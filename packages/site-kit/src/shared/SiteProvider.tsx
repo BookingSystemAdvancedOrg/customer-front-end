@@ -40,15 +40,17 @@ function contrast(a: [number, number, number], b: [number, number, number]): num
 const toHex = (rgb: [number, number, number]) =>
   '#' + rgb.map((v) => Math.round(v).toString(16).padStart(2, '0')).join('')
 
-/** Text på accentfärgen: vit på mörka färger, nästan svart på ljusa (t.ex.
+/** Booqys benvita (aldrig rent vitt): text på mörka färger och det ljusa man blandar mot. */
+const OFF_WHITE: [number, number, number] = [253, 250, 246]
+
+/** Text på accentfärgen: benvit på mörka färger, nästan svart på ljusa (t.ex.
  * guld) - så knappar alltid går att läsa (WCAG-kontrast). */
 export function textOn(hex: string): string {
   const rgb = parseHex(hex)
-  if (!rgb) return '#ffffff'
-  return contrast(rgb, [255, 255, 255]) >= contrast(rgb, [29, 26, 26]) ? '#ffffff' : '#1d1a1a'
+  if (!rgb) return '#fdfaf6'
+  return contrast(rgb, OFF_WHITE) >= contrast(rgb, [29, 26, 26]) ? '#fdfaf6' : '#1d1a1a'
 }
 
-const WHITE: [number, number, number] = [255, 255, 255]
 const NEAR_BLACK: [number, number, number] = [29, 26, 26]
 /** Kvittopapperet i mörkt läge: det accentfärgen som fyllning ska stå emot. */
 const TICKET_DARK: [number, number, number] = [42, 37, 35]
@@ -56,27 +58,27 @@ const TICKET_DARK: [number, number, number] = [42, 37, 35]
 const mix = (rgb: [number, number, number], to: [number, number, number], t: number) =>
   rgb.map((v, i) => v + (to[i] - v) * t) as [number, number, number]
 
-/** Bästa kontrast någon text (vit eller nästan svart) får på färgen. */
+/** Bästa kontrast någon text (benvit eller nästan svart) får på färgen. */
 function textContrast(rgb: [number, number, number]): number {
-  return Math.max(contrast(rgb, WHITE), contrast(rgb, NEAR_BLACK))
+  return Math.max(contrast(rgb, OFF_WHITE), contrast(rgb, NEAR_BLACK))
 }
 
 /**
  * Restaurangens färg som den används på knappar och bandet, med den text
- * som går att läsa på den. Ljust läge behåller färgen; bara om varken vit
+ * som går att läsa på den. Ljust läge behåller färgen; bara om varken benvit
  * eller svart text når 4,5:1 (mellantoner) knuffas den det minsta som
  * behövs. Mörkt läge ljusar upp den tills den som fyllning står emot
  * kvittopapperet (3:1) och texten på den läses (4,5:1).
  */
 export function accentPair(hex: string, mode: 'light' | 'dark'): { accent: string; onAccent: string } {
   const rgb = parseHex(hex)
-  if (!rgb) return { accent: hex, onAccent: '#ffffff' }
+  if (!rgb) return { accent: hex, onAccent: '#fdfaf6' }
   let best = rgb
   if (mode === 'light') {
     if (textContrast(rgb) < 4.5) {
       for (let t = 0.05; t <= 1.0001; t += 0.05) {
         const darker = mix(rgb, NEAR_BLACK, t)
-        const lighter = mix(rgb, WHITE, t)
+        const lighter = mix(rgb, OFF_WHITE, t)
         if (textContrast(darker) >= 4.5) {
           best = darker
           break
@@ -88,9 +90,9 @@ export function accentPair(hex: string, mode: 'light' | 'dark'): { accent: strin
       }
     }
   } else {
-    best = WHITE
+    best = OFF_WHITE
     for (let t = 0; t <= 1.0001; t += 0.05) {
-      const mixed = mix(rgb, WHITE, t)
+      const mixed = mix(rgb, OFF_WHITE, t)
       if (contrast(mixed, TICKET_DARK) >= 3 && textContrast(mixed) >= 4.5) {
         best = mixed
         break
@@ -102,7 +104,7 @@ export function accentPair(hex: string, mode: 'light' | 'dark'): { accent: strin
 }
 
 /**
- * Ljusar upp en färg mot vitt tills den når `min` i kontrast mot mörkt
+ * Ljusar upp en färg mot benvitt tills den når `min` i kontrast mot mörkt
  * läges yta. Mörka märkesfärger (t.ex. Booqys #350001) försvinner
  * annars mot svart bakgrund.
  */
@@ -113,10 +115,10 @@ export function liftForDark(hex: string, min: number): string {
   // skrivbordet: annars blir länkar i formulär för svaga.
   const surface: [number, number, number] = [51, 46, 43]
   for (let t = 0; t <= 1.0001; t += 0.05) {
-    const mixed = rgb.map((v) => v + (255 - v) * t) as [number, number, number]
+    const mixed = rgb.map((v, i) => v + (OFF_WHITE[i] - v) * t) as [number, number, number]
     if (contrast(mixed, surface) >= min) return toHex(mixed)
   }
-  return '#ffffff'
+  return '#fdfaf6'
 }
 
 /**

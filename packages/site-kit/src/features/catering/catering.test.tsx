@@ -21,10 +21,17 @@ vi.mock('./cateringApi', async (orig) => {
     [k, k in api ? (...a: unknown[]) => (api as Record<string, (...x: unknown[]) => unknown>)[k](...a) : v]))
 })
 const getPublicMenu = vi.fn()
-vi.mock('../meny/menuApi', async (orig) => ({
-  ...(await orig<typeof import('../meny/menuApi')>()),
-  getPublicMenu: (...a: unknown[]) => getPublicMenu(...a),
-}))
+const menuCategories = vi.hoisted(() => ({ list: undefined as undefined | { categoryId: string; name: string }[] }))
+vi.mock('../meny/menuApi', async (orig) => {
+  const real = await orig<typeof import('../meny/menuApi')>()
+  return {
+    ...real,
+    getPublicMenuWithCategories: async (...a: unknown[]) => ({
+      items: await getPublicMenu(...a),
+      categories: menuCategories.list ?? real.DEFAULT_CATEGORIES,
+    }),
+  }
+})
 vi.mock('../../shared/api', async (orig) => ({
   ...(await orig<typeof import('../../shared/api')>()),
   isApiConfigured: () => true,
@@ -85,6 +92,7 @@ beforeEach(() => {
   sessionStorage.clear()
   Object.values(api).forEach((f) => f.mockReset())
   getPublicMenu.mockReset()
+  menuCategories.list = undefined
   assign.mockReset()
   vi.stubGlobal('location', { ...window.location, assign })
 })
@@ -219,6 +227,37 @@ describe('CateringPage', () => {
     await user.type(screen.getByLabelText('Portioner Kycklingspett'), '20')
     const cart = screen.getByRole('complementary', { name: 'Kalkyl' })
     expect(await within(cart).findByText(/utanför restaurangens leveransområde/)).toBeInTheDocument()
+  })
+
+  it("groups the dishes by the restaurant's own categories", async () => {
+    api.getSettings.mockResolvedValue(SETTINGS)
+    api.getTiers.mockResolvedValue(TIERS)
+    api.getCateringMenu.mockResolvedValue({ dishes: [], packages: [] })
+    menuCategories.list = [{ categoryId: 'pizzor', name: 'Pizzor' }, { categoryId: 'mains', name: 'Husmanskost' }]
+    getPublicMenu.mockResolvedValue([
+      { menuItemId: 'p1', name: 'Margherita', description: '', price: 110, category: 'pizzor' },
+      { menuItemId: 'm1', name: 'Lasagne', description: '', price: 50, category: 'mains' },
+    ])
+    renderCalculator()
+    const pizzor = await screen.findByRole('region', { name: 'Pizzor' })
+    expect(within(pizzor).getByText('Margherita')).toBeInTheDocument()
+    expect(within(screen.getByRole('region', { name: 'Husmanskost' })).getByText('Lasagne')).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Övrigt' })).not.toBeInTheDocument()
+  })
+
+  it('says who acts when the form cannot load, and tries again in place', async () => {
+    const user = userEvent.setup()
+    const { ApiError } = await import('../../shared/api')
+    api.getSettings.mockRejectedValueOnce(new ApiError(503, 'unavailable')).mockResolvedValue(SETTINGS)
+    api.getTiers.mockResolvedValue([])
+    api.getCateringMenu.mockResolvedValue({ dishes: [{ dishId: 'd1', name: 'Kycklingspett', pricePerPortion: 85 }], packages: [] })
+    renderCalculator()
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent(/Cateringformuläret kunde inte laddas\. Försök igen, eller ring .+ på /)
+    expect(within(alert).getByRole('link')).toHaveAttribute('href', expect.stringMatching(/^tel:/))
+    await user.click(screen.getByRole('button', { name: 'Försök igen' }))
+    expect(await screen.findByLabelText('Antal gäster')).toBeInTheDocument()
+    expect(api.getSettings).toHaveBeenCalledTimes(2)
   })
 
   it('says so when the restaurant has catering switched off', async () => {

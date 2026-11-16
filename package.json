@@ -11,7 +11,10 @@
     "test": "npm test -w @booqy/brand && npm test -w @booqy/site-kit && vitest run",
     "brand-lint": "node packages/brand/scripts/brand-lint.mjs --config brand-lint.config.json",
     "test:e2e": "playwright test",
-    "typecheck:e2e": "tsc -p e2e/tsconfig.json"
+    "typecheck:e2e": "tsc -p e2e/tsconfig.json",
+    "test:ui": "playwright test -c e2e-ui/playwright.config.ts",
+    "test:ui:update": "playwright test -c e2e-ui/playwright.config.ts --update-snapshots all",
+    "typecheck:ui": "tsc -p e2e-ui/tsconfig.json"
   },
   "dependencies": {
     "@booqy/brand": "0.1.0",
@@ -21,6 +24,7 @@
     "react-router-dom": "^7.18.2"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
     "@playwright/test": "^1.63.0",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.2",

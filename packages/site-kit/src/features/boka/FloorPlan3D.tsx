@@ -23,13 +23,9 @@ import { CHAIR_D, CHAIR_W, chairs } from './chairs'
  * fast pixelkonstant (som i admin) eftersom API:t inte behöver returnera en
  * höjd som ser bra ut i en 3D-scen - bara golvplanets x/z är skalenligt.
  *
- * OBS: Kassan och skillnaden entré/kök syns aldrig här - inte en bugg i den
- * här komponenten, utan att `GET /locations/{id}/layout/active` (och
- * admin-front-ends `LayoutElement`-modell i botten) aldrig lagrar dem alls.
- * Kassan finns bara lokalt i adminens webbläsare (localStorage), och en
- * dörr sparas bara som generisk "door" utan kök/entré-flagga. Se
- * backend-tasken om att lägga till en fixture-typ och ett kind-fält på
- * dörren - tills dess finns det inget för den här sidan att rita.
+ * En kassa (`cashRegister`) från en äldre layout ritas aldrig: Booqy är
+ * bara online, och `getPublicActiveLayout` filtrerar bort den redan.
+ * Dörrens `kind` (entré/kök) används inte här: alla dörrar ritas likadant.
  */
 
 const SCALE = 42

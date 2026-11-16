@@ -1,12 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Button } from '@booqy/brand'
 import { isApiConfigured } from '../../shared/api'
 import { useSite } from '../../shared/SiteContext'
+import { useLocationInfo } from '../../shared/useLocationInfo'
+import { PhoneLink } from '../../shared/PhoneLink'
 import { PhoneInput } from '../../shared/PhoneInput'
 import { normalizePhone, validEmail } from '../boka/bookingApi'
 import { TurnstileWidget } from '../boka/TurnstileWidget'
-import { CATEGORY_LABEL, getPublicMenu, groupByCategory } from '../meny/menuApi'
+import { DEFAULT_CATEGORIES, getPublicMenuWithCategories, groupByCategory } from '../meny/menuApi'
+import type { MenuCategoryEntry } from '../meny/menuApi'
 import { useStickyCart } from '../../shared/useStickyCart'
 import type { PublicMenuItem } from '../meny/menuApi'
 import {
@@ -119,7 +123,10 @@ export default function CateringPage() {
   const [tiers, setTiers] = useState<Tier[]>([])
   const [cateringMenu, setCateringMenu] = useState<CateringMenu>({ dishes: [], packages: [] })
   const [legacyMenu, setLegacyMenu] = useState<PublicMenuItem[]>([])
-  const [loadError, setLoadError] = useState<string | null>(null)
+  const [legacyCategories, setLegacyCategories] = useState<MenuCategoryEntry[]>(DEFAULT_CATEGORIES)
+  const info = useLocationInfo()
+  const [loadError, setLoadError] = useState(false)
+  const [attempt, setAttempt] = useState(0)
   const [quantities, setQuantities] = useState<Record<string, number>>({})
   const [form, setForm] = useState<Form>(EMPTY)
   const [error, setError] = useState<string | null>(null)
@@ -137,20 +144,24 @@ export default function CateringPage() {
     Promise.all([getSettings(locationId), getTiers(locationId),
       getCateringMenu(locationId).catch(() => ({ dishes: [], packages: [] }))])
       .then(async ([s, t, m]) => {
-        const legacy = m.dishes.length || m.packages.length ? [] : (await getPublicMenu(locationId)).filter((d) => !d.alcohol)
+        const full = m.dishes.length || m.packages.length
+          ? { items: [], categories: DEFAULT_CATEGORIES }
+          : await getPublicMenuWithCategories(locationId)
+        const legacy = full.items.filter((d) => !d.alcohol)
         if (cancelled) return
         setSettings(s)
         setTiers(t)
         setCateringMenu(m)
         setLegacyMenu(legacy)
+        setLegacyCategories(full.categories)
         setForm((f) => ({ ...f, deliveryDate: f.deliveryDate || firstDate(s.advanceDays),
           fulfilment: s.delivery ? 'delivery' : 'pickup' }))
       })
-      .catch((err: unknown) => !cancelled && setLoadError(errorMessage(err)))
+      .catch(() => !cancelled && setLoadError(true))
     return () => {
       cancelled = true
     }
-  }, [locationId])
+  }, [locationId, attempt])
 
   const set = <K extends keyof Form>(key: K, value: Form[K]) => {
     setForm((f) => ({ ...f, [key]: value }))
@@ -261,7 +272,19 @@ export default function CateringPage() {
     }
   }
 
-  if (loadError) return <p className="notice error" role="alert">{loadError}</p>
+  if (loadError) {
+    // Gästen kan försöka igen direkt, eller ringa restaurangen.
+    return (
+      <section className="page-hero page-prose catering-load-error" data-bq-theme="restaurant">
+        <h1>Catering</h1>
+        <p role="alert">
+          Cateringformuläret kunde inte laddas. Försök igen, eller ring {info.name}
+          {info.phone ? <> på <PhoneLink phone={info.phone} /></> : null}.
+        </p>
+        <Button variant="primary" onClick={() => { setLoadError(false); setAttempt((n) => n + 1) }}>Försök igen</Button>
+      </section>
+    )
+  }
   if (!settings) return <SkelCard label="Hämtar cateringmenyn" lines={6} />
   if (!settings.enabled) {
     return <p className="notice" role="status">{config.tenant.name} tar inte emot cateringförfrågningar just nu.</p>
@@ -359,9 +382,9 @@ export default function CateringPage() {
             </section>
           )}
 
-          {groupByCategory(legacyMenu).map((group) => (
-            <section key={group.category} aria-label={CATEGORY_LABEL[group.category]}>
-              <h2 className="menu-content-title">{CATEGORY_LABEL[group.category]}</h2>
+          {groupByCategory(legacyMenu, legacyCategories).map((group) => (
+            <section key={group.category} aria-label={group.label}>
+              <h2 className="menu-content-title">{group.label}</h2>
               <ul className="catering-dishes">
                 {group.items.map((dish) => (
                   <li key={dish.menuItemId}>
