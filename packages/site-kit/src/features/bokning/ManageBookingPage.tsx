@@ -1,5 +1,6 @@
-import { useContext, useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useContext, useEffect, useRef, useState } from 'react'
+import { Link, useParams } from 'react-router-dom'
+import { ApiError } from '../../shared/api'
 import {
   bookingErrorMessage,
   cancelGuestReservation,
@@ -16,9 +17,10 @@ import { bookingEvent, restaurantName } from '../../shared/calendar'
 import { SiteContext } from '../../shared/SiteContext'
 import { SkelLines } from '../../shared/Skeleton'
 import { PhoneLink } from '../../shared/PhoneLink'
+import { formatPhoneNational } from '../../shared/phone'
 
 const STATUS_TEXT: Record<string, string> = {
-  pending: 'Väntar på kortgaranti',
+  pending: 'Inte klar',
   expired: 'Inte slutförd - bordet släpptes',
   reserved: 'Bokad',
   arrived: 'Välkommen!',
@@ -55,6 +57,7 @@ export default function ManageBookingPage() {
   const [confirming, setConfirming] = useState(false)
   const [acceptFee, setAcceptFee] = useState(false)
   const [busy, setBusy] = useState(false)
+  const feeRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (!token) return
@@ -81,7 +84,17 @@ export default function ManageBookingPage() {
       setBooking(await cancelGuestReservation(locationId, reservationId, token, acceptFee))
       setConfirming(false)
     } catch (err) {
-      setError(bookingErrorMessage(err))
+      // Avgiften kan ha börjat gälla efter att sidan laddades: visa den nya
+      // avgiften och rutan att godkänna den, med frågan kvar öppen.
+      const newFee = err instanceof ApiError && err.message === 'fee_applies' ? Number(err.body.fee) : NaN
+      if (newFee > 0) {
+        setBooking((b) => (b?.guarantee ? { ...b, guarantee: { ...b.guarantee, cancellationFee: newFee } } : b))
+        setAcceptFee(false)
+        // Rutan som behöver kryssas i får fokus när den har ritats.
+        requestAnimationFrame(() => feeRef.current?.focus())
+      }
+      const phone = booking?.location?.phoneNumber
+      setError(bookingErrorMessage(err, phone ? formatPhoneNational(phone) : undefined))
     } finally {
       setBusy(false)
     }
@@ -98,7 +111,7 @@ export default function ManageBookingPage() {
           <SkelLines n={5} />
         </div>
       )}
-      {error && <p className="notice error" role="alert">{error}</p>}
+      {error && <p id="manage-booking-error" className="notice error" role="alert">{error}</p>}
       {booking && (
         <>
           <p className="booking-status" aria-live="polite">{STATUS_TEXT[booking.status] ?? booking.status}</p>
@@ -122,8 +135,7 @@ export default function ManageBookingPage() {
           )}
           {booking.status === 'pending' && (
             <p className="notice" role="status">
-              Bokningen är inte klar: kortgarantin är inte bekräftad. Lägg in kortet där du bokade -
-              annars släpps bordet efter 20 minuter.
+              Bokningen blev inte klar. <Link to="/boka-bord">Gör en ny bokning</Link>.
             </p>
           )}
           {booking.guarantee?.cardOnFile && booking.cancellable && <GuaranteeTermsText booking={booking} />}
@@ -143,7 +155,8 @@ export default function ManageBookingPage() {
               <p>Vill du avboka bordet {formatDate(booking.date)} kl {booking.startTime}?</p>
               {fee > 0 && (
                 <label className="booking-check fee-accept">
-                  <input type="checkbox" checked={acceptFee} onChange={(e) => setAcceptFee(e.target.checked)} />
+                  <input ref={feeRef} type="checkbox" checked={acceptFee} onChange={(e) => setAcceptFee(e.target.checked)}
+                    aria-describedby={error ? 'manage-booking-error' : undefined} />
                   <span>
                     Det är mindre än {booking.guarantee!.cancelCutoffHours} timmar kvar. Jag godkänner att{' '}
                     <strong>{formatFee(fee)}</strong> debiteras mitt kort.

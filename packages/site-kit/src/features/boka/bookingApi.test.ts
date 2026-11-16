@@ -45,7 +45,7 @@ describe('errors', () => {
     [new ApiError(409, 'table_taken'), 'hann bokas'],
     [new ApiError(409, 'already_started'), 'redan börjat'],
     [new ApiError(404, 'not found'), 'hittades inte'],
-    [new ApiError(400, 'phone must be valid'), 'phone must be valid'],
+    [new ApiError(400, 'phone must be valid'), 'Kontrollera fälten, eller ring restaurangen.'],
     [new ApiError(503, 'x'), 'kunde inte genomföras'],
     [new ApiError(400, 'startTime is not a bookable time for this date'), 'Tiden går inte att boka längre'],
     [new ApiError(400, "tableIds contains a table that isn't bookable at this time"), 'Välj bord igen'],
@@ -66,6 +66,14 @@ describe('errors', () => {
     ]) {
       expect(bookingErrorMessage(new ApiError(400, message))).not.toMatch(/Kontrollera uppgifterna/)
     }
+  })
+
+  it('never appends an unknown English server message and names the restaurant phone', () => {
+    const err = new ApiError(400, 'the booking must be for the held date, time, tables and party size')
+    expect(bookingErrorMessage(err)).not.toMatch(/the booking must/)
+    expect(bookingErrorMessage(err, '08-123 456')).toBe(
+      'Något i uppgifterna stämmer inte. Kontrollera fälten, eller ring restaurangen på 08-123 456.',
+    )
   })
 
   it('tells which choice went stale', () => {

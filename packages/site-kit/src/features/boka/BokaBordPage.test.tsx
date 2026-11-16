@@ -333,6 +333,13 @@ describe('BokaBordPage', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Fyll i ett giltigt telefonnummer, t.ex. 070-123 45 67.')
     expect(posts('/reservations')).toHaveLength(0)
+    const phone = screen.getByLabelText('Telefon')
+    expect(phone).toHaveAttribute('aria-invalid', 'true')
+    expect(phone).toHaveAttribute('aria-describedby', 'booking-form-error')
+    expect(phone).toHaveFocus()
+    expect(screen.getByLabelText('Namn')).not.toHaveAttribute('aria-invalid')
+    await user.type(phone, '9')
+    expect(phone).not.toHaveAttribute('aria-invalid')
   })
 
   it('keeps the times when a refresh fails on the network', async () => {

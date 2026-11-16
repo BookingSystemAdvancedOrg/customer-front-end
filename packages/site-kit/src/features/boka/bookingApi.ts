@@ -300,8 +300,9 @@ export function turnstileMissing(err: unknown): boolean {
   return err instanceof ApiError && err.status === 400 && /^turnstile token is required/.test(err.message)
 }
 
-/** Svenska felmeddelanden för API:ts felkoder. */
-export function bookingErrorMessage(err: unknown): string {
+/** Svenska felmeddelanden för API:ts felkoder. `phone` är restaurangens
+ * nummer, som gästen kan ringa när felet inte går att peka ut. */
+export function bookingErrorMessage(err: unknown, phone?: string): string {
   if (err instanceof DOMException && err.name === 'TimeoutError') {
     return 'Det tog för lång tid att svara. Försök igen.'
   }
@@ -338,7 +339,7 @@ export function bookingErrorMessage(err: unknown): string {
       const match = err.message.match(pattern)
       if (match) return text(match)
     }
-    return `Kontrollera uppgifterna: ${err.message}`
+    return `Något i uppgifterna stämmer inte. Kontrollera fälten, eller ring restaurangen${phone ? ` på ${phone}` : ''}.`
   }
   if (err.status === 429) return 'För många försök. Vänta en stund och försök igen.'
   return 'Bokningen kunde inte genomföras just nu. Försök igen om en stund.'
