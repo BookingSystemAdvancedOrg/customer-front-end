@@ -8,6 +8,8 @@ export const sitePages = {
   booking: () => import('./features/boka/BokaBordPage'),
   manageBooking: () => import('./features/bokning/ManageBookingPage'),
   order: () => import('./features/bestall/BestallPage'),
+  /** Dit en gammal QR-kod på bordet leder: beställ och betala i kassan. */
+  kassan: () => import('./features/bestall/KassanPage'),
   orderStatus: () => import('./features/bestall/OrderStatusPage'),
   catering: () => import('./features/catering/CateringPage'),
   cateringRequest: () => import('./features/catering/CateringRequestPage'),

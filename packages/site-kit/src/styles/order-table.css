@@ -1,4 +1,4 @@
-/* Beställning vid bordet: bordet från QR-koden syns tydligt överst (BestallPage). */
+/* Platsen under ordernumret (OrderStatusPage): Avhämtning, eller bordet på äldre beställningar (Bord 3). */
 .order-table-chip {
   display: inline-flex;
   align-items: center;

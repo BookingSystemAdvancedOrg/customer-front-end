@@ -52,7 +52,7 @@ export interface SiteLocation {
   gracePeriodMinutes?: number | null
   specialDays?: SpecialDay[]
   /** Hur man kan beställa här (null/saknas = ingen beställning). */
-  ordering?: { pickup: boolean; table: boolean; prepMinutes: number } | null
+  ordering?: { pickup: boolean; prepMinutes: number } | null
   /** Cateringkalkylen är påslagen för platsen (cateringSettings.enabled). */
   catering?: boolean
   /** Med kö påslaget: om gäster själva får ställa sig i kö på sajten. */

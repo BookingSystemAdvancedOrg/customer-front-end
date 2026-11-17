@@ -10,8 +10,8 @@ web
 
 Guests of a restaurant that uses Booqy: people deciding where to eat, ordering
 takeaway, booking a table, or ordering catering for work. Mostly on a phone,
-often in a hurry or on the move (on the way home, standing in the queue,
-sitting at the table after scanning the QR code), sometimes at a desk for
+often in a hurry or on the move (on the way home, standing in the queue),
+sometimes at a desk for
 catering. Every age and level of tech comfort: the bar is "a child could do
 it".
 
@@ -21,7 +21,7 @@ restaurant owners as what their guests will get.
 ## Product Purpose
 
 The restaurant's own website on its own domain: menu, online ordering
-(pickup and QR code at the table), table booking, catering requests, plus the
+(pickup, paid online), table booking, catering requests, plus the
 guest pages linked from SMS/email (manage or cancel a booking, follow an
 order, see and sign a catering offer). Success is a guest who goes from
 landing to a placed order or confirmed booking quickly and without doubt, and
@@ -42,7 +42,9 @@ own floor plan, with live availability.
   about text, social links), enabled features, locations and legal entity.
   No restaurant data lives in the code.
 - Features are per restaurant and per location: reservations, ordering
-  (pickup and/or table QR), catering. Pages and nav items exist only for
+  (pickup only; ordering and paying by QR code at the table was removed
+  2026-11-17, an old table QR code shows "Beställ och betala i kassan"),
+  catering. Pages and nav items exist only for
   enabled features.
 - Multiple locations per restaurant; the guest picks one.
 - Swedish only. Guests pay with card, Apple Pay and Google Pay (Stripe).

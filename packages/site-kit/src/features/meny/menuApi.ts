@@ -84,7 +84,7 @@ export interface PublicMenuItem {
   allergens?: string[]
   /** Tillval gästen väljer vid beställning. */
   options?: OptionGroup[]
-  /** Innehåller alkohol: kan bara beställas vid bordet. */
+  /** Innehåller alkohol: går inte att beställa för avhämtning. */
   alcohol?: boolean
   /** Bildens fokuspunkt i hela procent (admin väljer den); saknas = mitten. */
   imageFocus?: { x: number; y: number } | null

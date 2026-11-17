@@ -3,7 +3,7 @@ import { ApiError } from '../../shared/api'
 import { isGiftCardError, knownOrderError, orderErrorMessage, stockholmDate, vatBreakdown, vatRate } from './orderApi'
 
 describe('vatRate (same rule as the server)', () => {
-  it('uses 25 % for alcohol and 12 % at the table', () => {
+  it('uses 25 % for alcohol and 12 % at the table (older orders)', () => {
     expect(vatRate(true, 'pickup', '2026-10-25')).toBe(25)
     expect(vatRate(false, 'table', '2026-10-25')).toBe(12)
   })
@@ -68,7 +68,7 @@ describe('gift card errors at checkout', () => {
 
 describe('knownOrderError', () => {
   it('keeps the own answer for a known code and leaves other load failures to the page', () => {
-    expect(knownOrderError(new ApiError(400, 'table code revoked'))).toMatch(/QR-koden gäller inte längre/)
+    expect(knownOrderError(new ApiError(410, 'table_ordering_off'))).toBe('Beställ och betala i kassan i restaurangen.')
     expect(knownOrderError(new ApiError(500, 'boom'))).toBeNull()
     expect(knownOrderError(new TypeError('Failed to fetch'))).toBeNull()
   })

@@ -35,7 +35,6 @@ export interface StorageEntry {
 export const LOCATION_KEY_PREFIX = 'site-location:'
 export const SLUG_KEY = 'site-tenant-slug'
 export const CART_KEY_PREFIX = 'order-cart:'
-export const TABLE_KEY = 'order-table-code'
 export const ORDER_TOKEN_PREFIX = 'order-token:'
 export const CATERING_TOKEN_PREFIX = 'catering-token:'
 export const OFFER_CARD_KEY = 'offer-card'
@@ -77,15 +76,6 @@ export const STORAGE_REGISTRY: readonly StorageEntry[] = [
     lifetime: 'Tills fliken stängs',
     category: 'nödvändig',
     where: 'Beställning',
-  },
-  {
-    name: TABLE_KEY,
-    kind: 'sessionStorage',
-    setBy: 'Webbplatsen',
-    purpose: 'Bordet från QR-koden du skannade, så att beställningen kommer till rätt bord.',
-    lifetime: 'Tills fliken stängs',
-    category: 'nödvändig',
-    where: 'Beställning vid bordet',
   },
   {
     name: `${ORDER_TOKEN_PREFIX}{beställning}`,

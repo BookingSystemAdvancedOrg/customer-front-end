@@ -33,6 +33,7 @@ import {
   createOrder,
   MENU_ITEM_REMOVED,
   getOrdering,
+  isTableQrLink,
   isGiftCardError,
   knownOrderError,
   kronor,
@@ -47,12 +48,11 @@ import {
   rememberToken,
   saveCart,
   stepQuantity,
-  tableCodeFrom,
-  tableTitle,
   vatBreakdown,
   vatRate,
 } from './orderApi'
-import type { Cart, LineNotes, OptionPick, OrderCreated, OrderMode, OrderingState } from './orderApi'
+import type { Cart, LineNotes, OptionPick, OrderCreated, OrderingState } from './orderApi'
+import KassanPage from './KassanPage'
 import { checkCode, codeErrorMessage, discounted, normalizeCode } from '../erbjudande/offerApi'
 import type { CodeTerms } from '../erbjudande/offerApi'
 import { useStickyCart } from '../../shared/useStickyCart'
@@ -120,22 +120,29 @@ function ore(price: number): number {
 }
 
 /**
- * Beställ mat: gästen väljer rätter (1-20 av varje), fyller i namn, mobil och
- * e-post och betalar här på sidan (steg 3: kvittot med Stripes formulär i
- * sajtens tryck, shared/payment). Med QR-koden på bordet (?bord=<kod>) blir
- * det en beställning till bordet; annars avhämtning med sms när maten är
- * klar. Varukorgen sparas i fliken tills betalningen gått igenom, så den
- * finns kvar om gästen går tillbaka och ändrar.
+ * /bestall: avhämtning. En gammal QR-kod från ett bord (?bord=<kod>) visar
+ * bara att gästen beställer och betalar i kassan (KassanPage); beställning
+ * vid bordet finns inte.
  */
 export default function BestallPage() {
+  const { search } = useLocation()
+  return isTableQrLink(search) ? <KassanPage /> : <PickupOrder />
+}
+
+/**
+ * Beställ mat för avhämtning: gästen väljer rätter (1-20 av varje), fyller i
+ * namn, mobil och e-post och betalar här på sidan (steg 3: kvittot med
+ * Stripes formulär i sajtens tryck, shared/payment), och får ett sms när
+ * maten är klar. Varukorgen sparas i fliken tills betalningen gått igenom,
+ * så den finns kvar om gästen går tillbaka och ändrar.
+ */
+function PickupOrder() {
   const { config, location } = useSite()
   const info = useLocationInfo()
   const { search } = useLocation()
   const navigate = useNavigate()
   const locationId = location.locationId
-  const [tableCode] = useState(() => tableCodeFrom(search))
   const cancelledOrder = new URLSearchParams(search).get('avbruten')
-  const mode: OrderMode = tableCode ? 'table' : 'pickup'
 
   const [ordering, setOrdering] = useState<OrderingState | null>(null)
   const [stateError, setStateError] = useState<string | null>(null)
@@ -174,11 +181,11 @@ export default function BestallPage() {
   useEffect(() => {
     if (!isApiConfigured()) return
     let cancelled = false
-    getOrdering(locationId, tableCode)
+    getOrdering(locationId)
       .then((s) => !cancelled && setOrdering(s))
       .catch((err: unknown) => {
         if (cancelled) return
-        // QR-koden och liknande har ett eget svar; annars gick hämtningen fel.
+        // Kända fel har ett eget svar; annars gick hämtningen fel.
         const known = knownOrderError(err)
         if (known) setStateError(known)
         else setLoadError(true)
@@ -193,7 +200,7 @@ export default function BestallPage() {
     return () => {
       cancelled = true
     }
-  }, [locationId, tableCode, attempt])
+  }, [locationId, attempt])
 
   /** Hämta menyn och läget igen, på plats. */
   function retryLoad() {
@@ -211,7 +218,7 @@ export default function BestallPage() {
   }
 
   const byId = useMemo(() => new Map((menu ?? []).map((d) => [d.menuItemId, d])), [menu])
-  // Rätter som försvunnit från menyn (eller alkohol i avhämtning, eller
+  // Rätter som försvunnit från menyn (eller alkohol, som inte säljs för avhämtning, eller
   // tillval som inte längre finns) räknas inte. En rad = rätt + tillval.
   const lines = Object.entries(cart)
     .map(([key, quantity]) => {
@@ -226,7 +233,7 @@ export default function BestallPage() {
       return { key, dish, picks, quantity, unit: dish ? ore(dish.price) + optionsOre(dish, picks) : 0 }
     })
     .filter((l): l is { key: string; dish: PublicMenuItem; picks: OptionPick[]; quantity: number; unit: number } =>
-      Boolean(l.dish) && !(mode === 'pickup' && l.dish!.alcohol) && validPicks(l.dish!, l.picks))
+      Boolean(l.dish) && !l.dish!.alcohol && validPicks(l.dish!, l.picks))
   const subtotal = lines.reduce((sum, l) => sum + l.unit * l.quantity, 0)
   const belowMin = Boolean(code && subtotal < code.minOrderOre)
   const applied = code && !belowMin ? code : null
@@ -242,8 +249,7 @@ export default function BestallPage() {
     lines.reduce((n, l) => n + (l.dish.menuItemId === menuItemId ? l.quantity : 0), 0)
   // Servern prövar beloppet före rabatten.
   const tooLarge = subtotal > MAX_ORDER_ORE
-  const open = Boolean(ordering?.open && ordering[mode])
-  const tableName = tableTitle(ordering?.forTable)
+  const open = Boolean(ordering?.open && ordering.pickup)
   const count = lines.reduce((n, l) => n + l.quantity, 0)
   // Utan rätter finns bara brickan.
   const step: Step = lines.length ? checkout : 'cart'
@@ -429,8 +435,7 @@ export default function BestallPage() {
     try {
       const created = await createOrder({
         locationId,
-        mode,
-        ...(tableCode ? { tableCode } : {}),
+        mode: 'pickup',
         items: lines.map((l) => ({
           menuItemId: l.dish.menuItemId,
           quantity: l.quantity,
@@ -511,12 +516,10 @@ export default function BestallPage() {
   const payTotal = payment ? payment.chargedAmount ?? payment.totalAmount : total
   const gift = payment?.giftCard
   const vat = vatBreakdown(lines.map((l) => ({
-    rate: vatRate(Boolean(l.dish.alcohol), mode),
+    rate: vatRate(Boolean(l.dish.alcohol), 'pickup'),
     total: (applied ? discounted(l.unit, applied.percent) : l.unit) * l.quantity,
   })))
-  const place = mode === 'table'
-    ? (tableName ?? 'Ditt bord')
-    : `Hämtas hos ${config.tenant.name}${location.name ? `, ${location.name}` : ''}`
+  const place = `Hämtas hos ${config.tenant.name}${location.name ? `, ${location.name}` : ''}`
 
   /** Sammanfattningen till höger (och i "Visa beställning" på mobilen). */
   const summary = (
@@ -629,7 +632,7 @@ export default function BestallPage() {
                       <label className="booking-field">
                         <span>Mobilnummer</span>
                         <span className="field-hint">
-                          {mode === 'pickup' ? 'Vi sms:ar när maten lagas och när den är klar.' : 'Vi sms:ar när maten lagas.'}
+                          Vi sms:ar när maten lagas och när den är klar.
                         </span>
                         <PhoneInput value={guest.phone} onChange={(phone) => setGuest({ ...guest, phone })}
                           id={PHONE_ID} {...invalid('phone')} />
@@ -723,16 +726,9 @@ export default function BestallPage() {
   return (
     <>
       <section className="page-head" ref={headRef}>
-        <h1>{mode === 'table' ? 'Beställ till bordet' : 'Beställ för avhämtning'}</h1>
-        {mode === 'table' && tableName && (
-          <p className="order-table-chip" aria-label={`Ditt bord: ${tableName}`}>
-            {tableName}
-          </p>
-        )}
+        <h1>Beställ för avhämtning</h1>
         <p className="page-lede">
-          {mode === 'table'
-            ? `Välj, betala i mobilen - vi serverar vid ${tableName ? (/^bord /i.test(tableName) ? `bord ${tableName.slice(5)}` : tableName) : 'ditt bord'}.`
-            : `Välj, betala här och hämta hos ${config.tenant.name}. Du får ett sms när maten är klar.`}
+          {`Välj, betala här och hämta hos ${config.tenant.name}. Du får ett sms när maten är klar.`}
         </p>
         {crumbs}
       </section>
@@ -760,17 +756,15 @@ export default function BestallPage() {
       )}
       {ordering && !open && (
         <p className="notice" role="status">
-          {ordering.open && !ordering[mode]
-            ? mode === 'table'
-              ? 'Beställning vid bordet är inte påslagen - fråga personalen.'
-              : 'Avhämtning går inte att beställa online just nu.'
+          {ordering.open && !ordering.pickup
+            ? 'Avhämtning går inte att beställa online just nu.'
             : closedMessage(ordering, formatPhoneNational(info.phone))}
         </p>
       )}
       {ordering?.open && ordering.lastOrderAt && (
         <p className="order-hint">
           Sista beställning kl. {ordering.lastOrderAt}
-          {mode === 'pickup' && ordering.prepMinutes ? ` · klar ca ${ordering.prepMinutes} min efter betalning` : ''}
+          {ordering.prepMinutes ? ` · klar ca ${ordering.prepMinutes} min efter betalning` : ''}
         </p>
       )}
 
@@ -797,7 +791,7 @@ export default function BestallPage() {
                 {group.items.map((dish) => {
                   const hasOptions = Boolean(dish.options?.length)
                   const quantity = hasOptions ? inCart(dish.menuItemId) : cart[dish.menuItemId] ?? 0
-                  const blocked = mode === 'pickup' && dish.alcohol
+                  const blocked = dish.alcohol
                   const allergens = allergenText(dish.allergens)
                   return (
                     <li className={`dish dish--order${quantity ? ' is-in-cart' : ''}`} key={dish.menuItemId} data-dish={dish.menuItemId}>
@@ -810,7 +804,7 @@ export default function BestallPage() {
                       </div>
                       <div className="dish-action">
                         {blocked ? (
-                          <span className="order-only-table">Bara vid bordet</span>
+                          <span className="order-no-pickup">Ej för avhämtning</span>
                         ) : hasOptions ? (
                           <span className="dish-option-action">
                             {quantity > 0 && <span className="dish-option-count">{quantity} i brickan</span>}

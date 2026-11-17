@@ -145,6 +145,18 @@ describe('feature routes (gift cards, queue)', () => {
     expect(document.title).toBe('Sidan finns inte - Testkrogen')
   })
 
+  it('sends an old table QR code to the counter page, even without ordering in the plan', async () => {
+    for (const ordering of [false, true]) {
+      const { unmount } = renderAt('/bestall?bord=code-5', { features: { ...ALL_ON, ordering } })
+      expect(await screen.findByRole('heading', { level: 1, name: 'Beställ och betala i kassan' })).toBeInTheDocument()
+      expect(screen.queryByRole('heading', { name: /Beställ för avhämtning/ })).not.toBeInTheDocument()
+      await waitFor(() => expect(document.title).toBe('Beställ i kassan - Testkrogen'))
+      unmount()
+    }
+    renderAt('/bestall', { features: ALL_ON })
+    expect(await screen.findByRole('heading', { level: 1, name: 'Sidan finns inte' })).toBeInTheDocument()
+  })
+
   it('names the page in the tab title', async () => {
     renderAt('/kontakt', { features: ALL_ON })
     await screen.findByRole('link', { name: 'Testkrogen - startsida' })

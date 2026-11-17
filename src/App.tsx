@@ -1,7 +1,7 @@
 import { lazy } from 'react'
 import type { ReactNode } from 'react'
-import { Route, Routes } from 'react-router-dom'
-import { sitePages, useSite } from '@booqy/site-kit'
+import { Route, Routes, useLocation } from 'react-router-dom'
+import { isTableQrLink, sitePages, useSite } from '@booqy/site-kit'
 import { CustomerLayout } from './shared/CustomerLayout'
 import MenyPage from './features/meny/MenyPage'
 import KontaktPage from './features/kontakt/KontaktPage'
@@ -13,6 +13,7 @@ import NotFoundPage from './features/notfound/NotFoundPage'
 const BookingFlow = lazy(sitePages.booking)
 const ManageBooking = lazy(sitePages.manageBooking)
 const OrderFlow = lazy(sitePages.order)
+const Kassan = lazy(sitePages.kassan)
 const OrderStatus = lazy(sitePages.orderStatus)
 const CateringFlow = lazy(sitePages.catering)
 const CateringRequest = lazy(sitePages.cateringRequest)
@@ -33,8 +34,9 @@ const TicketReceive = lazy(sitePages.biljettTaEmot)
  * juridik) kommer från @booqy/site-kit; den här appen är layouten, sidorna
  * och looken. Menyn är startsida;
  * okända sökvägar skickas dit. Boka bord och dess sidor finns bara när
- * restaurangen har bokning i sin plan; Beställ (avhämtning och QR-koden på
- * bordet) bara med beställning i planen. Gästens sidor för en gjord
+ * restaurangen har bokning i sin plan; Beställ (avhämtning) bara med
+ * beställning i planen. En gammal QR-kod från ett bord (/bestall?bord=...)
+ * visar alltid "Beställ och betala i kassan", även utan beställning. Gästens sidor för en gjord
  * bokning/beställning (länkar i sms och mejl) finns alltid. Catering
  * (kalkyl -> offertförfrågan) med catering i planen; gästens sida för en
  * förfrågan (offert, BankID-signering, betalning) finns alltid.
@@ -66,7 +68,13 @@ function App() {
         {reservations && <Route path="boka-bord" element={t('Boka bord', <BookingFlow />)} />}
         {reservations && <Route path="bokningsvillkor" element={t('Bokningsvillkor', <BookingTermsPage />)} />}
         <Route path="bokning/:locationId/:reservationId" element={t('Din bokning', <ManageBooking />)} />
-        {ordering && <Route path="bestall" element={t('Beställ', <OrderFlow />)} />}
+        <Route path="bestall" element={
+          <Bestall
+            order={t('Beställ', <OrderFlow />)}
+            kassan={t('Beställ i kassan', <Kassan />)}
+            notFound={ordering ? null : t('Sidan finns inte', <NotFoundPage reservations={!!reservations} events={!!events} />)}
+          />
+        } />
         <Route path="bestallning/:locationId/:orderId" element={t('Din beställning', <OrderStatus />)} />
         {catering && <Route path="catering" element={t('Catering', <CateringFlow />)} />}
         <Route path="catering/:locationId/:requestId" element={t('Din cateringförfrågan', <CateringRequest />)} />
@@ -85,6 +93,13 @@ function App() {
       </Route>
     </Routes>
   )
+}
+
+/** /bestall: en gammal QR-kod från ett bord leder till kassan; annars avhämtning (med beställning i planen). */
+function Bestall({ order, kassan, notFound }: { order: ReactNode; kassan: ReactNode; notFound: ReactNode }) {
+  const { search } = useLocation()
+  if (isTableQrLink(search)) return kassan
+  return notFound ?? order
 }
 
 export default App

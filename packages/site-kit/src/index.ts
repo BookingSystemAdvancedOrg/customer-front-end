@@ -83,6 +83,8 @@ export type { MenuCategory, MenuCategoryEntry, OptionGroup, PublicMenuItem } fro
 export { default as BookingFlow } from './features/boka/BokaBordPage'
 export { default as ManageBooking } from './features/bokning/ManageBookingPage'
 export { default as OrderFlow } from './features/bestall/BestallPage'
+export { default as KassanPage } from './features/bestall/KassanPage'
+export { isTableQrLink } from './features/bestall/orderApi'
 export { default as OrderStatus } from './features/bestall/OrderStatusPage'
 export { default as CateringFlow } from './features/catering/CateringPage'
 export { default as CateringRequest } from './features/catering/CateringRequestPage'
