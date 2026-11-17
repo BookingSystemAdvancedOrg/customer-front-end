@@ -82,6 +82,7 @@ describe('OrderStatusPage', () => {
   it('shows the table bill with Betala notan and Beställ mer for a pay-later order', async () => {
     statuses = [order({ mode: 'table', tableLabel: '7', payLater: true, paymentStatus: 'unpaid',
       bill: { amount: 45000, count: 3, status: 'open' } })]
+    sessionStorage.setItem('order-table-code', 'qr-7')
     renderAt('#tok-sms')
     expect(await screen.findByText('Tack! Vi serverar vid bord 7.')).toBeInTheDocument()
     expect(screen.getByText('Köket har fått beställningen. Du betalar innan du går.')).toBeInTheDocument()
@@ -95,6 +96,16 @@ describe('OrderStatusPage', () => {
     expect(screen.getByRole('link', { name: 'Beställ mer' })).toHaveAttribute('href', '/bestall')
     // Betala notan hittar nyckeln i fliken.
     expect(sessionStorage.getItem(`order-token:${ID}`)).toBe('tok-sms')
+  })
+
+  it('sends a guest without the table in this tab back to the QR code, not to pickup', async () => {
+    // Statuslänken öppnad i en ny flik (mejlet): bordets kod finns inte, så /bestall vore avhämtning.
+    statuses = [order({ mode: 'table', tableLabel: '7', payLater: true, paymentStatus: 'unpaid',
+      bill: { amount: 45000, count: 3, status: 'open' } })]
+    renderAt('#tok-mail')
+    expect(await screen.findByRole('link', { name: 'Betala notan' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Beställ mer' })).not.toBeInTheDocument()
+    expect(screen.getByText('Vill du beställa mer? Skanna QR-koden på bordet.')).toBeInTheDocument()
   })
 
   it('keeps the next round in the cart when a pay-later order is paid', async () => {

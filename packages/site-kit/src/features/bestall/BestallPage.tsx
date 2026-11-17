@@ -495,7 +495,7 @@ export default function BestallPage() {
       setPayment(created)
       setBusy(false)
     } catch (err) {
-      fail(orderErrorMessage(err), isGiftCardError(err) ? 'giftCard' : null)
+      fail(orderErrorMessage(err, payLater), isGiftCardError(err) ? 'giftCard' : null)
       if (err instanceof Error && /^discount_/.test(err.message)) setCode(null)
       if (err instanceof Error && (err.message === 'menu_item_unavailable' || /^option_/.test(err.message))) {
         // En rätt har gått ut eller stängts av sedan menyn hämtades: hämta om

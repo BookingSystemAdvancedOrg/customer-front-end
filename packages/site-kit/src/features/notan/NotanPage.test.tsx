@@ -162,6 +162,32 @@ describe('NotanPage', () => {
     })
   })
 
+  it('says someone else is paying when its own started payment was taken over', async () => {
+    // Fliken minns en gammal betalning med samma belopp, men en annan gäst har tagit över notan:
+    // servern svarar bill_being_paid, och gästen måste få veta det i stället för att formuläret bara står kvar.
+    const user = userEvent.setup()
+    sessionStorage.setItem('table-bill-pay:loc-1', JSON.stringify({ billId: 'old'.padEnd(32, 'x'), billToken: 'old-tok', amount: 45000 }))
+    view = () => json(bill({ status: 'paying', paying: { startedAt: '2026-11-17T14:00:00Z', retryAfter: 80 } }))
+    payResponse = () => json({ error: 'bill_being_paid', retryAfter: 80 }, 409)
+    renderAt('/notan/loc-1', '#L.payload.sig')
+    await user.click(await screen.findByRole('button', { name: 'Betala 450 kr' }))
+    expect(await screen.findByText('Någon vid bordet betalar notan just nu. Vänta en minut och försök igen, eller fråga personalen.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Betala 450 kr' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Försök igen' })).toBeInTheDocument()
+  })
+
+  it('offers Beställ mer on an empty bill only when the table is known in this tab', async () => {
+    view = () => json(bill({ status: 'empty', amount: 0, count: 0, orders: [], vat: [] }))
+    sessionStorage.setItem(`order-token:${ORDER}`, 'order-tok')
+    const first = renderAt(`/notan/loc-1/${ORDER}`)
+    expect(await screen.findByText('Det finns inget att betala för bordet just nu.')).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Beställ mer' })).not.toBeInTheDocument()
+    first.unmount()
+    sessionStorage.setItem('order-table-code', 'qr-7')
+    renderAt(`/notan/loc-1/${ORDER}`)
+    expect(await screen.findByRole('link', { name: 'Beställ mer' })).toBeInTheDocument()
+  })
+
   it.each([
     ['bill_paid', 409, 'Notan är redan betald.'],
     ['bill_below_minimum', 409, 'Beloppet är för litet för att betala med kort. Betala hos personalen.'],

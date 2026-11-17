@@ -419,13 +419,27 @@ export function knownOrderError(err: unknown): string | null {
   return err instanceof ApiError && ORDER_ERRORS[err.message] ? ORDER_ERRORS[err.message] : null
 }
 
-export function orderErrorMessage(err: unknown): string {
+/**
+ * Vid bordet (payLater) betalas inget nu, och ett stopp hjälper inte att vänta
+ * på: telefonens tak är 8 beställningar per dag. Personalen kan alltid ta
+ * beställningen.
+ */
+const TABLE_ORDER_ERRORS: Record<string, string> = {
+  too_many_requests: 'Det har kommit många beställningar från dig på kort tid. Fråga personalen så hjälper de dig.',
+  ordering_no_payments: 'Det går inte att beställa i mobilen just nu. Fråga personalen så hjälper de dig.',
+}
+
+export function orderErrorMessage(err: unknown, atTable = false): string {
   if (err instanceof DOMException && err.name === 'TimeoutError') {
     return 'Det tog för lång tid att svara. Försök igen.'
   }
   if (!(err instanceof ApiError)) return 'Något gick fel. Försök igen.'
   const botCheck = botCheckMessage(err)
   if (botCheck) return botCheck
+  if (atTable) {
+    const code = err.status === 429 ? 'too_many_requests' : err.message
+    if (TABLE_ORDER_ERRORS[code]) return TABLE_ORDER_ERRORS[code]
+  }
   if (ORDER_ERRORS[err.message]) return ORDER_ERRORS[err.message]
   if (/^phone/.test(err.message)) return 'Fyll i ett giltigt mobilnummer, t.ex. 070-123 45 67.'
   if (/^email/.test(err.message)) return 'Fyll i en giltig e-postadress.'

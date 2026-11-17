@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { clearCart, clock, getOrder, kronor, orderErrorMessage, recallToken, rememberToken } from './orderApi'
+import { clearCart, clock, getOrder, kronor, orderErrorMessage, recallToken, rememberToken, tableCodeFrom } from './orderApi'
 import type { GuestOrder } from './orderApi'
 import { FlowSteps } from '../../shared/FlowSteps'
 import { Celebrate } from '../../shared/Celebrate'
@@ -110,6 +110,8 @@ export default function OrderStatusPage() {
   )
   const [startedAt] = useState(() => Date.now())
   const [gaveUp, setGaveUp] = useState(false)
+  // Bordet från QR-koden i den här fliken: utan det blir /bestall avhämtning.
+  const [atTable] = useState(() => Boolean(tableCodeFrom('')))
 
   useEffect(() => {
     if (!token) return
@@ -221,8 +223,9 @@ export default function OrderStatusPage() {
                 <Link className="btn-primary" to={`/notan/${encodeURIComponent(order.locationId)}/${encodeURIComponent(order.orderId)}`}>
                   Betala notan
                 </Link>
-                <Link className="btn-secondary" to="/bestall">Beställ mer</Link>
+                {atTable && <Link className="btn-secondary" to="/bestall">Beställ mer</Link>}
               </div>
+              {!atTable && <p className="cell-muted">Vill du beställa mer? Skanna QR-koden på bordet.</p>}
             </div>
           )}
           {paidStamp && <p className="booking-status stamp-ok order-paid-stamp">Betald</p>}
