@@ -73,8 +73,8 @@ describe('App on SiteProvider', () => {
   })
 })
 
-describe('feature routes (gift cards, queue, site builder)', () => {
-  const ALL_ON = { reservations: true, ordering: false, catering: false, terminal: false, giftCards: true, waitlist: true, siteBuilder: true }
+describe('feature routes (gift cards, queue)', () => {
+  const ALL_ON = { reservations: true, ordering: false, catering: false, terminal: false, giftCards: true, waitlist: true }
 
   function renderAt(path: string, tenant: Parameters<typeof siteConfig>[0], publicJoin = false) {
     window.history.replaceState(null, '', '/?restaurang=testkrogen')
@@ -102,16 +102,13 @@ describe('feature routes (gift cards, queue, site builder)', () => {
     }
   })
 
-  it('routes gift cards, balance and preview, and links Presentkort in the nav, when on', async () => {
+  it('routes gift cards and balance, and links Presentkort in the nav, when on', async () => {
     renderAt('/presentkort', { features: ALL_ON })
     expect(await screen.findByRole('heading', { name: 'Presentkort' })).toBeInTheDocument()
     expect(screen.getAllByRole('link', { name: 'Presentkort' }).length).toBeGreaterThan(0)
     cleanup()
     renderAt('/presentkort/saldo', { features: ALL_ON })
     expect(await screen.findByRole('heading', { name: 'Saldo på presentkort' })).toBeInTheDocument()
-    cleanup()
-    renderAt('/forhandsvisning', { features: ALL_ON })
-    expect(await screen.findByRole('heading', { name: 'Förhandsvisning' })).toBeInTheDocument()
   })
 
   it('routes the queue only when the location takes queue sign-ups on the site', async () => {
@@ -123,18 +120,18 @@ describe('feature routes (gift cards, queue, site builder)', () => {
     expect(await screen.findByRole('heading', { name: 'Kö' })).toBeInTheDocument()
   })
 
-  it('draws the start page as the builder start page for a published builder site, the menu otherwise', async () => {
-    renderAt('/', { features: ALL_ON, site: { mode: 'builder', version: 2 } })
-    expect(await screen.findByText('Den här sidan är på väg.')).toBeInTheDocument()
-    cleanup()
-    renderAt('/meny', { features: ALL_ON, site: { mode: 'builder', version: 2 } })
+  it('ignores what the removed site builder left on a restaurant: menu start page, no preview, no builder pages', async () => {
+    // An older /site-config, or a stored entitlement, may still carry these.
+    const stale = { features: { ...ALL_ON, siteBuilder: true }, site: { mode: 'builder', version: 2 } } as Parameters<typeof siteConfig>[0]
+    renderAt('/', stale)
     await screen.findByRole('link', { name: 'Testkrogen - startsida' })
     expect(screen.queryByText('Den här sidan är på väg.')).not.toBeInTheDocument()
-    for (const site of [{ mode: 'builder' as const, version: 0 }, { mode: 'custom' as const, version: 3 }]) {
+    await waitFor(() => expect(document.title).toBe('Testkrogen'))
+    for (const path of ['/forhandsvisning', '/en-sida']) {
       cleanup()
-      renderAt('/', { features: ALL_ON, site })
-      await screen.findByRole('link', { name: 'Testkrogen - startsida' })
-      expect(screen.queryByText('Den här sidan är på väg.')).not.toBeInTheDocument()
+      renderAt(path, stale)
+      expect(await screen.findByRole('heading', { level: 1, name: 'Sidan finns inte' })).toBeInTheDocument()
+      expect(screen.queryByRole('heading', { name: 'Förhandsvisning' })).not.toBeInTheDocument()
     }
   })
 
@@ -152,19 +149,6 @@ describe('feature routes (gift cards, queue, site builder)', () => {
     renderAt('/kontakt', { features: ALL_ON })
     await screen.findByRole('link', { name: 'Testkrogen - startsida' })
     await waitFor(() => expect(document.title).toBe('Kontakt - Testkrogen'))
-  })
-
-  it('draws unknown paths as builder pages only for a published builder site', async () => {
-    renderAt('/en-sida', { features: ALL_ON, site: { mode: 'builder', version: 0 } })
-    await screen.findByRole('link', { name: 'Testkrogen - startsida' })
-    expect(screen.queryByText('Den här sidan är på väg.')).not.toBeInTheDocument()
-    cleanup()
-    renderAt('/en-sida', { features: ALL_ON, site: { mode: 'custom', version: 3 } })
-    await screen.findByRole('link', { name: 'Testkrogen - startsida' })
-    expect(screen.queryByText('Den här sidan är på väg.')).not.toBeInTheDocument()
-    cleanup()
-    renderAt('/en-sida', { features: ALL_ON, site: { mode: 'builder', version: 2 } })
-    expect(await screen.findByText('Den här sidan är på väg.')).toBeInTheDocument()
   })
 })
 
@@ -206,16 +190,5 @@ describe('event routes (events and tickets)', () => {
       expect(screen.getAllByRole('link', { name: 'Evenemang' }).length).toBeGreaterThan(0)
       unmount()
     }
-  })
-
-  it('is not shadowed by a published builder site', async () => {
-    const tenant = { features: { reservations: true, siteBuilder: true, events: true }, site: { mode: 'builder' as const, version: 2 } }
-    renderAt('/evenemang', tenant)
-    expect(await screen.findByRole('heading', { name: 'Evenemang' })).toBeInTheDocument()
-    expect(screen.queryByText('Den här sidan är på väg.')).not.toBeInTheDocument()
-    cleanup()
-    renderAt('/biljett/ta-emot', tenant)
-    expect(await screen.findByRole('heading', { name: 'Ta emot biljett' })).toBeInTheDocument()
-    expect(screen.queryByText('Den här sidan är på väg.')).not.toBeInTheDocument()
   })
 })

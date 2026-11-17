@@ -1,7 +1,7 @@
 import { siteKitConfig } from '../config'
 import { apiGet } from './api'
 import { configureBotCheck } from './botCheck'
-import type { LocationWaitlist, SiteBuilderState, SiteFeatureKey } from './contracts'
+import type { LocationWaitlist, SiteFeatureKey } from './contracts'
 import type { BusinessHours } from './locationApi'
 import { LOCATION_KEY_PREFIX, SLUG_KEY } from './storageRegistry'
 
@@ -79,8 +79,6 @@ export interface SiteConfig {
     branding: SiteBranding
     /** Saknad nyckel = av. Strängindexet finns kvar för sajter byggda före de typade nycklarna. */
     features: Record<string, boolean> & Partial<Record<SiteFeatureKey, boolean>>
-    /** Med webbplatsbyggaren påslagen och något sparat: hur sajten ritas. */
-    site?: SiteBuilderState
   }
   legal: {
     legalName: string

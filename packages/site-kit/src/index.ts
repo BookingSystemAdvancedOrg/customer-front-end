@@ -35,7 +35,7 @@ export type {
   SitePrivacy,
   SpecialDay,
 } from './shared/site'
-export type { LocationWaitlist, SiteBuilderState, SiteFeatureKey, SiteSlotId } from './shared/contracts'
+export type { LocationWaitlist, SiteFeatureKey, SiteSlotId } from './shared/contracts'
 
 /* --- API --------------------------------------------------------------- */
 export { ApiError, apiBaseUrl, apiDelete, apiGet, apiPost, isApiConfigured } from './shared/api'

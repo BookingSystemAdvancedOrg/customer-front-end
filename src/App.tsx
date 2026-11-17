@@ -23,8 +23,6 @@ const BookingTermsPage = lazy(sitePages.bookingTerms)
 const GiftCards = lazy(sitePages.presentkort)
 const GiftCardBalance = lazy(sitePages.presentkortSaldo)
 const Queue = lazy(sitePages.ko)
-const SitePreview = lazy(sitePages.forhandsvisning)
-const BuilderPage = lazy(sitePages.builderPage)
 const Events = lazy(sitePages.evenemang)
 const EventDetail = lazy(sitePages.evenemangDetalj)
 const Tickets = lazy(sitePages.biljett)
@@ -42,9 +40,8 @@ const TicketReceive = lazy(sitePages.biljettTaEmot)
  * (personalens QR-kod för notan) finns alltid. Catering
  * (kalkyl -> offertförfrågan) med catering i planen; gästens sida för en
  * förfrågan (offert, BankID-signering, betalning) finns alltid.
- * Presentkort, kö (när platsen tar emot kö på sajten), förhandsvisning och
- * evenemang (med biljettsidorna) finns bara med funktionen i planen. En sajt från webbplatsbyggaren med en
- * publicerad version ritar startsidan och okända sökvägar som byggarens sidor; /meny är kvar.
+ * Presentkort, kö (när platsen tar emot kö på sajten) och evenemang (med
+ * biljettsidorna) finns bara med funktionen i planen.
  */
 function App() {
   const { config, location } = useSite()
@@ -53,11 +50,9 @@ function App() {
   const catering = config.tenant.features.catering
   const giftCards = config.tenant.features.giftCards
   const queue = config.tenant.features.waitlist && location.waitlist?.publicJoin
-  const siteBuilder = config.tenant.features.siteBuilder
   const events = config.tenant.features.events
-  const builder = siteBuilder && config.tenant.site?.mode === 'builder' && config.tenant.site.version > 0
   // Fliken och sökträffen säger vilken sida det är ("Boka bord - Bistro X");
-  // React 19 lyfter <title> till <head>. Byggarens sidor sätter sin egen.
+  // React 19 lyfter <title> till <head>.
   const name = config.tenant.name
   const t = (label: string, el: ReactNode) => (
     <>
@@ -68,7 +63,7 @@ function App() {
   return (
     <Routes>
       <Route element={<CustomerLayout />}>
-        <Route index element={builder ? <BuilderPage /> : <><title>{name}</title><MenyPage /></>} />
+        <Route index element={<><title>{name}</title><MenyPage /></>} />
         <Route path="meny" element={t('Meny', <MenyPage />)} />
         {reservations && <Route path="boka-bord" element={t('Boka bord', <BookingFlow />)} />}
         {reservations && <Route path="bokningsvillkor" element={t('Bokningsvillkor', <BookingTermsPage />)} />}
@@ -86,12 +81,11 @@ function App() {
         {giftCards && <Route path="presentkort" element={t('Presentkort', <GiftCards />)} />}
         {giftCards && <Route path="presentkort/saldo" element={t('Saldo på presentkort', <GiftCardBalance />)} />}
         {queue && <Route path="ko" element={t('Kö', <Queue />)} />}
-        {siteBuilder && <Route path="forhandsvisning" element={t('Förhandsvisning', <SitePreview />)} />}
         {events && <Route path="evenemang" element={t('Evenemang', <Events />)} />}
         {events && <Route path="evenemang/:eventId" element={t('Evenemang', <EventDetail />)} />}
         {events && <Route path="biljett" element={t('Dina biljetter', <Tickets />)} />}
         {events && <Route path="biljett/ta-emot" element={t('Ta emot biljett', <TicketReceive />)} />}
-        <Route path="*" element={builder ? <BuilderPage /> : t('Sidan finns inte', <NotFoundPage reservations={!!reservations} events={!!events} />)} />
+        <Route path="*" element={t('Sidan finns inte', <NotFoundPage reservations={!!reservations} events={!!events} />)} />
       </Route>
     </Routes>
   )
