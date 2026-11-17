@@ -10,7 +10,6 @@ import { PhoneInput } from '../../shared/PhoneInput'
 import { PhoneLink } from '../../shared/PhoneLink'
 import { FlowSteps } from '../../shared/FlowSteps'
 import { normalizePhone, validEmail } from '../boka/bookingApi'
-import { TurnstileWidget } from '../boka/TurnstileWidget'
 import { Plate } from '../../shared/Plate'
 import {
   allergenText,
@@ -193,9 +192,6 @@ export default function BestallPage() {
   const titleRef = useRef<HTMLHeadingElement>(null)
   const stepMoved = useRef(false)
   const headRef = useRef<HTMLDivElement>(null)
-  const turnstileSiteKey = config.turnstile?.siteKey ?? null
-  const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
-  const [turnstileReset, setTurnstileReset] = useState(0)
   const marketing = Boolean(config.tenant.features.marketing)
   // Rabattkoden: från länken i mejlet (?kod=) eller inskriven.
   const [codeInput, setCodeInput] = useState(() => new URLSearchParams(search).get('kod') ?? '')
@@ -464,7 +460,6 @@ export default function BestallPage() {
       if (gap !== step) go(gap)
       return fail(problem.message, problem.field)
     }
-    if (turnstileSiteKey && !turnstileToken) return fail('Bekräfta säkerhetskontrollen ovanför knappen.')
     setBusy(true)
     try {
       const created = await createOrder({
@@ -483,7 +478,6 @@ export default function BestallPage() {
         ...(guest.notes.trim() ? { notes: guest.notes.trim() } : {}),
         language: 'sv',
         acceptTerms: true,
-        ...(turnstileToken ? { turnstileToken } : {}),
         ...(applied ? { discountCode: applied.code } : {}),
         ...(!payLater && giftCardCode.trim() ? { giftCardCode: giftCardCode.trim() } : {}),
         ...consentFields(guest.consent, config.privacy, marketing),
@@ -527,10 +521,6 @@ export default function BestallPage() {
           })
           .catch(() => undefined)
       }
-      if (turnstileSiteKey) {
-        setTurnstileToken(null)
-        setTurnstileReset((n) => n + 1)
-      }
       setBusy(false)
     }
   }
@@ -551,10 +541,6 @@ export default function BestallPage() {
     stepMoved.current = true
     setCheckout('cart')
     setPayment(null)
-    if (turnstileSiteKey) {
-      setTurnstileToken(null)
-      setTurnstileReset((n) => n + 1)
-    }
   }
 
   // Summan som betalas: serverns belopp när beställningen finns (minus presentkortet), annars sidans.
@@ -736,10 +722,6 @@ export default function BestallPage() {
                         </summary>
                         <GuestDataNotice kind="order" />
                       </details>
-                      {turnstileSiteKey && (
-                        <TurnstileWidget siteKey={turnstileSiteKey} resetKey={turnstileReset} action="order"
-                          onToken={setTurnstileToken} />
-                      )}
                     </fieldset>
                   )}
                 </div>

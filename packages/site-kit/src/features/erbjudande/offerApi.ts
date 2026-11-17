@@ -1,4 +1,5 @@
 import { ApiError, apiGet, apiPost } from '../../shared/api'
+import { botCheckMessage } from '../../shared/botCheckMessage'
 
 /**
  * Välkomsterbjudandet (restaurangen ställer in det under Marknadsföring i
@@ -51,7 +52,6 @@ export function signUp(body: {
   locationId: string
   email: string
   consent: true
-  turnstileToken?: string
 }): Promise<{ sent: true; expiresAt?: string }> {
   return apiPost('/m/signup', body)
 }
@@ -81,11 +81,12 @@ const SIGNUP_ERRORS: Record<string, string> = {
 }
 
 export function signupErrorMessage(err: unknown): string {
+  const botCheck = botCheckMessage(err)
+  if (botCheck) return botCheck
   if (err instanceof ApiError) {
     if (SIGNUP_ERRORS[err.message]) return SIGNUP_ERRORS[err.message]
     if (err.status === 429) return SIGNUP_ERRORS.too_many_requests
     if (/^email/.test(err.message)) return 'Fyll i en giltig e-postadress.'
-    if (/^turnstile/.test(err.message)) return 'Bekräfta säkerhetskontrollen och försök igen.'
   }
   return 'Det gick inte att skicka koden just nu. Försök igen om en stund.'
 }

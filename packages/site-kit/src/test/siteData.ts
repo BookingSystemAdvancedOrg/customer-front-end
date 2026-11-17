@@ -33,7 +33,7 @@ export function siteConfig(over: Partial<SiteConfig['tenant']> = {}): SiteConfig
       },
     ],
     stripe: { publishableKey: null, accountId: null },
-    turnstile: { siteKey: null },
+    botCheck: { integrationUrl: null },
   }
 }
 

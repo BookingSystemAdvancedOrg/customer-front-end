@@ -1,4 +1,5 @@
 import { ApiError, apiBaseUrl, apiDelete, apiGet, apiPost } from '../../shared/api'
+import { botCheckMessage } from '../../shared/botCheckMessage'
 import { TICKET_PURCHASE_KEY } from '../../shared/storageRegistry'
 import { menuImageUrl } from '../meny/menuApi'
 
@@ -124,7 +125,6 @@ export interface CheckoutBody {
   buyerName: string
   buyerEmail: string
   buyerPhone?: string
-  turnstileToken?: string
 }
 
 const loc = (locationId: string) => `/public/locations/${encodeURIComponent(locationId)}/events`
@@ -210,7 +210,6 @@ const ERRORS: Record<string, string> = {
   changed_retry: 'Biljetterna har ändrats sedan sidan laddades. Kontrollera valet och försök igen.',
   too_many_tickets: 'Det är för många biljetter i en beställning. Välj färre.',
   invalid_email: 'Kontrollera e-postadressen.',
-  turnstile_failed: 'Säkerhetskontrollen gick inte igenom. Försök igen.',
   stripe_unavailable: 'Kortbetalningen svarar inte just nu. Försök igen om en stund.',
   no_stripe_account: 'Restaurangen kan inte ta emot kortbetalningar just nu.',
   too_many_requests: 'För många försök. Vänta en stund och försök igen.',
@@ -229,6 +228,8 @@ export function codeOf(err: unknown): string | null {
 
 /** API:ts felkod som en svensk mening; annars `fallback`. */
 export function eventsErrorMessage(err: unknown, fallback: string): string {
+  const botCheck = botCheckMessage(err)
+  if (botCheck) return botCheck
   const code = codeOf(err)
   return (code && ERRORS[code]) || fallback
 }

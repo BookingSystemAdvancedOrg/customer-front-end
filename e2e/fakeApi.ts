@@ -43,7 +43,7 @@ export function siteConfig(events = true) {
       businessHours: { monday: [{ opensAt: '11:00', closesAt: '22:00' }] }, bookingDurationHours: 2, maxPartySizeOnline: 8,
     }],
     stripe: { publishableKey: 'pk_test_e2e', accountId: 'acct_e2e' },
-    turnstile: { siteKey: null },
+    botCheck: { integrationUrl: null },
   }
 }
 

@@ -17,12 +17,6 @@ vi.mock('./eventsApi', async (orig) => ({
   giveTicket: vi.fn(), cancelGift: vi.fn(), acceptGift: vi.fn(), listForResale: vi.fn(),
 }))
 vi.mock('../../shared/payment/stripe', () => ({ stripeFor: () => null }))
-// Turnstile-attrapp: visar sin resetKey och ger en token per återställning.
-vi.mock('../boka/TurnstileWidget', () => ({
-  TurnstileWidget: ({ resetKey, onToken }: { resetKey: number; onToken: (t: string) => void }) => (
-    <button type="button" onClick={() => onToken(`tok-${resetKey}`)}>{`turnstile ${resetKey}`}</button>
-  ),
-}))
 vi.mock('qrcode', () => ({ default: { toDataURL: vi.fn(async (data: string) => `data:image/png;base64,${btoa(data)}`) } }))
 
 const FEATURES = { reservations: true, ordering: false, catering: false, terminal: false, events: true }
@@ -184,21 +178,19 @@ describe('EvenemangDetaljPage', () => {
     expect(ids[0]).not.toBe(ids[1])
   })
 
-  it('asks for a fresh Turnstile check after Ändra biljetterna', async () => {
-    const config = { ...siteConfig({ features: FEATURES }), turnstile: { siteKey: 'site-key' } }
+  it('can buy again right after Ändra biljetterna, with a new order id and no bot check field', async () => {
     vi.mocked(api.checkout).mockResolvedValue({ clientSecret: 's', amountSek: 450, expiresAt: '2026-11-05T12:15:00Z', stripeAccount: 'a' })
-    site('/evenemang/ev1abcdef', '/evenemang/:eventId', <EvenemangDetaljPage />, config)
+    open()
     fireEvent.click(await screen.findByRole('button', { name: 'En Vuxen till' }))
     fillBuyer()
-    fireEvent.click(screen.getByRole('button', { name: 'turnstile 0' }))
     fireEvent.click(screen.getByRole('button', { name: 'Till betalning, 450 kr' }))
     fireEvent.click(await screen.findByRole('button', { name: 'Ändra biljetterna' }))
-    // Den använda token är borta: knappen väntar på en ny kontroll.
-    expect(screen.getByRole('button', { name: 'Till betalning, 450 kr' })).toBeDisabled()
-    fireEvent.click(screen.getByRole('button', { name: 'turnstile 1' }))
+    expect(screen.getByRole('button', { name: 'Till betalning, 450 kr' })).toBeEnabled()
     fireEvent.click(screen.getByRole('button', { name: 'Till betalning, 450 kr' }))
     await waitFor(() => expect(api.checkout).toHaveBeenCalledTimes(2))
-    expect(vi.mocked(api.checkout).mock.calls.map(([, b]) => b.turnstileToken)).toEqual(['tok-0', 'tok-1'])
+    const bodies = vi.mocked(api.checkout).mock.calls.map(([, b]) => b)
+    expect(bodies[0].orderId).not.toBe(bodies[1].orderId)
+    for (const body of bodies) expect(Object.keys(body).some((k) => /token/i.test(k))).toBe(false)
   })
 
   it('keeps the choice within the seats left after the event is reloaded on sold_out', async () => {
@@ -469,16 +461,23 @@ describe('loading, retry and stale state', () => {
     expect(email).not.toHaveAttribute('aria-invalid')
   })
 
-  it('drops the spent Turnstile token after a failed checkout', async () => {
-    const config = { ...siteConfig({ features: FEATURES }), turnstile: { siteKey: 'site-key' } }
+  it('can try again after a failed checkout', async () => {
     vi.mocked(api.checkout).mockRejectedValueOnce(new ApiError(500, 'boom'))
-    site('/evenemang/ev1abcdef', '/evenemang/:eventId', <EvenemangDetaljPage />, config)
+    site('/evenemang/ev1abcdef', '/evenemang/:eventId', <EvenemangDetaljPage />)
     fireEvent.click(await screen.findByRole('button', { name: 'En Vuxen till' }))
     fillBuyer()
-    fireEvent.click(screen.getByRole('button', { name: 'turnstile 0' }))
     fireEvent.click(screen.getByRole('button', { name: 'Till betalning, 450 kr' }))
     expect(await screen.findByText('Det gick inte att starta köpet. Försök igen.')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Till betalning, 450 kr' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Till betalning, 450 kr' })).toBeEnabled()
+  })
+
+  it('says who acts when the bot check cannot load', async () => {
+    vi.mocked(api.checkout).mockRejectedValueOnce(new ApiError(0, 'bot_check_unavailable'))
+    site('/evenemang/ev1abcdef', '/evenemang/:eventId', <EvenemangDetaljPage />)
+    fireEvent.click(await screen.findByRole('button', { name: 'En Vuxen till' }))
+    fillBuyer()
+    fireEvent.click(screen.getByRole('button', { name: 'Till betalning, 450 kr' }))
+    expect(await screen.findByText(/Säkerhetskontrollen kunde inte laddas/)).toBeInTheDocument()
   })
 
   it('refetches the ticket in place when a gift hits invalid_state', async () => {

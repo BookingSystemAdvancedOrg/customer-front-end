@@ -90,7 +90,6 @@ export { OfferCard } from './features/erbjudande/OfferCard'
 export { FloorPlan3D } from './features/boka/FloorPlan3D'
 export { FloorPlanSvg } from './features/boka/FloorPlanSvg'
 export { GuaranteeConfirmation, GuaranteeNotice, GuaranteeStep, GuaranteeTermsText } from './features/boka/GuaranteeStep'
-export { TurnstileWidget } from './features/boka/TurnstileWidget'
 
 /* --- Betalning (Stripe Elements) ------------------------------------------ */
 export { PaidStamp, PaymentPanel, PaymentPrinting, PaymentTicket, SecureNote } from './shared/payment/PaymentTicket'

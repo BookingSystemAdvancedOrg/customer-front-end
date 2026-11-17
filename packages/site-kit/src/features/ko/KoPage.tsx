@@ -3,11 +3,11 @@ import { Link } from 'react-router-dom'
 import { Bar, Button, Printing } from '@booqy/brand'
 import './ko.css'
 import { ApiError } from '../../shared/api'
+import { botCheckMessage } from '../../shared/botCheckMessage'
 import { PhoneInput } from '../../shared/PhoneInput'
 import { Select } from '../../shared/Select'
 import { toE164 } from '../../shared/phone'
 import { useSite } from '../../shared/SiteContext'
-import { TurnstileWidget } from '../boka/TurnstileWidget'
 import {
   ERRORS,
   acceptTable,
@@ -24,6 +24,8 @@ import {
 const REFRESH_MS = 20_000
 
 function message(err: unknown, fallback: string): string {
+  const botCheck = botCheckMessage(err)
+  if (botCheck) return botCheck
   if (err instanceof ApiError) {
     const code = String(err.body.code ?? err.body.error ?? '')
     if (ERRORS[code]) return ERRORS[code]
@@ -150,11 +152,8 @@ function JoinForm({ onJoined }: { onJoined: (token: string) => void }) {
   const [name, setName] = useState('')
   const [party, setParty] = useState(2)
   const [phone, setPhone] = useState('')
-  const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
-  const [turnstileReset, setTurnstileReset] = useState(0)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const siteKey = config.turnstile?.siteKey ?? null
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -163,13 +162,10 @@ function JoinForm({ onJoined }: { onJoined: (token: string) => void }) {
     try {
       const out = await joinQueue(location.locationId, {
         entryId, name: name.trim(), partySize: party, phone: toE164(phone),
-        ...(turnstileToken ? { turnstileToken } : {}),
       })
       onJoined(out.token)
     } catch (err) {
       setError(message(err, 'Det gick inte att ställa dig i kö. Försök igen.'))
-      setTurnstileToken(null)
-      setTurnstileReset((n) => n + 1)
     } finally {
       setBusy(false)
     }
@@ -204,10 +200,9 @@ function JoinForm({ onJoined }: { onJoined: (token: string) => void }) {
           Uppgifterna raderas 30 dagar efter dagen. {config.tenant.name} är personuppgiftsansvarig.{' '}
           <Link to="/integritetspolicy" target="_blank" rel="noopener">Läs integritetspolicyn</Link>
         </p>
-        {siteKey ? <TurnstileWidget siteKey={siteKey} resetKey={turnstileReset} onToken={setTurnstileToken} /> : null}
         {error ? <Bar variant="banner" tone="danger">{error}</Bar> : null}
         <Button type="submit" variant="primary" busy={busy} busyLabel="Skickar…"
-          disabled={!name.trim() || !phone.trim() || Boolean(siteKey && !turnstileToken)}>
+          disabled={!name.trim() || !phone.trim()}>
           Ställ mig i kö
         </Button>
       </form>

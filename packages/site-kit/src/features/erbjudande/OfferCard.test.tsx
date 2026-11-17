@@ -7,11 +7,6 @@ import { WithSite } from '../../test/siteFixture'
 import { json, siteConfig } from '../../test/siteData'
 import { OFFER_CARD_KEY } from '../../shared/storageRegistry'
 
-vi.mock('../boka/TurnstileWidget', () => ({
-  TurnstileWidget: ({ onToken, action }: { onToken: (t: string | null) => void; action: string }) => (
-    <button type="button" onClick={() => onToken(`token-${action}`)}>Jag är inte en robot</button>
-  ),
-}))
 vi.mock('../../shared/api', async (orig) => ({
   ...(await orig<typeof import('../../shared/api')>()),
   apiBaseUrl: () => 'https://api.test',
@@ -110,5 +105,15 @@ describe('OfferCard', () => {
     await user.click(screen.getByRole('checkbox'))
     await user.click(screen.getByRole('button', { name: 'Skicka min rabattkod' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('För många försök')
+  })
+
+  it('says who acts when the server rejects the bot check', async () => {
+    const user = userEvent.setup()
+    signup = () => json({ error: 'bot_check_failed' }, 400)
+    render(<WithSite config={config()} path="/"><OfferCard /></WithSite>)
+    await user.type(await screen.findByPlaceholderText('din@epost.se', {}, { timeout: 2500 }), 'ny@example.se')
+    await user.click(screen.getByRole('checkbox'))
+    await user.click(screen.getByRole('button', { name: 'Skicka min rabattkod' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('kontakta restaurangen')
   })
 })

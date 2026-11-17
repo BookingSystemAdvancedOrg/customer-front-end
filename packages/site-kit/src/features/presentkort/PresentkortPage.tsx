@@ -12,7 +12,6 @@ import { useTheme } from '../../shared/theme'
 import { paymentAppearance, paymentFonts } from '../../shared/payment/appearance'
 import { SecureNote } from '../../shared/payment/PaymentTicket'
 import { stripeFor } from '../../shared/payment/stripe'
-import { TurnstileWidget } from '../boka/TurnstileWidget'
 import { validEmail } from '../boka/bookingApi'
 import {
   getOffer,
@@ -126,8 +125,6 @@ function Details({ offer, onCheckout }: { offer: Offer; onCheckout: (c: Checkout
   const [recipientName, setRecipientName] = useState('')
   const [recipientEmail, setRecipientEmail] = useState('')
   const [message, setMessage] = useState('')
-  const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
-  const [turnstileReset, setTurnstileReset] = useState(0)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   // Fältfelen visas först när gästen har försökt gå vidare, inte medan hen skriver.
@@ -135,7 +132,6 @@ function Details({ offer, onCheckout }: { offer: Offer; onCheckout: (c: Checkout
   const customRef = useRef<HTMLInputElement>(null)
   const emailRef = useRef<HTMLInputElement>(null)
   const recipientRef = useRef<HTMLInputElement>(null)
-  const siteKey = config.turnstile?.siteKey ?? null
   const chosen = choice === CUSTOM ? Number(custom || 0) : Number(choice)
   const customOk = choice !== CUSTOM || (chosen >= offer.customMinSek && chosen <= offer.customMaxSek && Number.isInteger(chosen))
   const emailOk = validEmail(buyerEmail)
@@ -156,14 +152,11 @@ function Details({ offer, onCheckout }: { offer: Offer; onCheckout: (c: Checkout
         ...(recipientName.trim() ? { recipientName: recipientName.trim() } : {}),
         ...(recipientEmail.trim() ? { recipientEmail: recipientEmail.trim() } : {}),
         ...(message.trim() ? { message: message.trim() } : {}),
-        ...(turnstileToken ? { turnstileToken } : {}),
       })
       rememberPurchase({ purchaseId, amountSek: out.amountSek, expiresAt: out.expiresAt })
       onCheckout(out)
     } catch (err) {
       setError(giftErrorMessage(err, 'Det gick inte att starta köpet. Försök igen.'))
-      setTurnstileToken(null)
-      setTurnstileReset((n) => n + 1)
     } finally {
       setBusy(false)
     }
@@ -227,10 +220,8 @@ function Details({ offer, onCheckout }: { offer: Offer; onCheckout: (c: Checkout
         {config.tenant.name} är personuppgiftsansvarig.{' '}
         <Link to="/integritetspolicy" target="_blank" rel="noopener">Läs integritetspolicyn</Link>
       </p>
-      {siteKey ? <TurnstileWidget siteKey={siteKey} resetKey={turnstileReset} onToken={setTurnstileToken} /> : null}
       {error ? <Bar variant="banner" tone="danger">{error}</Bar> : null}
-      <Button type="submit" variant="primary" busy={busy} busyLabel="Startar…"
-        disabled={Boolean(siteKey && !turnstileToken)}>
+      <Button type="submit" variant="primary" busy={busy} busyLabel="Startar…">
         {choice === CUSTOM && !customOk ? 'Till betalning' : `Till betalning, ${kr(chosen)}`}
       </Button>
     </form>

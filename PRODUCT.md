@@ -49,7 +49,7 @@ own floor plan, with live availability.
 - Booking: guests always choose their table on the floor plan (confirmed
   requirement). Restaurants can have several floors; the floor being chosen
   from is in focus, the other floors stay visible behind it at low opacity.
-  Card guarantee for larger parties, Turnstile bot check, 15-minute table
+  Card guarantee for larger parties, AWS WAF bot check, 15-minute table
   hold.
 
 ## Capabilities and Constraints

@@ -1,5 +1,6 @@
 import { siteKitConfig } from '../config'
 import { apiGet } from './api'
+import { configureBotCheck } from './botCheck'
 import type { LocationWaitlist, SiteBuilderState, SiteFeatureKey } from './contracts'
 import type { BusinessHours } from './locationApi'
 import { LOCATION_KEY_PREFIX, SLUG_KEY } from './storageRegistry'
@@ -90,7 +91,8 @@ export interface SiteConfig {
   }
   locations: SiteLocation[]
   stripe: { publishableKey: string | null; accountId: string | null }
-  turnstile: { siteKey: string | null }
+  /** Säkerhetskontrollen på formulären (AWS WAF, shared/botCheck.ts). */
+  botCheck?: { integrationUrl: string | null }
   /** Saknas från äldre backend: sidorna faller då tillbaka på standardtexterna. */
   privacy?: SitePrivacy
 }
@@ -159,7 +161,10 @@ export function siteQuery(
 }
 
 export function getSiteConfig(query: string): Promise<SiteConfig> {
-  return apiGet<SiteConfig>(`/site-config?${query}`)
+  return apiGet<SiteConfig>(`/site-config?${query}`).then((config) => {
+    configureBotCheck(config.botCheck)
+    return config
+  })
 }
 
 // Vald plats minns per restaurang (bara bekvämlighet - servern äger listan).
