@@ -35,9 +35,6 @@ const MENU = {
 let fetchMock: ReturnType<typeof vi.fn>
 let ordering: Record<string, unknown>
 let orderResponse: () => Response
-/** Svaret på en beställning vid bordet (payLater): ingen betalning. */
-const tableCreated = () => json({ orderId: 'o'.repeat(32), locationId: 'loc-1', statusToken: 'tok', totalAmount: 9500,
-  number: 12, payLater: true, serviceDate: '2026-11-17' }, 201)
 const assign = vi.fn()
 
 function config() {
@@ -84,17 +81,6 @@ async function fill(user: User) {
   await user.type(screen.getByLabelText(/E-post/), 'anna@example.se')
   await forward(user)
   await user.click(screen.getByRole('checkbox', { name: /inte kan ändras/ }))
-}
-
-/** Vid bordet: e-posten är valfri och rutan säger att man betalar innan man går. */
-async function fillTable(user: User, email = '') {
-  await forward(user)
-  await user.type(screen.getByLabelText('Namn'), 'Anna')
-  await user.type(screen.getByLabelText(/Mobilnummer/), '070-123 45 67')
-  await forward(user)
-  if (email) await user.type(screen.getByLabelText(/E-post/), email)
-  await forward(user)
-  await user.click(screen.getByRole('checkbox', { name: /går direkt till köket/ }))
 }
 
 function postedOrder() {
@@ -268,14 +254,13 @@ describe('BestallPage', () => {
   it('keeps alcohol for table orders and names the table from the QR code', async () => {
     const user = userEvent.setup()
     ordering = { ...ordering, forTable: { label: '5', title: 'Bord 5' } }
-    orderResponse = tableCreated
     render(<WithSite config={config()} path="/bestall?bord=code-5"><BestallPage /></WithSite>)
-    expect(await screen.findByText('Välj och skicka beställningen. Vi serverar vid bord 5. Du betalar innan du går.')).toBeInTheDocument()
+    expect(await screen.findByText(/vi serverar vid bord 5/)).toBeInTheDocument()
     expect(screen.getByLabelText('Ditt bord: Bord 5')).toHaveTextContent('Bord 5')
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/ordering?table=code-5'))).toBe(true)
     await user.click(await screen.findByRole('button', { name: 'Lägg till Rödvin' }))
-    await fillTable(user)
-    await user.click(screen.getByRole('button', { name: 'Skicka beställningen · 95 kr' }))
+    await fill(user)
+    await user.click(screen.getByRole('button', { name: /Till betalning/ }))
     expect(postedOrder()).toMatchObject({ mode: 'table', tableCode: 'code-5', items: [{ menuItemId: 'wine', quantity: 1 }] })
   })
 
@@ -287,9 +272,8 @@ describe('BestallPage', () => {
     await user.click(screen.getByText('Önskemål eller allergi?'))
     await user.type(screen.getByLabelText('Önskemål'), 'ingen lök')
     await user.type(screen.getByLabelText('Allergi'), 'jordnötsallergi')
-    orderResponse = tableCreated
-    await fillTable(user)
-    await user.click(screen.getByRole('button', { name: /Skicka beställningen/ }))
+    await fill(user)
+    await user.click(screen.getByRole('button', { name: /Till betalning/ }))
     expect(postedOrder()).toMatchObject({
       items: [{ menuItemId: 'pizza', quantity: 1, note: 'ingen lök', allergy: 'jordnötsallergi' }],
     })
@@ -298,7 +282,7 @@ describe('BestallPage', () => {
   it('names a renamed table by its name', async () => {
     ordering = { ...ordering, forTable: { label: 'Terrassen', title: 'Terrassen' } }
     render(<WithSite config={config()} path="/bestall?bord=code-t"><BestallPage /></WithSite>)
-    expect(await screen.findByText(/Vi serverar vid Terrassen/)).toBeInTheDocument()
+    expect(await screen.findByText(/vi serverar vid Terrassen/)).toBeInTheDocument()
   })
 
   it.each([
@@ -657,135 +641,5 @@ describe('BestallPage gift card, field errors and loading', () => {
     expect(chips[0]).toHaveClass('is-active')
     expect(chips[0]).toHaveAttribute('aria-current', 'true')
     expect(chips[1]).not.toHaveClass('is-active')
-  })
-})
-
-describe('BestallPage at the table (pay later)', () => {
-  function renderTable(c = config()) {
-    ordering = { ...ordering, forTable: { label: '7', title: 'Bord 7' } }
-    return render(
-      <WithSite config={c} path="/bestall?bord=code-7&kod=ABCD-EFGH">
-        <Routes>
-          <Route path="bestall" element={<BestallPage />} />
-          <Route path="bestallning/:locationId/:orderId" element={<p>Statussidan</p>} />
-        </Routes>
-      </WithSite>,
-    )
-  }
-
-  function marketingGiftConfig() {
-    const c = config()
-    c.tenant.features = { ...c.tenant.features, marketing: true, giftCards: true }
-    return c
-  }
-
-  it('shows Skicka instead of Betala and sends the order straight to the kitchen', async () => {
-    const user = userEvent.setup()
-    orderResponse = tableCreated
-    renderTable()
-    await user.click(await screen.findByRole('button', { name: 'Lägg till Margherita' }))
-    const rail = screen.getByRole('list', { name: /^Beställning: steg/ })
-    expect(within(rail).getByText('Skicka')).toBeInTheDocument()
-    expect(within(rail).queryByText('Betala')).not.toBeInTheDocument()
-    await forward(user)
-    expect(screen.getByText('Vi sms:ar när maten lagas.')).toBeInTheDocument()
-    await user.type(screen.getByLabelText('Namn'), 'Anna')
-    await user.type(screen.getByLabelText(/Mobilnummer/), '070-123 45 67')
-    await forward(user)
-    expect(screen.getByRole('heading', { name: 'Önskemål' })).toBeInTheDocument()
-    expect(screen.getByLabelText(/E-post \(valfritt\)/)).toBeInTheDocument()
-    expect(screen.getByText('Bara om du vill få besked på mejl.')).toBeInTheDocument()
-    // E-posten får vara tom.
-    await forward(user)
-    expect(screen.getByRole('heading', { name: 'Skicka beställningen' })).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Skicka beställningen · 125 kr' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent('Kryssa i rutan för att skicka beställningen.')
-    await user.click(screen.getByRole('checkbox', { name: 'Jag förstår att beställningen går direkt till köket och att jag betalar innan jag går.' }))
-    await user.click(screen.getByRole('button', { name: 'Skicka beställningen · 125 kr' }))
-    expect(await screen.findByText('Statussidan')).toBeInTheDocument()
-    const posted = postedOrder()
-    expect(posted).toMatchObject({ mode: 'table', tableCode: 'code-7', payLater: true, name: 'Anna', acceptTerms: true })
-    expect(posted).not.toHaveProperty('email')
-    expect(posted).not.toHaveProperty('embedded')
-    expect(posted).not.toHaveProperty('discountCode')
-    expect(posted).not.toHaveProperty('giftCardCode')
-    expect(stripe.provider).not.toHaveBeenCalled()
-    expect(sessionStorage.getItem('order-cart:loc-1')).toBeNull()
-    expect(sessionStorage.getItem(`order-token:${'o'.repeat(32)}`)).toBe('tok')
-  })
-
-  it('sends a typed e-mail and refuses a malformed one', async () => {
-    const user = userEvent.setup()
-    orderResponse = tableCreated
-    renderTable()
-    await user.click(await screen.findByRole('button', { name: 'Lägg till Cola' }))
-    await forward(user)
-    await user.type(screen.getByLabelText('Namn'), 'Anna')
-    await user.type(screen.getByLabelText(/Mobilnummer/), '070-123 45 67')
-    await forward(user)
-    await user.type(screen.getByLabelText(/E-post/), 'anna@')
-    await forward(user)
-    expect(await screen.findByRole('alert')).toHaveTextContent('Fyll i en giltig e-postadress, eller lämna fältet tomt.')
-    await user.type(screen.getByLabelText(/E-post/), 'example.se')
-    await forward(user)
-    await user.click(screen.getByRole('checkbox', { name: /går direkt till köket/ }))
-    await user.click(screen.getByRole('button', { name: /Skicka beställningen/ }))
-    expect(await screen.findByText('Statussidan')).toBeInTheDocument()
-    expect(postedOrder()).toMatchObject({ email: 'anna@example.se', payLater: true })
-  })
-
-  it('has no discount code or gift card at the table, even from an e-mail link', async () => {
-    const user = userEvent.setup()
-    renderTable(marketingGiftConfig())
-    await user.click(await screen.findByRole('button', { name: 'Lägg till Margherita' }))
-    expect(screen.queryByRole('button', { name: 'Har du en rabattkod?' })).not.toBeInTheDocument()
-    expect(screen.queryByText(/Koden ABCD-EFGH/)).not.toBeInTheDocument()
-    await fillTable(user)
-    expect(screen.queryByRole('button', { name: 'Har du ett presentkort?' })).not.toBeInTheDocument()
-    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/codes') || String(url).includes('discount'))).toBe(false)
-  })
-
-  it.each([
-    ['table_bill_full', 'Bordet har redan många obetalda beställningar. Fråga personalen så hjälper de dig.'],
-    ['codes_not_for_table', 'Rabattkoder och presentkort går inte att använda vid bordet. Fråga personalen.'],
-  ])('explains %s and keeps the cart', async (error, text) => {
-    const user = userEvent.setup()
-    orderResponse = () => json({ error }, error === 'table_bill_full' ? 409 : 400)
-    renderTable()
-    await user.click(await screen.findByRole('button', { name: 'Lägg till Margherita' }))
-    await fillTable(user)
-    await user.click(screen.getByRole('button', { name: /Skicka beställningen/ }))
-    expect(await screen.findByRole('alert')).toHaveTextContent(text)
-    expect(loadCart('loc-1')).toEqual({ pizza: 1 })
-  })
-
-  it('stops an order above the table bill limit and tells the guest to ask the staff', async () => {
-    const user = userEvent.setup()
-    renderTable()
-    const add = await screen.findByRole('button', { name: 'Lägg till Margherita' })
-    await user.click(add)
-    for (let i = 1; i < 20; i++) await user.click(screen.getAllByRole('button', { name: 'En Margherita till' })[0])
-    await user.click(screen.getByRole('button', { name: 'Lägg till Rödvin' }))
-    for (let i = 1; i < 20; i++) await user.click(screen.getAllByRole('button', { name: 'En Rödvin till' })[0])
-    await user.click(screen.getByRole('button', { name: 'Lägg till Cola' }))
-    for (let i = 1; i < 20; i++) await user.click(screen.getAllByRole('button', { name: 'En Cola till' })[0])
-    expect(screen.getAllByText('Beställningen är för stor. Fråga personalen.').length).toBeGreaterThan(0)
-    expect(screen.getByRole('button', { name: /Fortsätt/ })).toBeDisabled()
-  })
-})
-
-describe('BestallPage pickup is unchanged by pay later', () => {
-  it('still sends embedded payment, e-mail and no payLater, and shows Betala', async () => {
-    const user = userEvent.setup()
-    render(<WithSite config={config()} path="/bestall"><BestallPage /></WithSite>)
-    await user.click(await screen.findByRole('button', { name: 'Lägg till Margherita' }))
-    const rail = screen.getByRole('list', { name: /^Beställning: steg/ })
-    expect(within(rail).getByText('Betala')).toBeInTheDocument()
-    await fill(user)
-    await user.click(screen.getByRole('button', { name: 'Till betalning · 125 kr' }))
-    expect(await screen.findByRole('button', { name: 'Betala 285,50 kr' })).toBeInTheDocument()
-    const posted = postedOrder()
-    expect(posted).toMatchObject({ mode: 'pickup', email: 'anna@example.se', embedded: true })
-    expect(posted).not.toHaveProperty('payLater')
   })
 })

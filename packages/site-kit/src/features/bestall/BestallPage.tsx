@@ -47,7 +47,6 @@ import {
   rememberToken,
   saveCart,
   stepQuantity,
-  TABLE_MAX_ORE,
   tableCodeFrom,
   tableTitle,
   vatBreakdown,
@@ -66,8 +65,6 @@ import { SkelDishes } from '../../shared/Skeleton'
 import { formatPhoneNational } from '../../shared/phone'
 
 const STEPS = [{ label: 'Varukorg' }, { label: 'Dina uppgifter' }, { label: 'Betala' }, { label: 'Klart' }]
-/** Vid bordet: ingen betalning nu, gästen betalar notan innan hen går. */
-const STEPS_TABLE = [{ label: 'Varukorg' }, { label: 'Dina uppgifter' }, { label: 'Skicka' }, { label: 'Klart' }]
 
 interface Guest {
   name: string
@@ -92,49 +89,29 @@ const STEP_TITLE: Record<Step, string> = {
   confirm: 'Godkänn och betala',
 }
 
-const STEP_TITLE_TABLE: Record<Step, string> = {
-  ...STEP_TITLE,
-  receipt: 'Önskemål',
-  confirm: 'Skicka beställningen',
-}
-
 /** Fältet som felet gäller: det markeras (aria-invalid) och får fokus. */
 type Field = 'name' | 'phone' | 'email' | 'notes' | 'accept' | 'giftCard'
 
 const ERROR_ID = 'order-error'
 const PHONE_ID = 'order-phone'
 
-/**
- * Det som saknas i ett steg och i vilket fält (null när steget är klart).
- * Vid bordet (payLater) är e-posten valfri: kvittot kommer när notan betalas.
- */
-function stepError(step: Step, g: Guest, payLater = false): { field: Field; message: string } | null {
+/** Det som saknas i ett steg och i vilket fält (null när steget är klart). */
+function stepError(step: Step, g: Guest): { field: Field; message: string } | null {
   if (step === 'who') {
     if (!g.name.trim()) return { field: 'name', message: 'Fyll i ditt namn.' }
     if (!normalizePhone(g.phone)) return { field: 'phone', message: 'Fyll i ett giltigt mobilnummer, t.ex. 070-123 45 67.' }
   }
   if (step === 'receipt') {
-    if (payLater) {
-      if (g.email.trim() && !validEmail(g.email)) {
-        return { field: 'email', message: 'Fyll i en giltig e-postadress, eller lämna fältet tomt.' }
-      }
-    } else if (!validEmail(g.email)) {
-      return { field: 'email', message: 'Fyll i en giltig e-postadress - kvittot skickas dit.' }
-    }
+    if (!validEmail(g.email)) return { field: 'email', message: 'Fyll i en giltig e-postadress - kvittot skickas dit.' }
     if (g.notes.length > NOTES_MAX) return { field: 'notes', message: `Meddelandet får vara högst ${NOTES_MAX} tecken.` }
   }
-  if (step === 'confirm' && !g.accept) {
-    return {
-      field: 'accept',
-      message: payLater ? 'Kryssa i rutan för att skicka beställningen.' : 'Godkänn villkoren för att gå vidare till betalning.',
-    }
-  }
+  if (step === 'confirm' && !g.accept) return { field: 'accept', message: 'Godkänn villkoren för att gå vidare till betalning.' }
   return null
 }
 
 /** Första steget med något som saknas. */
-function firstGap(g: Guest, payLater = false): Step | null {
-  return STEP_ORDER.find((step) => stepError(step, g, payLater)) ?? null
+function firstGap(g: Guest): Step | null {
+  return STEP_ORDER.find((step) => stepError(step, g)) ?? null
 }
 
 /** Pris i öre från menyns kronor (servern räknar likadant). */
@@ -145,13 +122,10 @@ function ore(price: number): number {
 /**
  * Beställ mat: gästen väljer rätter (1-20 av varje), fyller i namn, mobil och
  * e-post och betalar här på sidan (steg 3: kvittot med Stripes formulär i
- * sajtens tryck, shared/payment); avhämtning med sms när maten är klar.
- * Med QR-koden på bordet (?bord=<kod>) blir det en beställning till bordet
- * utan betalning (payLater): den går direkt till köket och hamnar på bordets
- * nota, som gästen betalar innan hen går (NotanPage, eller hos personalen).
- * Vid bordet finns inga rabattkoder eller presentkort och e-posten är valfri.
- * Varukorgen sparas i fliken tills betalningen gått igenom (avhämtning) eller
- * beställningen skickats (bordet), så den finns kvar om gästen går tillbaka.
+ * sajtens tryck, shared/payment). Med QR-koden på bordet (?bord=<kod>) blir
+ * det en beställning till bordet; annars avhämtning med sms när maten är
+ * klar. Varukorgen sparas i fliken tills betalningen gått igenom, så den
+ * finns kvar om gästen går tillbaka och ändrar.
  */
 export default function BestallPage() {
   const { config, location } = useSite()
@@ -162,10 +136,6 @@ export default function BestallPage() {
   const [tableCode] = useState(() => tableCodeFrom(search))
   const cancelledOrder = new URLSearchParams(search).get('avbruten')
   const mode: OrderMode = tableCode ? 'table' : 'pickup'
-  // Vid bordet betalas inget nu: notan betalas innan gästen går.
-  const payLater = mode === 'table'
-  const steps = payLater ? STEPS_TABLE : STEPS
-  const stepTitle = payLater ? STEP_TITLE_TABLE : STEP_TITLE
 
   const [ordering, setOrdering] = useState<OrderingState | null>(null)
   const [stateError, setStateError] = useState<string | null>(null)
@@ -259,8 +229,7 @@ export default function BestallPage() {
       Boolean(l.dish) && !(mode === 'pickup' && l.dish!.alcohol) && validPicks(l.dish!, l.picks))
   const subtotal = lines.reduce((sum, l) => sum + l.unit * l.quantity, 0)
   const belowMin = Boolean(code && subtotal < code.minOrderOre)
-  // Rabattkoder gäller inte vid bordet (notan tar inga koder).
-  const applied = code && !belowMin && !payLater ? code : null
+  const applied = code && !belowMin ? code : null
   const total = applied
     ? lines.reduce((sum, l) => sum + discounted(l.unit, applied.percent) * l.quantity, 0)
     : subtotal
@@ -271,19 +240,15 @@ export default function BestallPage() {
   /** Antal av en rätt i varukorgen, alla tillval sammanräknade. */
   const inCart = (menuItemId: string) =>
     lines.reduce((n, l) => n + (l.dish.menuItemId === menuItemId ? l.quantity : 0), 0)
-  // Servern prövar beloppet före rabatten. Vid bordet är notans tak lägre.
-  const maxOre = payLater ? TABLE_MAX_ORE : MAX_ORDER_ORE
-  const tooLarge = subtotal > maxOre
-  const tooLargeText = payLater
-    ? 'Beställningen är för stor. Fråga personalen.'
-    : `Beställningen är för stor för att betalas online (högst ${kronor(MAX_ORDER_ORE)}). Minska antalet eller kontakta restaurangen.`
+  // Servern prövar beloppet före rabatten.
+  const tooLarge = subtotal > MAX_ORDER_ORE
   const open = Boolean(ordering?.open && ordering[mode])
   const tableName = tableTitle(ordering?.forTable)
   const count = lines.reduce((n, l) => n + l.quantity, 0)
   // Utan rätter finns bara brickan.
   const step: Step = lines.length ? checkout : 'cart'
   // Stegraden: rätter -> uppgifter -> betala. Betala när sista steget är ifyllt.
-  const stepAt = payment ? 3 : step === 'cart' ? 1 : step === 'confirm' && !firstGap(guest, payLater) ? 3 : 2
+  const stepAt = payment ? 3 : step === 'cart' ? 1 : step === 'confirm' && !firstGap(guest) ? 3 : 2
   const onMenu = !payment && step === 'cart'
 
   useEffect(() => {
@@ -432,7 +397,7 @@ export default function BestallPage() {
   // En kod från mejlets länk kontrolleras direkt.
   const fromLink = useRef(codeInput)
   useEffect(() => {
-    if (marketing && !payLater && fromLink.current) void applyCode(fromLink.current)
+    if (marketing && fromLink.current) void applyCode(fromLink.current)
     fromLink.current = ''
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [marketing])
@@ -442,7 +407,7 @@ export default function BestallPage() {
     e.preventDefault()
     if (step === 'confirm') return void submit()
     if (!lines.length || tooLarge || !open) return
-    const problem = stepError(step, guest, payLater)
+    const problem = stepError(step, guest)
     if (problem) return fail(problem.message, problem.field)
     go(STEP_ORDER[STEP_ORDER.indexOf(step) + 1])
   }
@@ -454,9 +419,9 @@ export default function BestallPage() {
   async function submit() {
     fail(null)
     if (!lines.length) return fail('Lägg till något från menyn först.')
-    const gap = firstGap(guest, payLater)
+    const gap = firstGap(guest)
     if (gap) {
-      const problem = stepError(gap, guest, payLater)!
+      const problem = stepError(gap, guest)!
       if (gap !== step) go(gap)
       return fail(problem.message, problem.field)
     }
@@ -474,18 +439,17 @@ export default function BestallPage() {
         })),
         name: guest.name.trim(),
         phone: guest.phone.trim(),
-        ...(!payLater || guest.email.trim() ? { email: guest.email.trim() } : {}),
+        email: guest.email.trim(),
         ...(guest.notes.trim() ? { notes: guest.notes.trim() } : {}),
         language: 'sv',
         acceptTerms: true,
         ...(applied ? { discountCode: applied.code } : {}),
-        ...(!payLater && giftCardCode.trim() ? { giftCardCode: giftCardCode.trim() } : {}),
+        ...(giftCardCode.trim() ? { giftCardCode: giftCardCode.trim() } : {}),
         ...consentFields(guest.consent, config.privacy, marketing),
-        ...(payLater ? { payLater: true as const } : { embedded: true as const }),
+        embedded: true,
       })
       rememberToken(created.orderId, created.statusToken)
-      if (payLater || created.chargedAmount === 0) {
-        // Vid bordet: beställningen är i köket och betalas med notan.
+      if (created.chargedAmount === 0) {
         // Presentkortet täckte allt: beställningen är redan betald och går till köket.
         done(created)
         return
@@ -525,7 +489,7 @@ export default function BestallPage() {
     }
   }
 
-  /** Betald (eller skickad till bordet): varukorgen töms och gästen följer beställningen på statussidan. */
+  /** Betald: varukorgen töms och gästen följer beställningen på statussidan. */
   const done = useCallback((order: OrderCreated) => {
     clearCart(locationId)
     setLineNotes({})
@@ -580,18 +544,16 @@ export default function BestallPage() {
     </>
   )
 
-  const crumbs = <FlowSteps steps={steps} current={stepAt} label="Beställning" />
+  const crumbs = <FlowSteps steps={STEPS} current={stepAt} label="Beställning" />
 
   if (payment || step !== 'cart') {
     const formId = payment ? 'order-pay' : 'order-checkout'
-    const title = payment ? 'Betala' : stepTitle[step]
+    const title = payment ? 'Betala' : STEP_TITLE[step]
     const ctaDisabled = payment ? !payStatus.ready || payStatus.busy : !open || busy || tooLarge
     const cta = payment
       ? payStatus.busy ? <><span className="spinner" aria-hidden="true" />Betalar…</> : `Betala ${kronor(payTotal)}`
       : step === 'confirm'
-        ? busy
-          ? <><span className="spinner" aria-hidden="true" />{payLater ? 'Skickar…' : 'Skickar beställningen…'}</>
-          : payLater ? `Skicka beställningen · ${kronor(total)}` : `Till betalning · ${kronor(total)}`
+        ? busy ? <><span className="spinner" aria-hidden="true" />Skickar beställningen…</> : `Till betalning · ${kronor(total)}`
         : <>Fortsätt<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" /></svg></>
     // Ett klick tillbaka till varukorgen från alla kassasteg före betalningen.
     const editCart = !payment && (
@@ -678,8 +640,8 @@ export default function BestallPage() {
                   {step === 'receipt' && (
                     <>
                       <label className="booking-field">
-                        <span>{payLater ? 'E-post (valfritt)' : 'E-post'}</span>
-                        <span className="field-hint">{payLater ? 'Bara om du vill få besked på mejl.' : 'Hit skickar vi kvittot.'}</span>
+                        <span>E-post</span>
+                        <span className="field-hint">Hit skickar vi kvittot.</span>
                         <input type="email" autoComplete="email" value={guest.email} ref={fieldRef('email')}
                           {...invalid('email')} onChange={(e) => setGuest({ ...guest, email: e.target.value })} />
                       </label>
@@ -694,30 +656,22 @@ export default function BestallPage() {
 
                   {step === 'confirm' && (
                     <fieldset className="order-fields" disabled={busy}>
-                      <legend className="sr-only">{stepTitle.confirm}</legend>
+                      <legend className="sr-only">{STEP_TITLE.confirm}</legend>
                       <label className="booking-check">
                         <input type="checkbox" checked={guest.accept} ref={fieldRef('accept')} {...invalid('accept')}
                           onChange={(e) => setGuest({ ...guest, accept: e.target.checked })} />
-                        {payLater ? (
-                          <span>Jag förstår att beställningen går direkt till köket och att jag betalar innan jag går.</span>
-                        ) : (
-                          <span>
-                            Jag förstår att beställningen inte kan ändras efter betalning. Avbryter restaurangen får
-                            jag pengarna tillbaka.
-                          </span>
-                        )}
+                        <span>
+                          Jag förstår att beställningen inte kan ändras efter betalning. Avbryter restaurangen får
+                          jag pengarna tillbaka.
+                        </span>
                       </label>
-                      {!payLater && (
-                        <div ref={giftRef}>
-                          <Slot id="bestall.checkout.giftcard" props={{ value: giftCardCode, onChange: setGiftCardCode, totalOre: total }} />
-                        </div>
-                      )}
+                      <div ref={giftRef}>
+                        <Slot id="bestall.checkout.giftcard" props={{ value: giftCardCode, onChange: setGiftCardCode, totalOre: total }} />
+                      </div>
                       <MarketingConsent value={guest.consent} onChange={(consent) => setGuest({ ...guest, consent })} />
                       <details className="checkout-privacy">
                         <summary>
-                          {payLater
-                            ? 'Vi använder namn och mobil (och e-post om du fyllt i den) till beställningen.'
-                            : 'Vi använder namn, mobil och e-post till beställningen och kvittot.'}{' '}
+                          Vi använder namn, mobil och e-post till beställningen och kvittot.{' '}
                           <span className="checkout-privacy-more">Läs mer</span>
                         </summary>
                         <GuestDataNotice kind="order" />
@@ -728,7 +682,8 @@ export default function BestallPage() {
 
                 {tooLarge && (
                   <p className="notice error" role="alert">
-                    {tooLargeText}
+                    Beställningen är för stor för att betalas online (högst {kronor(MAX_ORDER_ORE)}). Minska antalet eller
+                    kontakta restaurangen.
                   </p>
                 )}
                 {error && !tooLarge && (
@@ -776,7 +731,7 @@ export default function BestallPage() {
         )}
         <p className="page-lede">
           {mode === 'table'
-            ? `Välj och skicka beställningen. Vi serverar vid ${tableName ? (/^bord /i.test(tableName) ? `bord ${tableName.slice(5)}` : tableName) : 'ditt bord'}. Du betalar innan du går.`
+            ? `Välj, betala i mobilen - vi serverar vid ${tableName ? (/^bord /i.test(tableName) ? `bord ${tableName.slice(5)}` : tableName) : 'ditt bord'}.`
             : `Välj, betala här och hämta hos ${config.tenant.name}. Du får ett sms när maten är klar.`}
         </p>
         {crumbs}
@@ -894,7 +849,7 @@ export default function BestallPage() {
 
         <aside className="order-cart" id="order-cart" ref={cartRef} aria-label="Din beställning">
           <div className="tray-head">
-            <h2 className="checkout-title" ref={titleRef} tabIndex={-1}>{stepTitle.cart}</h2>
+            <h2 className="checkout-title" ref={titleRef} tabIndex={-1}>{STEP_TITLE.cart}</h2>
             <span className="tray-plates" aria-hidden="true" ref={trayRef}>
               {lines.slice(0, 5).map(({ key, dish }) => (
                 <Plate key={key} src={menuImageUrl(dish.imageKey)} position={menuImagePosition(dish.imageFocus)} name={dish.name} size="sm" />
@@ -946,7 +901,7 @@ export default function BestallPage() {
                   </span>
                 </div>
                 <p className="cart-note">Priserna inkluderar moms.</p>
-                {marketing && !payLater && (
+                {marketing && (
                   <div className="cart-code">
                     {!codeOpen && !code ? (
                       <button type="button" className="link-button" onClick={() => setCodeOpen(true)}>
@@ -978,7 +933,8 @@ export default function BestallPage() {
                 )}
                 {tooLarge && (
                   <p className="notice error" role="alert">
-                    {tooLargeText}
+                    Beställningen är för stor för att betalas online (högst {kronor(MAX_ORDER_ORE)}). Minska antalet eller
+                    kontakta restaurangen.
                   </p>
                 )}
             {error && !tooLarge && (

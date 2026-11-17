@@ -73,12 +73,3 @@ describe('knownOrderError', () => {
     expect(knownOrderError(new TypeError('Failed to fetch'))).toBeNull()
   })
 })
-
-describe('pay-later table order errors', () => {
-  it('tells the guest to ask the staff', () => {
-    expect(orderErrorMessage(new ApiError(409, 'table_bill_full'))).toBe(
-      'Bordet har redan många obetalda beställningar. Fråga personalen så hjälper de dig.')
-    expect(orderErrorMessage(new ApiError(400, 'codes_not_for_table'))).toBe(
-      'Rabattkoder och presentkort går inte att använda vid bordet. Fråga personalen.')
-  })
-})

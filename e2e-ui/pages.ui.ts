@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { VIEWPORTS, CROSS_BROWSER, VISUAL, fullAudit, axeIssues, focusIssues, assertNoIssues, record, setTheme, STABLE_CSS, type Issue } from './lib/ui-audit'
-import { uiApi, EVENT, TICKET_TOKEN, TABLE_ORDER_ID, TABLE_BILL_ID } from './lib/ui-api'
+import { uiApi, EVENT, TICKET_TOKEN } from './lib/ui-api'
 
 /** Every guest-site route x every screen size x light/dark. */
 export const PAGES: { name: string; path: string }[] = [
@@ -9,10 +9,6 @@ export const PAGES: { name: string; path: string }[] = [
   { name: 'boka-bord', path: '/boka-bord' },
   { name: 'bokningsvillkor', path: '/bokningsvillkor' },
   { name: 'bestall', path: '/bestall' },
-  { name: 'bestall-bord', path: '/bestall?bord=code-7' },
-  { name: 'bestallning-bord', path: `/bestallning/loc-1/${TABLE_ORDER_ID}#order-tok` },
-  { name: 'notan', path: '/notan/loc-1#L.payload.sig' },
-  { name: 'notan-betald', path: `/notan/loc-1?nota=${TABLE_BILL_ID}#bill-tok` },
   { name: 'catering', path: '/catering' },
   { name: 'om-oss', path: '/om-oss' },
   { name: 'kontakt', path: '/kontakt' },

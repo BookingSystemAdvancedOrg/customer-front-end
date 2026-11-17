@@ -38,7 +38,6 @@ export const CART_KEY_PREFIX = 'order-cart:'
 export const TABLE_KEY = 'order-table-code'
 export const ORDER_TOKEN_PREFIX = 'order-token:'
 export const CATERING_TOKEN_PREFIX = 'catering-token:'
-export const TABLE_BILL_PAY_PREFIX = 'table-bill-pay:'
 export const OFFER_CARD_KEY = 'offer-card'
 export const THEME_KEY = 'booqy-theme'
 export const SOUND_KEY = 'booqy-sound'
@@ -96,15 +95,6 @@ export const STORAGE_REGISTRY: readonly StorageEntry[] = [
     lifetime: 'Tills fliken stängs',
     category: 'nödvändig',
     where: 'Beställning',
-  },
-  {
-    name: `${TABLE_BILL_PAY_PREFIX}{plats}`,
-    kind: 'sessionStorage',
-    setBy: 'Webbplatsen',
-    purpose: 'Kommer ihåg betalningen av bordets nota som du har påbörjat, så att du kan gå tillbaka och betala utan att börja om.',
-    lifetime: 'Tills notan är betald eller fliken stängs',
-    category: 'nödvändig',
-    where: 'Notan vid bordet',
   },
   {
     name: `${CATERING_TOKEN_PREFIX}{förfrågan}`,

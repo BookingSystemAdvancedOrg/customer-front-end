@@ -9,7 +9,6 @@ export const sitePages = {
   manageBooking: () => import('./features/bokning/ManageBookingPage'),
   order: () => import('./features/bestall/BestallPage'),
   orderStatus: () => import('./features/bestall/OrderStatusPage'),
-  bill: () => import('./features/notan/NotanPage'),
   catering: () => import('./features/catering/CateringPage'),
   cateringRequest: () => import('./features/catering/CateringRequestPage'),
   privacy: () => import('./features/juridik/PrivacyPage'),

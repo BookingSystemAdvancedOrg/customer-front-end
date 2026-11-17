@@ -8,13 +8,8 @@ import { CART_KEY_PREFIX, ORDER_TOKEN_PREFIX, TABLE_KEY } from '../../shared/sto
  *
  *   GET  /locations/{id}/ordering[?table=<kod>]  öppet nu? (och QR-kodens bord)
  *   POST /order                                  beställningen -> betalningen (Checkout
- *                                                Session som sajten visar själv, embedded);
- *                                                vid bordet (payLater) direkt till köket, obetald
+ *                                                Session som sajten visar själv, embedded)
  *   GET  /locations/{id}/order-status/{orderId}  gästens beställning (X-Order-Token)
- *   GET  /locations/{id}/table-bill[?order=]     bordets nota (X-Order-Token: betallänken
- *                                                eller beställningens token)
- *   POST /locations/{id}/table-bill/pay          betala hela notan (Checkout Session)
- *   GET  /locations/{id}/table-bill/{billId}     en betalning av notan (X-Order-Token: notans token)
  *
  * Priserna räknas alltid om av servern från menyn - sajten skickar bara
  * vilka rätter och hur många. Statustoken (gästens "nyckel" till sin
@@ -27,9 +22,6 @@ export const NOTES_MAX = 300
 /** Högsta belopp för en beställning (öre) - samma skrivfelsspärr som servern
  * (shared/orders.py MAX_ORDER_ORE). */
 export const MAX_ORDER_ORE = 5_000_000
-/** Högsta obetalda belopp på ett bords nota (öre), serverns TABLE_MAX_OPEN_ORE:
- * en större beställning vid bordet går aldrig igenom. */
-export const TABLE_MAX_ORE = 500_000
 
 export type OrderMode = 'pickup' | 'table'
 
@@ -54,8 +46,7 @@ export interface OrderRequest {
   items: { menuItemId: string; quantity: number; note?: string; allergy?: string; options?: OptionPick[] }[]
   name: string
   phone: string
-  /** Krävs för avhämtning (kvittot); valfri vid bordet. */
-  email?: string
+  email: string
   notes?: string
   language: 'sv'
   acceptTerms: true
@@ -68,9 +59,7 @@ export interface OrderRequest {
   /** Frivilligt samtycke till erbjudanden (shared/MarketingConsent.tsx). */
   marketingConsent?: { channels: ('email' | 'sms')[]; textVersion: string }
   /** Betalningen visas på sajtens egen sida (Payment Element), inte hos Stripe. */
-  embedded?: true
-  /** Vid bordet: direkt till köket, betalas med bordets nota innan gästen går. */
-  payLater?: true
+  embedded: true
 }
 
 export interface OrderCreated {
@@ -86,9 +75,6 @@ export interface OrderCreated {
   giftCard?: { last4: string; debitedOre: number }
   /** Det som återstår att betala med kort (öre); 0 = presentkortet täckte allt och beställningen är betald. */
   chargedAmount?: number
-  /** Vid bordet: beställningen är i köket och betalas med notan. */
-  payLater?: boolean
-  number?: number
 }
 
 export interface GuestOrder {
@@ -96,14 +82,8 @@ export interface GuestOrder {
   locationId: string
   number?: number
   status: 'pending_payment' | 'confirmed' | 'preparing' | 'ready' | 'completed' | 'cancelled' | 'failed'
-  paymentStatus?:
-    | 'processing' | 'paid' | 'failed' | 'refunded' | 'partly_refunded'
-    | 'unpaid' | 'paid_outside' | 'written_off' | 'void'
+  paymentStatus?: 'processing' | 'paid' | 'failed' | 'refunded'
   mode: OrderMode
-  /** Vid bordet: betalas med bordets nota innan gästen går. */
-  payLater?: boolean
-  /** Notan beställningen ligger på, så länge den är obetald. */
-  bill?: { amount: number; count: number; status: 'open' | 'paying' | 'empty' }
   tableLabel?: string
   lines: {
     menuItemId: string
@@ -362,8 +342,6 @@ export const MENU_ITEM_REMOVED =
   'En rätt i varukorgen finns inte längre på menyn och har tagits bort. Kontrollera beställningen och försök igen.'
 
 const ORDER_ERRORS: Record<string, string> = {
-  table_bill_full: 'Bordet har redan många obetalda beställningar. Fråga personalen så hjälper de dig.',
-  codes_not_for_table: 'Rabattkoder och presentkort går inte att använda vid bordet. Fråga personalen.',
   ordering_closed: 'Vi har precis slutat ta emot beställningar för idag.',
   ordering_paused: 'Köket har pausat beställningar en stund. Försök igen om en liten stund.',
   ordering_disabled: 'Det går inte att beställa online just nu.',
