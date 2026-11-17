@@ -59,3 +59,11 @@
   background: var(--surface);
   border-color: var(--ink);
 }
+
+/* Statussidan: bordet (eller Avhämtning) under numret, lika stort som i kassan. */
+.order-status .order-place {
+  justify-self: start;
+  align-self: flex-start;
+  width: fit-content;
+  margin: 0;
+}

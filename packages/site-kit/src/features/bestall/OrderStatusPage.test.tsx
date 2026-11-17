@@ -65,6 +65,22 @@ describe('OrderStatusPage', () => {
     expect(screen.getByText(/Hämta hos City - Gatan 1/)).toBeInTheDocument()
   })
 
+  it('shows where the food goes: the table for a QR order, Avhämtning for pickup', async () => {
+    sessionStorage.setItem(`order-token:${ID}`, 'tok')
+    statuses = [order({ status: 'preparing', mode: 'table', tableLabel: '3' })]
+    const first = renderAt()
+    expect(await screen.findByText('Bord 3')).toHaveClass('order-place')
+    expect(screen.queryByText('Avhämtning')).toBeNull()
+    first.unmount()
+    statuses = [order({ status: 'preparing', mode: 'table', tableLabel: 'Terrassen' })]
+    const named = renderAt()
+    expect(await screen.findByText('Terrassen')).toHaveClass('order-place')
+    named.unmount()
+    statuses = [order({ status: 'preparing' })]
+    renderAt()
+    expect(await screen.findByText('Avhämtning')).toHaveClass('order-place')
+  })
+
   it('tells the guest a failed payment cost nothing', async () => {
     sessionStorage.setItem(`order-token:${ID}`, 'tok')
     statuses = [order({ status: 'failed' })]

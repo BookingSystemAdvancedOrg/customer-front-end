@@ -24,6 +24,14 @@ function tokenFor(orderId: string): string {
   return recallToken(orderId) ?? ''
 }
 
+/** Var maten hamnar, som personalen ser det: "Bord 7", ett namngivet bord, eller Avhämtning. */
+function placeTitle(order: GuestOrder): string {
+  if (order.mode !== 'table') return 'Avhämtning'
+  const label = order.tableLabel ?? ''
+  if (!label) return 'Ditt bord'
+  return /^\d/.test(label) ? `Bord ${label}` : label
+}
+
 function headline(order: GuestOrder): string {
   const table = order.tableLabel
     ? /^bord/i.test(order.tableLabel) ? order.tableLabel : `bord ${order.tableLabel}`
@@ -142,6 +150,7 @@ export default function OrderStatusPage() {
       {error && <p className="notice error" role="alert">{error}</p>}
       {order && (
         <>
+          <p className="order-table-chip order-place">{placeTitle(order)}</p>
           <p className={`booking-status${['ready', 'completed'].includes(order.status) ? ' stamp-ok' : ''}`} aria-live="polite" key={order.status}>
             {headline(order)}
           </p>

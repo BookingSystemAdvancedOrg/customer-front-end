@@ -262,6 +262,13 @@ describe('BestallPage', () => {
     await fill(user)
     await user.click(screen.getByRole('button', { name: /Till betalning/ }))
     expect(postedOrder()).toMatchObject({ mode: 'table', tableCode: 'code-5', items: [{ menuItemId: 'wine', quantity: 1 }] })
+    // Pay first, like pickup: the browser names no table and nothing is left to pay later.
+    expect(postedOrder()).not.toHaveProperty('payLater')
+    expect(postedOrder()).not.toHaveProperty('tableLabel')
+    expect(postedOrder()).toMatchObject({ embedded: true, acceptTerms: true })
+    await user.click(await screen.findByRole('button', { name: /^Betala / }))
+    expect(stripe.confirm).toHaveBeenCalledWith({ redirect: 'if_required' })
+    expect(await screen.findByText('Betalt')).toBeInTheDocument()
   })
 
   it('sends a dish\'s wish and allergy with the order, for the kitchen ticket', async () => {
