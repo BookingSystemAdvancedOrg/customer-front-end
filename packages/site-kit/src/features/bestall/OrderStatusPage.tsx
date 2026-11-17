@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { clearCart, clock, getOrder, kronor, orderErrorMessage, recallToken } from './orderApi'
+import { clearCart, clock, getOrder, kronor, orderErrorMessage, recallToken, rememberToken } from './orderApi'
 import type { GuestOrder } from './orderApi'
 import { FlowSteps } from '../../shared/FlowSteps'
 import { Celebrate } from '../../shared/Celebrate'
@@ -17,7 +17,11 @@ const FINAL = new Set<GuestOrder['status']>(['completed', 'cancelled', 'failed']
 function tokenFor(orderId: string): string {
   try {
     const fromHash = decodeURIComponent(window.location.hash.replace(/^#/, ''))
-    if (fromHash) return fromHash
+    if (fromHash) {
+      // Notan (Betala notan) hittar den i fliken.
+      rememberToken(orderId, fromHash)
+      return fromHash
+    }
   } catch {
     // Trasig länk - prova fliken.
   }
@@ -53,6 +57,17 @@ const STEPS: { status: GuestOrder['status']; label: string }[] = [
   { status: 'completed', label: 'Hämtad' },
 ]
 
+/** Vid bordet med notan: beställningen är inte betald när köket får den. */
+const STEPS_PAY_LATER: typeof STEPS = [
+  { status: 'confirmed', label: 'Mottagen' },
+  { status: 'preparing', label: 'Tillagas' },
+  { status: 'ready', label: 'Klar' },
+  { status: 'completed', label: 'Serverad' },
+]
+
+/** Betald (med notan, hos personalen eller som vanligt). */
+const PAID = new Set(['paid', 'paid_outside', 'partly_refunded'])
+
 /** Vad som händer härnäst, under rubriken. */
 function nextUp(order: GuestOrder): string | null {
   const table = order.tableLabel
@@ -62,6 +77,7 @@ function nextUp(order: GuestOrder): string | null {
     case 'pending_payment':
       return 'Det brukar ta några sekunder. Sidan uppdateras av sig själv.'
     case 'confirmed':
+      if (order.payLater) return 'Köket har fått beställningen. Du betalar innan du går.'
       return order.mode === 'pickup'
         ? 'Köket har fått beställningen. Vi sms:ar när maten lagas och när den är klar att hämta.'
         : `Köket har fått beställningen. Vi sms:ar när maten lagas och kommer till ${table}.`
@@ -81,7 +97,9 @@ const CELEBRATE = new Set<GuestOrder['status']>(['confirmed', 'ready'])
  * Gästens beställning: /bestallning/<plats>/<id>. Hit går gästen när
  * betalningen på beställningssidan gått igenom (eller kommer tillbaka från
  * Swish, Klarna eller banken), och hit leder länken i kvittomejlet.
- * Sidan frågar var femte sekund tills beställningen är klar.
+ * Sidan frågar var femte sekund tills beställningen är klar. En beställning
+ * vid bordet (payLater) visar bordets nota med Betala notan och Beställ mer,
+ * och sidan fortsätter fråga (glesare) tills notan är betald.
  */
 export default function OrderStatusPage() {
   const { locationId = '', orderId = '' } = useParams()
@@ -104,10 +122,15 @@ export default function OrderStatusPage() {
         setOrder(next)
         setError(null)
         // Betald (även efter Swish/Klarna utanför sidan): varukorgen är förbrukad.
-        if (next.paymentStatus === 'paid') clearCart(locationId)
+        // Vid bordet töms den redan när beställningen skickas (gästen kan ha en ny runda i brickan).
+        if (next.paymentStatus === 'paid' && !next.payLater) clearCart(locationId)
         const waitingTooLong = next.status === 'pending_payment' && Date.now() - startedAt > PAYMENT_WAIT_MS
         setGaveUp(waitingTooLong)
         if (!FINAL.has(next.status) && !waitingTooLong) timer = window.setTimeout(poll, STATUS_POLL_MS)
+        // Serverad men notan obetald: notan kan betalas eller ändras, så sidan följer den glesare.
+        else if (next.payLater && next.status === 'completed' && next.paymentStatus === 'unpaid') {
+          timer = window.setTimeout(poll, STATUS_POLL_MS * 3)
+        }
       } catch (err) {
         if (cancelled) return
         setError(orderErrorMessage(err))
@@ -123,8 +146,16 @@ export default function OrderStatusPage() {
 
   const stepIndex = order ? STEPS.findIndex((s) => s.status === order.status) : -1
   const reachedAll = order?.status === 'completed'
-  const steps = order?.mode === 'table' ? STEPS.map((s) => (s.status === 'completed' ? { ...s, label: 'Serverad' } : s)) : STEPS
+  const steps = order?.payLater
+    ? STEPS_PAY_LATER
+    : order?.mode === 'table' ? STEPS.map((s) => (s.status === 'completed' ? { ...s, label: 'Serverad' } : s)) : STEPS
   const hint = order ? nextUp(order) : null
+  const label = order?.tableLabel ?? ''
+  const tableName = !label ? 'bordet' : /^bord /i.test(label) ? `bord ${label.slice(5)}` : /^\d/.test(label) ? `bord ${label}` : label
+  const bill = order?.payLater && order.paymentStatus === 'unpaid' && order.status !== 'cancelled' && order.bill?.amount
+    ? order.bill
+    : null
+  const paidStamp = Boolean(order?.payLater && order.paymentStatus && PAID.has(order.paymentStatus))
 
   return (
     <section className={`booking-confirmation order-status${order && CELEBRATE.has(order.status) ? ' is-success' : ''}`}>
@@ -169,11 +200,32 @@ export default function OrderStatusPage() {
               <Link to="/bestall">Försök igen</Link>.
             </p>
           )}
-          {order.status === 'cancelled' && (
+          {order.status === 'cancelled' && (order.payLater && ['void', 'unpaid'].includes(order.paymentStatus ?? '') ? (
+            <p className="notice" role="status">Du har inte betalat något för den.</p>
+          ) : (
             <p className="notice" role="status">
               Hela beloppet, {kronor(order.totalAmount)}, betalas tillbaka till ditt kort inom några bankdagar.
             </p>
+          ))}
+          {bill && (
+            <div className="next-up order-bill" aria-labelledby="order-bill-title">
+              <h2 id="order-bill-title" className="order-bill-title">Notan för {tableName}</h2>
+              <p className="order-bill-amount">
+                <span>Att betala</span>
+                <strong>{kronor(bill.amount)}</strong>
+              </p>
+              {bill.status === 'paying' && (
+                <p className="cell-muted">Någon vid bordet betalar notan just nu.</p>
+              )}
+              <div className="order-bill-actions">
+                <Link className="btn-primary" to={`/notan/${encodeURIComponent(order.locationId)}/${encodeURIComponent(order.orderId)}`}>
+                  Betala notan
+                </Link>
+                <Link className="btn-secondary" to="/bestall">Beställ mer</Link>
+              </div>
+            </div>
           )}
+          {paidStamp && <p className="booking-status stamp-ok order-paid-stamp">Betald</p>}
           <ul className="cart-list order-status-lines">
             {order.lines.map((line, i) => (
               <li key={`${line.menuItemId}-${i}`}>

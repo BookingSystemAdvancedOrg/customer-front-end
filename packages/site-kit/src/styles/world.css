@@ -2521,6 +2521,13 @@ h1, h2, h3, h4 {
     z-index: 30;
   }
 
+  /* Kassaarket isolerar sina lager (glaset), så knappens z-index gäller bara
+     inuti arket: arket självt ligger över sidfoten, annars täcker sidfotens
+     glas knappen på korta steg. Under sidhuvudet (z-index 40). */
+  .checkout:has(.checkout-cta) {
+    z-index: 2;
+  }
+
   /* längst ner på sidan: sidfoten slutar ovanför den fasta knappen */
   .site:has(.checkout-cta) .site-footer {
     margin-bottom: calc(56px + 2 * max(12px, env(safe-area-inset-bottom)));

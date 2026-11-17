@@ -14,6 +14,7 @@ const BookingFlow = lazy(sitePages.booking)
 const ManageBooking = lazy(sitePages.manageBooking)
 const OrderFlow = lazy(sitePages.order)
 const OrderStatus = lazy(sitePages.orderStatus)
+const TableBill = lazy(sitePages.bill)
 const CateringFlow = lazy(sitePages.catering)
 const CateringRequest = lazy(sitePages.cateringRequest)
 const PrivacyPolicy = lazy(sitePages.privacy)
@@ -37,7 +38,8 @@ const TicketReceive = lazy(sitePages.biljettTaEmot)
  * okända sökvägar skickas dit. Boka bord och dess sidor finns bara när
  * restaurangen har bokning i sin plan; Beställ (avhämtning och QR-koden på
  * bordet) bara med beställning i planen. Gästens sidor för en gjord
- * bokning/beställning (länkar i sms och mejl) finns alltid. Catering
+ * bokning/beställning (länkar i sms och mejl) och notan vid bordet
+ * (personalens QR-kod för notan) finns alltid. Catering
  * (kalkyl -> offertförfrågan) med catering i planen; gästens sida för en
  * förfrågan (offert, BankID-signering, betalning) finns alltid.
  * Presentkort, kö (när platsen tar emot kö på sajten), förhandsvisning och
@@ -73,6 +75,8 @@ function App() {
         <Route path="bokning/:locationId/:reservationId" element={t('Din bokning', <ManageBooking />)} />
         {ordering && <Route path="bestall" element={t('Beställ', <OrderFlow />)} />}
         <Route path="bestallning/:locationId/:orderId" element={t('Din beställning', <OrderStatus />)} />
+        <Route path="notan/:locationId" element={t('Notan', <TableBill />)} />
+        <Route path="notan/:locationId/:orderId" element={t('Notan', <TableBill />)} />
         {catering && <Route path="catering" element={t('Catering', <CateringFlow />)} />}
         <Route path="catering/:locationId/:requestId" element={t('Din cateringförfrågan', <CateringRequest />)} />
         <Route path="om-oss" element={t('Om oss', <OmOssPage />)} />

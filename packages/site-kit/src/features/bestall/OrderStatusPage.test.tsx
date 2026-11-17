@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import OrderStatusPage, { STATUS_POLL_MS } from './OrderStatusPage'
@@ -77,5 +77,56 @@ describe('OrderStatusPage', () => {
     renderAt()
     expect(screen.getByRole('alert')).toHaveTextContent('Länken är ofullständig')
     expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('shows the table bill with Betala notan and Beställ mer for a pay-later order', async () => {
+    statuses = [order({ mode: 'table', tableLabel: '7', payLater: true, paymentStatus: 'unpaid',
+      bill: { amount: 45000, count: 3, status: 'open' } })]
+    renderAt('#tok-sms')
+    expect(await screen.findByText('Tack! Vi serverar vid bord 7.')).toBeInTheDocument()
+    expect(screen.getByText('Köket har fått beställningen. Du betalar innan du går.')).toBeInTheDocument()
+    const rail = screen.getByRole('list', { name: /^Beställning: steg/ })
+    expect(within(rail).getByText('Mottagen')).toBeInTheDocument()
+    expect(within(rail).queryByText('Betald')).not.toBeInTheDocument()
+    expect(within(rail).getByText('Serverad')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Notan för bord 7' })).toBeInTheDocument()
+    expect(screen.getByText('Att betala').nextSibling).toHaveTextContent('450 kr')
+    expect(screen.getByRole('link', { name: 'Betala notan' })).toHaveAttribute('href', `/notan/loc-1/${ID}`)
+    expect(screen.getByRole('link', { name: 'Beställ mer' })).toHaveAttribute('href', '/bestall')
+    // Betala notan hittar nyckeln i fliken.
+    expect(sessionStorage.getItem(`order-token:${ID}`)).toBe('tok-sms')
+  })
+
+  it('keeps the next round in the cart when a pay-later order is paid', async () => {
+    sessionStorage.setItem(`order-token:${ID}`, 'tok')
+    sessionStorage.setItem('order-cart:loc-1', JSON.stringify({ pizza: 1 }))
+    statuses = [order({ mode: 'table', tableLabel: '7', payLater: true, paymentStatus: 'paid', status: 'completed' })]
+    renderAt()
+    expect(await screen.findByText('Betald')).toHaveClass('stamp-ok')
+    expect(screen.queryByRole('link', { name: 'Betala notan' })).not.toBeInTheDocument()
+    expect(sessionStorage.getItem('order-cart:loc-1')).not.toBeNull()
+  })
+
+  it('shows Betald for a bill paid outside Booqy', async () => {
+    sessionStorage.setItem(`order-token:${ID}`, 'tok')
+    statuses = [order({ mode: 'table', tableLabel: '7', payLater: true, paymentStatus: 'paid_outside', paidOutside: true })]
+    renderAt()
+    expect(await screen.findByText('Betald')).toBeInTheDocument()
+  })
+
+  it('says nothing was paid when the restaurant cancels an unpaid table order', async () => {
+    sessionStorage.setItem(`order-token:${ID}`, 'tok')
+    statuses = [order({ mode: 'table', tableLabel: '7', payLater: true, paymentStatus: 'void', status: 'cancelled' })]
+    renderAt()
+    expect(await screen.findByText('Du har inte betalat något för den.')).toBeInTheDocument()
+    expect(screen.queryByText(/betalas tillbaka/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Betala notan' })).not.toBeInTheDocument()
+  })
+
+  it('keeps the pickup steps and refund text', async () => {
+    sessionStorage.setItem(`order-token:${ID}`, 'tok')
+    statuses = [order({ status: 'cancelled', paymentStatus: 'refunded' })]
+    renderAt()
+    expect(await screen.findByText(/Hela beloppet, 250 kr, betalas tillbaka/)).toBeInTheDocument()
   })
 })

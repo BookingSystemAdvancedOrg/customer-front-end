@@ -44,6 +44,23 @@ const cateringQuote = {
   guests: 20, portions: 20, tierName: null, subtotal: 490000, discountPercent: 0, discount: 0, deliveryFee: 0, cleaningFee: 0,
   total: 490000, vat: 52500, vatRate: 12, serviceIncluded: false, distanceKm: null, deliveryFeeManual: false, earliestDate: '2026-11-18',
 }
+/** Notan vid bordet: två obetalda beställningar vid bord 7 (pay later). */
+export const TABLE_ORDER_ID = 'a'.repeat(32)
+export const TABLE_BILL_ID = 'b'.repeat(32)
+const billOrders = [
+  { number: 12, createdAt: '2026-11-14T08:05:00Z', total: 37500, lines: [{ name: 'Råbiff', quantity: 1, total: 21500, vatRate: 12 }, { name: 'Pizza Margherita (Stor)', quantity: 1, total: 17500, vatRate: 12 }] },
+  { number: 15, createdAt: '2026-11-14T08:40:00Z', total: 22000, lines: [{ name: 'Husets rödvin', quantity: 2, total: 22000, vatRate: 25 }] },
+]
+const billVat = [{ rate: 12, gross: 37500, net: 33482, vat: 4018 }, { rate: 25, gross: 22000, net: 17600, vat: 4400 }]
+export const tableBill = { tableTitle: 'Bord 7', serviceDate: '2026-11-14', status: 'open', amount: 59500, count: 2, currency: 'sek', minChargeOre: 300, orders: billOrders, vat: billVat, location: { name: 'Testkrogen City' } }
+const paidBill = { billId: TABLE_BILL_ID, status: 'paid', amount: 59500, count: 2, paidAt: '2026-11-14T09:00:00Z', tableTitle: 'Bord 7', serviceDate: '2026-11-14', orders: billOrders, vat: billVat }
+const tableOrder = {
+  orderId: TABLE_ORDER_ID, locationId: LOCATION_ID, number: 15, status: 'preparing', paymentStatus: 'unpaid', mode: 'table', tableLabel: '7', payLater: true, serviceDate: '2026-11-14',
+  lines: [{ menuItemId: 'm5', name: 'Husets rödvin', unitPrice: 11000, quantity: 2, total: 22000, vatRate: 25 }], totalAmount: 22000, vat: [{ rate: 25, gross: 22000, net: 17600, vat: 4400 }],
+  createdAt: '2026-11-14T08:40:00Z', confirmedAt: '2026-11-14T08:40:00Z', location: { name: 'Testkrogen City', address: 'Gatan 1, 111 22 Stockholm', phoneNumber: '08-123 456 78' },
+  bill: { amount: 59500, count: 2, status: 'open' },
+}
+
 const giftOffer = { amountsSek: [300, 500, 1000], customMinSek: 100, customMaxSek: 5000, validityMonths: 24 }
 
 /** All guest-site features on, with data on every page. Falls back to the e2e fakeApi for events and tickets. */
@@ -62,7 +79,10 @@ export async function uiApi(page: Page) {
     if (p === `/locations/${LOCATION_ID}/menu`) return route.fulfill(json(menu))
     if (p === `/locations/${LOCATION_ID}/public-info`) return route.fulfill(json(info))
     if (p === `/locations/${LOCATION_ID}/availability`) return route.fulfill(json({ locationId: LOCATION_ID, date: u.searchParams.get('date'), timezone: 'Europe/Stockholm', slots }))
-    if (p === `/locations/${LOCATION_ID}/ordering`) return route.fulfill(json({ open: true, pickup: true, table: true, prepMinutes: 20, closesAt: '22:00' }))
+    if (p === `/locations/${LOCATION_ID}/ordering`) return route.fulfill(json({ open: true, pickup: true, table: true, prepMinutes: 20, closesAt: '22:00', ...(u.searchParams.get('table') ? { forTable: { label: '7', title: 'Bord 7' } } : {}) }))
+    if (p === `/locations/${LOCATION_ID}/order-status/${TABLE_ORDER_ID}`) return route.fulfill(json(tableOrder))
+    if (p === `/locations/${LOCATION_ID}/table-bill`) return route.fulfill(json(tableBill))
+    if (p === `/locations/${LOCATION_ID}/table-bill/${TABLE_BILL_ID}`) return route.fulfill(json(paidBill))
     if (p === `/locations/${LOCATION_ID}/layout/active`) return route.fulfill(json({ layout: null }, 404))
     if (p === `/locations/${LOCATION_ID}/catering/settings`) return route.fulfill(json(cateringSettings))
     if (p === `/locations/${LOCATION_ID}/catering/discount-tiers`) return route.fulfill(json({ tiers: [] }))
