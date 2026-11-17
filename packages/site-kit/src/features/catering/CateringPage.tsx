@@ -7,6 +7,7 @@ import { useSite } from '../../shared/SiteContext'
 import { useLocationInfo } from '../../shared/useLocationInfo'
 import { PhoneLink } from '../../shared/PhoneLink'
 import { PhoneInput } from '../../shared/PhoneInput'
+import { formatPhoneNational } from '../../shared/phone'
 import { normalizePhone, validEmail } from '../boka/bookingApi'
 import { TurnstileWidget } from '../boka/TurnstileWidget'
 import { DEFAULT_CATEGORIES, getPublicMenuWithCategories, groupByCategory } from '../meny/menuApi'
@@ -32,7 +33,7 @@ import { FlowSteps } from '../../shared/FlowSteps'
 import { GuestDataNotice } from '../../shared/GuestDataNotice'
 import { MarketingConsent, NO_CONSENT, consentFields } from '../../shared/MarketingConsent'
 import type { ConsentChoice } from '../../shared/MarketingConsent'
-import { DateInput, TimeInput } from '../../shared/DateInput'
+import { DateInput, TimeInput, formatDate } from '../../shared/DateInput'
 import { SkelCard } from '../../shared/Skeleton'
 
 const STEPS = [{ label: 'Meny' }, { label: 'När & var' }, { label: 'Uppgifter' }, { label: 'Skicka' }]
@@ -73,24 +74,34 @@ const EMPTY: Form = {
 
 const addressComplete = (f: Form) => Boolean(f.street.trim() && /^\d{3} ?\d{2}$/.test(f.postalCode.trim()) && f.city.trim())
 
-function check(form: Form, guests: number, minGuests: number, chosen: number): string | null {
-  if (!guests) return 'Fyll i antal gäster.'
-  if (guests < minGuests) return `Minst ${minGuests} gäster.`
-  if (chosen === 0) return 'Välj minst ett paket eller en rätt.'
-  if (!form.deliveryDate) return 'Välj datum.'
-  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(form.deliveryTime)) return 'Välj en tid.'
-  if (form.fulfilment === 'delivery' && !addressComplete(form)) return 'Fyll i leveransadressen (gata, postnummer och ort).'
-  if (!form.equipmentReturn) return 'Välj hur fat och utrustning lämnas tillbaka.'
-  if (!form.name.trim()) return 'Fyll i ditt namn.'
-  if (!validEmail(form.email)) return 'Fyll i en giltig e-postadress - offerten skickas dit.'
-  if (!normalizePhone(form.phone)) return 'Fyll i ett giltigt mobilnummer, t.ex. 070-123 45 67.'
-  if (form.customerType === 'company') {
-    if (!form.companyName.trim()) return 'Fyll i företagets namn.'
-    if (!/^\d{6}-?\d{4}$/.test(form.orgNumber.trim())) return 'Fyll i organisationsnummer (NNNNNN-NNNN).'
-    if (!form.signatoryName.trim() || !form.signatoryRole.trim()) return 'Fyll i vem som signerar för företaget och hens roll.'
-    if (!form.signatoryAuthority) return 'Bekräfta att den som signerar får teckna avtal för företaget.'
+/** Fältet som ska markeras och få fokus (null när inget enskilt fält är fel). */
+type FieldKey = keyof Form | null
+const ERROR_ID = 'catering-error'
+
+function check(form: Form, guests: number, minGuests: number, chosen: number, dates: { min: string; max: string }): { field: FieldKey; message: string } | null {
+  const fail = (field: FieldKey, message: string) => ({ field, message })
+  if (!guests) return fail('guests', 'Fyll i antal gäster.')
+  if (guests < minGuests) return fail('guests', `Minst ${minGuests} gäster.`)
+  if (chosen === 0) return fail(null, 'Välj minst ett paket eller en rätt.')
+  if (!form.deliveryDate) return fail('deliveryDate', `Välj ett datum mellan ${formatDate(dates.min)} och ${formatDate(dates.max)}.`)
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(form.deliveryTime)) return fail('deliveryTime', 'Välj en tid.')
+  if (form.fulfilment === 'delivery' && !addressComplete(form)) {
+    const field = !form.street.trim() ? 'street' : !/^\d{3} ?\d{2}$/.test(form.postalCode.trim()) ? 'postalCode' : 'city'
+    return fail(field, 'Fyll i leveransadressen (gata, postnummer och ort).')
   }
-  if (!form.accept) return 'Godkänn villkoren för att skicka förfrågan.'
+  if (!form.equipmentReturn) return fail('equipmentReturn', 'Välj hur fat och utrustning lämnas tillbaka.')
+  if (!form.name.trim()) return fail('name', 'Fyll i ditt namn.')
+  if (!validEmail(form.email)) return fail('email', 'Fyll i en giltig e-postadress - offerten skickas dit.')
+  if (!normalizePhone(form.phone)) return fail('phone', 'Fyll i ett giltigt mobilnummer, t.ex. 070-123 45 67.')
+  if (form.customerType === 'company') {
+    if (!form.companyName.trim()) return fail('companyName', 'Fyll i företagets namn.')
+    if (!/^\d{6}-?\d{4}$/.test(form.orgNumber.trim())) return fail('orgNumber', 'Fyll i organisationsnummer (NNNNNN-NNNN).')
+    if (!form.signatoryName.trim() || !form.signatoryRole.trim()) {
+      return fail(form.signatoryName.trim() ? 'signatoryRole' : 'signatoryName', 'Fyll i vem som signerar för företaget och hens roll.')
+    }
+    if (!form.signatoryAuthority) return fail('signatoryAuthority', 'Bekräfta att den som signerar får teckna avtal för företaget.')
+  }
+  if (!form.accept) return fail('accept', 'Godkänn villkoren för att skicka förfrågan.')
   return null
 }
 
@@ -130,6 +141,7 @@ export default function CateringPage() {
   const [quantities, setQuantities] = useState<Record<string, number>>({})
   const [form, setForm] = useState<Form>(EMPTY)
   const [error, setError] = useState<string | null>(null)
+  const [badField, setBadField] = useState<FieldKey>(null)
   const [busy, setBusy] = useState(false)
   const [quote, setQuote] = useState<Quote | null>(null)
   const [quoteError, setQuoteError] = useState<string | null>(null)
@@ -166,7 +178,15 @@ export default function CateringPage() {
   const set = <K extends keyof Form>(key: K, value: Form[K]) => {
     setForm((f) => ({ ...f, [key]: value }))
     setError(null)
+    setBadField(null)
   }
+  /** id, aria-invalid och aria-describedby för ett fält som kan vara fel. */
+  const field = (key: keyof Form, hint?: string) => ({
+    id: `catering-${key}`,
+    'aria-invalid': badField === key || undefined,
+    'aria-describedby': badField === key ? ERROR_ID : hint,
+  })
+  const phone = info.phone ? formatPhoneNational(info.phone) : undefined
   const minGuests = settings?.minGuests ?? 1
   const guests = Number(form.guests) || 0
   const dishById = useMemo(() => new Map(cateringMenu.dishes.map((d) => [d.dishId, d])), [cateringMenu])
@@ -211,7 +231,7 @@ export default function CateringPage() {
         .catch((err: unknown) => {
           if (cancelled) return
           setQuote(null)
-          setQuoteError(errorMessage(err))
+          setQuoteError(errorMessage(err, phone))
         })
         .finally(() => !cancelled && setQuoting(false))
     }, QUOTE_DEBOUNCE_MS)
@@ -219,9 +239,11 @@ export default function CateringPage() {
       cancelled = true
       window.clearTimeout(timer)
     }
-  }, [locationId, quoteKey])
+  }, [locationId, quoteKey, phone])
 
   const upcoming = nextTier(tiers, guests)
+  const minDate = quote?.earliestDate ?? firstDate(settings?.advanceDays ?? 0)
+  const maxDate = firstDate(365)
   const stepAt = chosenCount === 0 || guests < minGuests ? 1 : !form.deliveryDate || !form.equipmentReturn ? 2
     : !(form.name.trim() && form.email.trim() && form.phone) ? 3 : 4
 
@@ -233,8 +255,14 @@ export default function CateringPage() {
   async function submit(e: FormEvent) {
     e.preventDefault()
     if (!settings) return
-    const problem = check(form, guests, minGuests, chosenCount)
-    if (problem || !form.equipmentReturn || !quoteInput) return setError(problem)
+    const problem = check(form, guests, minGuests, chosenCount, { min: minDate, max: maxDate })
+    if (problem) {
+      setError(problem.message)
+      setBadField(problem.field)
+      if (problem.field) document.getElementById(`catering-${problem.field}`)?.focus()
+      return
+    }
+    if (!form.equipmentReturn || !quoteInput) return
     if (turnstileSiteKey && !turnstileToken) return setError('Bekräfta säkerhetskontrollen ovanför knappen.')
     setBusy(true)
     try {
@@ -262,7 +290,7 @@ export default function CateringPage() {
       rememberToken(created.requestId, created.token)
       navigate(`/catering/${created.locationId}/${created.requestId}?skickad=1`)
     } catch (err) {
-      setError(errorMessage(err))
+      setError(errorMessage(err, phone))
       if (turnstileSiteKey) {
         setTurnstileToken(null)
         setTurnstileReset((n) => n + 1)
@@ -320,7 +348,7 @@ export default function CateringPage() {
           <div className="booking-grid catering-guests">
             <label className="booking-field">
               Antal gäster
-              <input inputMode="numeric" value={form.guests} aria-describedby="catering-guest-hint"
+              <input inputMode="numeric" value={form.guests} {...field('guests', 'catering-guest-hint')}
                 onChange={(e) => set('guests', e.target.value.replace(/\D/g, '').slice(0, 4))} />
             </label>
           </div>
@@ -422,12 +450,13 @@ export default function CateringPage() {
             <div className="booking-grid">
               <label className="booking-field">
                 Datum
-                <DateInput min={quote?.earliestDate ?? firstDate(settings.advanceDays)} value={form.deliveryDate}
+                <DateInput min={minDate} max={maxDate}
+                  value={form.deliveryDate} {...field('deliveryDate')}
                   onChange={(e) => set('deliveryDate', e.target.value)} />
               </label>
               <label className="booking-field">
                 Tid
-                <TimeInput value={form.deliveryTime} onChange={(e) => set('deliveryTime', e.target.value)} />
+                <TimeInput value={form.deliveryTime} {...field('deliveryTime')} onChange={(e) => set('deliveryTime', e.target.value)} />
               </label>
             </div>
             {quote && (
@@ -439,16 +468,16 @@ export default function CateringPage() {
                 <div className="booking-grid">
                   <label className="booking-field">
                     Gatuadress
-                    <input autoComplete="street-address" value={form.street} onChange={(e) => set('street', e.target.value)} />
+                    <input autoComplete="street-address" value={form.street} {...field('street')} onChange={(e) => set('street', e.target.value)} />
                   </label>
                   <label className="booking-field">
                     Postnummer
-                    <input autoComplete="postal-code" inputMode="numeric" value={form.postalCode}
+                    <input autoComplete="postal-code" inputMode="numeric" value={form.postalCode} {...field('postalCode')}
                       onChange={(e) => set('postalCode', e.target.value)} />
                   </label>
                   <label className="booking-field">
                     Ort
-                    <input autoComplete="address-level2" value={form.city} onChange={(e) => set('city', e.target.value)} />
+                    <input autoComplete="address-level2" value={form.city} {...field('city')} onChange={(e) => set('city', e.target.value)} />
                   </label>
                 </div>
                 <p className="order-hint">Leveranspriset räknas på vägavståndet från restaurangen.</p>
@@ -456,9 +485,10 @@ export default function CateringPage() {
             )}
             <fieldset className="equipment-return">
               <legend>Hur lämnas fat och utrustning tillbaka?</legend>
-              {(['cleaned', 'not_cleaned'] as const).map((v) => (
+              {(['cleaned', 'not_cleaned'] as const).map((v, i) => (
                 <label key={v} className={`booking-check${form.equipmentReturn === v ? ' on' : ''}`}>
                   <input type="radio" name="equipmentReturn" value={v} checked={form.equipmentReturn === v}
+                    {...(i === 0 ? field('equipmentReturn') : { 'aria-invalid': badField === 'equipmentReturn' || undefined })}
                     onChange={() => set('equipmentReturn', v)} />
                   <span>
                     {v === 'cleaned'
@@ -497,11 +527,11 @@ export default function CateringPage() {
                 <>
                   <label className="booking-field">
                     Företag
-                    <input autoComplete="organization" value={form.companyName} onChange={(e) => set('companyName', e.target.value)} />
+                    <input autoComplete="organization" value={form.companyName} {...field('companyName')} onChange={(e) => set('companyName', e.target.value)} />
                   </label>
                   <label className="booking-field">
                     Organisationsnummer
-                    <input placeholder="556677-8899" value={form.orgNumber} onChange={(e) => set('orgNumber', e.target.value)} />
+                    <input placeholder="556677-8899" value={form.orgNumber} {...field('orgNumber')} onChange={(e) => set('orgNumber', e.target.value)} />
                   </label>
                   <label className="booking-field">
                     Fakturareferens (valfritt)
@@ -509,15 +539,15 @@ export default function CateringPage() {
                   </label>
                   <label className="booking-field">
                     Den som signerar
-                    <input autoComplete="name" value={form.signatoryName} onChange={(e) => set('signatoryName', e.target.value)} />
+                    <input autoComplete="name" value={form.signatoryName} {...field('signatoryName')} onChange={(e) => set('signatoryName', e.target.value)} />
                   </label>
                   <label className="booking-field">
                     Roll (t.ex. VD, inköpare)
-                    <input autoComplete="organization-title" value={form.signatoryRole}
+                    <input autoComplete="organization-title" value={form.signatoryRole} {...field('signatoryRole')}
                       onChange={(e) => set('signatoryRole', e.target.value)} />
                   </label>
                   <label className="booking-check booking-field--wide">
-                    <input type="checkbox" checked={form.signatoryAuthority}
+                    <input type="checkbox" checked={form.signatoryAuthority} {...field('signatoryAuthority')}
                       onChange={(e) => set('signatoryAuthority', e.target.checked)} />
                     <span>Jag intygar att den som signerar har rätt att teckna avtal för företaget.</span>
                   </label>
@@ -525,15 +555,15 @@ export default function CateringPage() {
               )}
               <label className="booking-field">
                 {form.customerType === 'company' ? 'Kontaktperson' : 'Namn'}
-                <input autoComplete="name" value={form.name} onChange={(e) => set('name', e.target.value)} />
+                <input autoComplete="name" value={form.name} {...field('name')} onChange={(e) => set('name', e.target.value)} />
               </label>
               <label className="booking-field">
                 E-post
-                <input type="email" autoComplete="email" value={form.email} onChange={(e) => set('email', e.target.value)} />
+                <input type="email" autoComplete="email" value={form.email} {...field('email')} onChange={(e) => set('email', e.target.value)} />
               </label>
               <label className="booking-field">
                 Mobilnummer
-                <PhoneInput value={form.phone} onChange={(v) => set('phone', v)} />
+                <PhoneInput value={form.phone} {...field('phone')} onChange={(v) => set('phone', v)} />
               </label>
               <label className="booking-field booking-field--wide">
                 Önskemål, allergier, servering (valfritt)
@@ -589,7 +619,7 @@ export default function CateringPage() {
           )}
           <p className="cart-note catering-estimate">Uppskattat pris, bindande först när offerten signerats.</p>
           <label className="booking-check">
-            <input type="checkbox" checked={form.accept} onChange={(e) => set('accept', e.target.checked)} />
+            <input type="checkbox" checked={form.accept} {...field('accept')} onChange={(e) => set('accept', e.target.checked)} />
             <span>Jag godkänner att restaurangen kontaktar mig om förfrågan.</span>
           </label>
           <MarketingConsent value={form.consent} onChange={(v) => set('consent', v)} />
@@ -598,7 +628,7 @@ export default function CateringPage() {
             <TurnstileWidget siteKey={turnstileSiteKey} resetKey={turnstileReset} action="catering"
               onToken={setTurnstileToken} />
           )}
-          {error && <p className="notice error" role="alert">{error}</p>}
+          {error && <p className="notice error" role="alert" id={ERROR_ID}>{error}</p>}
           <button type="submit" className={`btn-primary${busy ? ' is-busy' : ''}`} disabled={busy || chosenCount === 0}>
             {busy ? <><span className="spinner" aria-hidden="true" />Skickar förfrågan…</> : 'Skicka förfrågan'}
           </button>

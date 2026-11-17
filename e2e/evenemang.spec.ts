@@ -151,7 +151,7 @@ test.describe('Evenemang och biljetter på restaurangens sajt', () => {
     for (const path of ['/evenemang', `/evenemang/${EVENT_ID}`, `/biljett#${TICKET_TOKEN}`, '/biljett/ta-emot']) {
       await page.goto(path)
       await expect(page.getByRole('link', { name: 'Testkrogen - startsida' })).toBeVisible()
-      await expect(page).toHaveURL(/\/$/)
+      await expect(page.getByRole('heading', { name: 'Sidan finns inte' })).toBeVisible()
       await expect(page.getByRole('heading', { name: /^(Evenemang|Dina biljetter|Ta emot biljett)$/ })).toHaveCount(0)
       await expect(page.getByRole('link', { name: 'Evenemang' })).toHaveCount(0)
     }

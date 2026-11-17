@@ -1,5 +1,6 @@
 import { ApiError, apiBaseUrl, apiDelete, apiGet, apiPost } from '../../shared/api'
 import { TICKET_PURCHASE_KEY } from '../../shared/storageRegistry'
+import { menuImageUrl } from '../meny/menuApi'
 
 /**
  * Evenemang och biljetter på restaurangens sajt (CONTRACTS.md 6.K K15-K22,
@@ -11,7 +12,9 @@ import { TICKET_PURCHASE_KEY } from '../../shared/storageRegistry'
 export interface PublicEventSummary {
   eventId: string
   title: string
-  imageUrl?: string
+  /** Bilden laddas upp som menybilderna: S3-nyckeln, URL:en byggs med sajtens bild-CDN. */
+  imageKey?: string
+  imageAlt?: string
   nextOccurrence: string
   fromPriceSek: number
   soldOut: boolean
@@ -51,6 +54,8 @@ export interface PublicEvent {
   eventId: string
   title: string
   description?: string
+  imageKey?: string
+  imageAlt?: string
   refundPolicy?: string | null
   perOrderMax: number
   occurrences: PublicOccurrence[]
@@ -138,13 +143,21 @@ export const listForResale = (token: string, body: { transferId: string; ticketI
   apiPost<{ transferId: string; ticketId: string; status: string; priceOre: number }>(`${tok(token)}/transfers`, { ...body, kind: 'resale' })
 /** Ångra en gåva som inte tagits emot, eller ta bort en biljett från försäljning (K22). */
 export const cancelGift = (token: string, transferId: string) =>
-  apiDelete<unknown>(`${tok(token)}/transfers/${encodeURIComponent(transferId)}`).catch((err: unknown) => {
+  apiDelete<unknown>(`${tok(token)}/transfers/${encodeURIComponent(transferId)}`).then((r) => r ?? null, (err: unknown) => {
     // 204 har ingen kropp: det är inte ett fel.
     if (err instanceof SyntaxError) return null
     throw err
   })
 export const acceptGift = (transferToken: string, name: string) =>
   apiPost<{ ticketToken: string }>(`/public/ticket-transfers/${encodeURIComponent(transferToken)}/accept`, { name })
+
+/** Evenemangets bild, eller null utan bild eller utan bild-CDN (då visas ingen bild). */
+export function eventImage(ev: { imageKey?: string; imageAlt?: string }): { src: string; alt: string } | null {
+  // Varje del av nyckeln kodas för sig, så att ett konstigt tecken aldrig ändrar URL:en.
+  const key = ev.imageKey?.split('/').map(encodeURIComponent).join('/')
+  const src = key ? menuImageUrl(key) : null
+  return src ? { src, alt: ev.imageAlt ?? '' } : null
+}
 
 /** Länk till ett Wallet-pass (K19); visas bara när servern säger att Wallet finns. */
 export function passUrl(token: string, ticketId: string, kind: 'apple' | 'google'): string {
@@ -202,7 +215,7 @@ const ERRORS: Record<string, string> = {
   no_stripe_account: 'Restaurangen kan inte ta emot kortbetalningar just nu.',
   too_many_requests: 'För många försök. Vänta en stund och försök igen.',
   transfer_closed: 'Biljetten kan inte ges bort eller säljas längre. Det går fram till två timmar före start.',
-  invalid_state: 'Biljetten kan inte ändras just nu. Ladda om sidan.',
+  invalid_state: 'Biljetten har ändrats. Vi har hämtat det senaste läget.',
   resale_taken: 'Biljetten är inte längre till salu. Någon annan hann före, eller så togs den tillbaka.',
   invalid_price: 'En gratisbiljett kan inte säljas, men du kan ge bort den.',
   own_listing: 'Det är din egen biljett som är till salu. Ta bort den från försäljning på biljettsidan i stället.',

@@ -90,7 +90,12 @@
   width: 100%;
   max-width: none;
   margin: 0;
-  padding: 0 0 clamp(56px, 8vw, 96px);
+  /* Luften under innehållet kommer från sidfotens marginal (booqy-look.css). */
+  padding: 0;
+}
+
+.page > :last-child {
+  margin-bottom: 0;
 }
 
 /* Sidorna ligger i .page (tryck-in-animationen); heron får gå kant till kant. */
@@ -869,6 +874,12 @@
   gap: 22px;
 }
 
+/* Boka bord: stegen och rubriken med FlowSteps i samma centrerade 860 px-spalt. */
+.page > .booking,
+.page > .page-head:has(+ .booking) {
+  max-width: 860px;
+}
+
 /* --- Kontakt: formuläret på ett kvitto ---------------------------------- */
 
 .photo-hero {
@@ -990,4 +1001,18 @@
   .site-header-theme {
     width: 36px;
   }
+}
+
+/* Kontakt: raden efter "Öppna i e-postprogrammet". Tom tills gästen klickat. */
+.contact-form-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--ink);
+}
+.contact-form-status a {
+  overflow-wrap: anywhere;
 }

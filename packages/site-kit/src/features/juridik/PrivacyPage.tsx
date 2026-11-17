@@ -2,6 +2,7 @@ import { useSite } from '../../shared/SiteContext'
 import { NoticeText } from './NoticeText'
 import { PhoneLink } from '../../shared/PhoneLink'
 import { STORAGE_REGISTRY } from '../../shared/storageRegistry'
+import { StorageName } from './StorageName'
 import type { StorageKind } from '../../shared/storageRegistry'
 
 const KIND_LABEL: Record<StorageKind, string> = {
@@ -111,7 +112,7 @@ export default function PrivacyPage() {
             {STORAGE_REGISTRY.map((entry) => (
               <tr key={entry.name}>
                 <td>
-                  <code>{entry.name}</code>
+                  <StorageName entry={entry} />
                   <span className="storage-kind">{KIND_LABEL[entry.kind]}</span>
                 </td>
                 <td>
@@ -126,8 +127,8 @@ export default function PrivacyPage() {
         </table>
       </div>
       <p>
-        Du kan rensa allt detta i webbläsarens inställningar. Då glöms bara vald plats och en
-        eventuell varukorg; inget annat på sajten påverkas.
+        Du kan rensa allt detta i webbläsarens inställningar. Då glöms dina val på sajten (plats,
+        ljust/mörkt läge, klickljud, varukorg och plats i kön); inget annat på sajten påverkas.
       </p>
 
       {/* Rättigheterna finns redan i restaurangens egen text. */}

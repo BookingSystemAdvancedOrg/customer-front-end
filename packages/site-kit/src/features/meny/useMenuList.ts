@@ -21,9 +21,11 @@ export function useMenuList() {
     items: PublicMenuItem[]
     categories: MenuCategoryEntry[]
     error: string | null
+    attempt: number
   } | null>(null)
   const [chosen, setFilter] = useState<MenuCategory | null>(null)
-  const current = result?.locationId === locationId ? result : null
+  const [attempt, setAttempt] = useState(0)
+  const current = result?.locationId === locationId && result.attempt === attempt ? result : null
   const items = current?.items ?? []
   const categories = current?.categories ?? DEFAULT_CATEGORIES
   const filter = chosen ?? categories[0]?.categoryId ?? 'starters'
@@ -35,12 +37,13 @@ export function useMenuList() {
     let cancelled = false
     getPublicMenuWithCategories(locationId)
       .then((fetched) => {
-        if (!cancelled) setResult({ locationId, ...fetched, error: null })
+        if (!cancelled) setResult({ locationId, attempt, ...fetched, error: null })
       })
       .catch((err: unknown) => {
         if (!cancelled) {
           setResult({
             locationId,
+            attempt,
             items: [],
             categories: DEFAULT_CATEGORIES,
             error: err instanceof Error ? err.message : 'Menyn kunde inte hämtas.',
@@ -50,12 +53,15 @@ export function useMenuList() {
     return () => {
       cancelled = true
     }
-  }, [configured, locationId])
+  }, [configured, locationId, attempt])
+
+  /** Försök igen efter ett fel: visar laddningen och hämtar på nytt. */
+  const retry = () => setAttempt((a) => a + 1)
 
   const visible = items
     .filter((it) => it.category === filter)
     .slice()
     .sort((a, b) => a.name.localeCompare(b.name, 'sv'))
 
-  return { configured, loading, error, filter, setFilter, visible, items, categories }
+  return { configured, loading, error, retry, filter, setFilter, visible, items, categories }
 }

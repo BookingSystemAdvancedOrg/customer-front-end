@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { SiteProvider } from '@booqy/site-kit'
@@ -91,7 +91,7 @@ describe('feature routes (gift cards, queue, site builder)', () => {
     )
   }
 
-  it('routes nothing new while the features are off: the paths fall back to the menu', async () => {
+  it('routes nothing new while the features are off: the paths show the not-found page', async () => {
     for (const path of ['/presentkort', '/presentkort/saldo', '/ko', '/forhandsvisning', '/en-sida']) {
       const { unmount } = renderAt(path, {})
       await screen.findByRole('link', { name: 'Testkrogen - startsida' })
@@ -138,6 +138,22 @@ describe('feature routes (gift cards, queue, site builder)', () => {
     }
   })
 
+  it('an unknown path says the page does not exist, with links only to what the restaurant has', async () => {
+    renderAt('/en-sida', { features: { reservations: true, events: false } })
+    expect(await screen.findByRole('heading', { level: 1, name: 'Sidan finns inte' })).toBeInTheDocument()
+    const card = screen.getByRole('heading', { level: 1, name: 'Sidan finns inte' }).closest('section')!
+    expect(within(card).getByRole('link', { name: 'Meny' })).toHaveAttribute('href', '/meny')
+    expect(within(card).getByRole('link', { name: 'Boka bord' })).toHaveAttribute('href', '/boka-bord')
+    expect(within(card).queryByRole('link', { name: 'Evenemang' })).toBeNull()
+    expect(document.title).toBe('Sidan finns inte - Testkrogen')
+  })
+
+  it('names the page in the tab title', async () => {
+    renderAt('/kontakt', { features: ALL_ON })
+    await screen.findByRole('link', { name: 'Testkrogen - startsida' })
+    await waitFor(() => expect(document.title).toBe('Kontakt - Testkrogen'))
+  })
+
   it('draws unknown paths as builder pages only for a published builder site', async () => {
     renderAt('/en-sida', { features: ALL_ON, site: { mode: 'builder', version: 0 } })
     await screen.findByRole('link', { name: 'Testkrogen - startsida' })
@@ -170,7 +186,7 @@ describe('event routes (events and tickets)', () => {
     )
   }
 
-  it('routes and links nothing while events is off or missing: the paths fall back to the menu', async () => {
+  it('routes and links nothing while events is off or missing: the paths show the not-found page', async () => {
     for (const features of [undefined, { reservations: true, events: false }]) {
       for (const path of EVENT_PATHS) {
         const { unmount } = renderAt(path, features ? { features } : {})

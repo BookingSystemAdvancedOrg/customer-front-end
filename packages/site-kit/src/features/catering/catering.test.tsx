@@ -4,11 +4,13 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import CateringPage from './CateringPage'
 import CateringRequestPage, { RETURN_CHECK_MS, SIGN_POLL_MS } from './CateringRequestPage'
-import { firstDate, tokenFor } from './cateringApi'
+import { errorMessage, firstDate, tokenFor } from './cateringApi'
+import { ApiError } from '../../shared/api'
 import type { CateringSettings, GuestRequest, Quote, Tier } from './cateringApi'
 import { WithSite } from '../../test/siteFixture'
 import { SiteContext } from '../../shared/SiteContext'
 import { siteConfig } from '../../test/siteData'
+import { formatDate } from '../../shared/DateInput'
 
 const api = vi.hoisted(() => ({
   getSettings: vi.fn(), getTiers: vi.fn(), createRequest: vi.fn(), getRequest: vi.fn(), getQuote: vi.fn(),
@@ -106,6 +108,15 @@ describe('catering helpers', () => {
     expect(firstDate(5, new Date('2026-10-12T23:30:00Z'))).toBe('2026-10-18')
   })
 
+  it('maps server validation to Swedish and never shows the English text', () => {
+    expect(errorMessage(new ApiError(400, 'deliveryDate must be within a year'))).toBe('Välj ett datum inom ett år framåt.')
+    expect(errorMessage(new ApiError(400, 'deliveryTime must be HH:MM'))).toBe('Välj en tid, t.ex. 12:00.')
+    expect(errorMessage(new ApiError(400, 'notes must be at most 1000 characters'))).toMatch(/^Önskemålen/)
+    expect(errorMessage(new ApiError(400, 'something new'), '08-12 34 56')).toBe(
+      'Något i uppgifterna stämmer inte. Kontrollera fälten, eller ring restaurangen på 08-12 34 56.',
+    )
+  })
+
   it('keeps the link token in the tab', () => {
     expect(tokenFor('req-1', '#t=abc')).toBe('abc')
     expect(tokenFor('req-1', '')).toBe('abc')
@@ -154,7 +165,13 @@ describe('CateringPage', () => {
 
     await user.click(within(cart).getByRole('button', { name: 'Skicka förfrågan' }))
     expect(await within(cart).findByRole('alert')).toHaveTextContent('Fyll i ditt namn.')
-    await user.type(screen.getByLabelText('Namn'), 'Anna Andersson')
+    const nameInput = screen.getByLabelText('Namn')
+    expect(nameInput).toHaveAttribute('aria-invalid', 'true')
+    expect(nameInput).toHaveAttribute('aria-describedby', 'catering-error')
+    expect(nameInput).toHaveFocus()
+    expect(document.querySelector('[data-max]')).toHaveAttribute('data-max', firstDate(365))
+    await user.type(nameInput, 'Anna Andersson')
+    expect(nameInput).not.toHaveAttribute('aria-invalid')
     await user.type(screen.getByLabelText('E-post'), 'anna@example.se')
     await user.type(screen.getByLabelText('Mobilnummer'), '070-123 45 67')
     await user.click(within(cart).getByRole('checkbox', { name: /kontaktar mig/ }))
@@ -165,6 +182,28 @@ describe('CateringPage', () => {
     }))
     expect(await screen.findByText('Skickad sida')).toBeInTheDocument()
     expect(sessionStorage.length).toBeGreaterThan(0)
+  })
+
+  it('says which dates are allowed when the typed date is out of range', async () => {
+    const user = userEvent.setup()
+    api.getSettings.mockResolvedValue(SETTINGS)
+    api.getTiers.mockResolvedValue(TIERS)
+    api.getCateringMenu.mockResolvedValue({ dishes: [], packages: [] })
+    api.getQuote.mockResolvedValue({ ...QUOTE, earliestDate: undefined })
+    getPublicMenu.mockResolvedValue([{ menuItemId: 'm1', name: 'Lasagne', description: '', price: 50, category: 'mains' }])
+    renderCalculator()
+    await user.type(await screen.findByLabelText('Portioner Lasagne'), '30')
+    await user.type(screen.getByLabelText('Antal gäster'), '30')
+    const date = document.querySelector<HTMLInputElement>('[data-max]')!
+    await user.clear(date)
+    const [y, m, d] = firstDate(400).split('-')
+    await user.type(date, `${d}/${m}/${y}`)
+    const cart = screen.getByRole('complementary', { name: 'Kalkyl' })
+    await user.click(within(cart).getByRole('button', { name: 'Skicka förfrågan' }))
+    expect(await within(cart).findByRole('alert')).toHaveTextContent(
+      `Välj ett datum mellan ${formatDate(firstDate(SETTINGS.advanceDays))} och ${formatDate(firstDate(365))}.`)
+    expect(date).toHaveFocus()
+    expect(date).toHaveAttribute('aria-describedby', 'catering-error')
   })
 
   it('offers the catering packages per guest and asks a company for its signatory', async () => {

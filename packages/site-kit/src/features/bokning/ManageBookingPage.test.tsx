@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -107,6 +107,45 @@ describe('ManageBookingPage', () => {
     await user.click(confirm)
     expect(await screen.findByText('Avbokad - avgift debiterad')).toBeInTheDocument()
     expect(screen.getByText(/Debiterad avgift: 300 kr/)).toBeInTheDocument()
+  })
+
+  it('shows the fee checkbox when the fee started after the page loaded', async () => {
+    const user = userEvent.setup()
+    const guarantee = { cardOnFile: true, noShowFee: 60000, lateCancelFee: 30000, cancelCutoffHours: 24,
+      currency: 'sek', cancellationFee: 0 }
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url.endsWith('/cancel')) {
+        if (!String(init?.body ?? '').includes('acceptFee')) return json({ error: 'fee_applies', fee: 30000 }, 409)
+        return json({ ...BOOKING, guarantee, status: 'cancelled_charged', cancellable: false })
+      }
+      return json({ ...BOOKING, guarantee })
+    })
+    renderAt('#tok')
+    await user.click(await screen.findByRole('button', { name: 'Avboka' }))
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Ja, avboka' }))
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('Godkänn avgiften')
+    const fee = screen.getByRole('checkbox', { name: /300 kr/ })
+    await waitFor(() => expect(fee).toHaveFocus())
+    expect(fee).toHaveAttribute('aria-describedby', alert.id)
+    const confirm = screen.getByRole('button', { name: 'Ja, avboka' })
+    expect(confirm).toBeDisabled()
+    await user.click(screen.getByRole('checkbox', { name: /300 kr/ }))
+    await user.click(confirm)
+    expect(await screen.findByText('Avbokad - avgift debiterad')).toBeInTheDocument()
+  })
+
+  it('an unfinished card step points to a new booking', async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.endsWith('/confirm')) return json({ error: 'card_not_confirmed' }, 409)
+      return json({ ...BOOKING, status: 'pending', cancellable: false })
+    })
+    renderAt('#tok')
+    expect(await screen.findByText(/Bokningen blev inte klar/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Gör en ny bokning' })).toHaveAttribute('href', '/boka-bord')
+    expect(screen.queryByText(/20 minuter/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Väntar på kortgaranti/)).not.toBeInTheDocument()
   })
 
   it('finishes a pending booking when the guest comes back from Stripe', async () => {

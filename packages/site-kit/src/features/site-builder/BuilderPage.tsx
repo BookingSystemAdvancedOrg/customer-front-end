@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Menu } from '../meny/Menu'
 import { useSite } from '../../shared/SiteContext'
 import { siteKitConfig } from '../../config'
+import { liveSlots, siteFeatures } from './liveSlots'
 import { SitePage, findPage } from './SitePage'
 import type { SiteDocument } from './siteSchema'
 
@@ -28,7 +28,7 @@ function embedded(): SiteDocument | null {
 
 /** Varje sida på en sajt från webbplatsbyggaren, ritad från det publicerade dokumentet. */
 export default function BuilderPage() {
-  const { config } = useSite()
+  const { config, location } = useSite()
   const { pathname } = useLocation()
   const [doc, setDoc] = useState<SiteDocument | null>(embedded)
   const version = config.tenant.site?.version ?? 0
@@ -43,14 +43,36 @@ export default function BuilderPage() {
     return () => { cancelled = true }
   }, [version])
 
+  // The render Lambda writes a static <meta name="description"> into <head>. React 19 never adopts
+  // a meta tag, so that static one is removed and the tag React renders below (data-booqy) is the only one.
+  useEffect(() => {
+    document.head.querySelectorAll('meta[name="description"]:not([data-booqy])').forEach((m) => m.remove())
+  }, [])
+
   const page = doc ? findPage(doc, pathname) : null
   if (!doc || !page) {
     return (
       <section className="page-hero page-prose">
+        {/* The static index.html <title> is gone after a client navigation: always render one. */}
+        <title>{doc ? `Sidan finns inte - ${config.tenant.name}` : config.tenant.name}</title>
         <h1>{config.tenant.name}</h1>
         <p>{doc ? 'Sidan finns inte.' : 'Den här sidan är på väg.'}</p>
       </section>
     )
   }
-  return <SitePage doc={doc} page={page} imageBase={siteKitConfig().menuImageBaseUrl ?? ''} live={{ menu: () => <Menu /> }} />
+  return (
+    <>
+      {/* React 19 hoists these into <head>: the page's own SEO title, never just the restaurant name. */}
+      <title>{page.seo.title || page.title}</title>
+      {page.seo.description ? <meta name="description" content={page.seo.description} data-booqy="" /> : null}
+      <SitePage
+        doc={doc}
+        page={page}
+        imageBase={siteKitConfig().menuImageBaseUrl ?? ''}
+        live={liveSlots}
+        features={siteFeatures(config)}
+        address={location.address ?? ''}
+      />
+    </>
+  )
 }

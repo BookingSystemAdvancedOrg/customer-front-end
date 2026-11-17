@@ -11,9 +11,10 @@ const SUBJECT_OPTIONS = [
 ]
 
 /**
- * Kontakt. Det finns ingen meddelande-endpoint - formuläret öppnar ett
+ * Kontakt. Det finns ingen meddelande-endpoint: formuläret öppnar ett
  * mailto:-utkast i besökarens e-postklient, till den valda platsens (eller
- * restaurangens) e-postadress från GET /site-config.
+ * restaurangens) e-postadress från GET /site-config. Utan e-postprogram
+ * händer inget synligt, så efter klicket visas adressen med en kopieringsknapp.
  */
 export default function KontaktPage() {
   const { email, phone, address } = useLocationInfo()
@@ -22,6 +23,9 @@ export default function KontaktPage() {
   const [contactEmail, setContactEmail] = useState('')
   const [subject, setSubject] = useState('')
   const [message, setMessage] = useState('')
+  const [opened, setOpened] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const [copyFailed, setCopyFailed] = useState(false)
 
   const subjectLabel = useMemo(
     () => SUBJECT_OPTIONS.find((opt) => opt.value === subject)?.label ?? subject,
@@ -33,6 +37,19 @@ export default function KontaktPage() {
     const mailSubject = `Kontakt ${config.tenant.name} - ${subjectLabel}`
     const mailBody = `Namn: ${name}\nE-post: ${contactEmail}\nÄmne: ${subjectLabel}\n\n${message}`
     window.location.href = `mailto:${email}?subject=${encodeURIComponent(mailSubject)}&body=${encodeURIComponent(mailBody)}`
+    setOpened(true)
+  }
+
+  function copyAddress() {
+    const fail = () => {
+      setCopied(false)
+      setCopyFailed(true)
+    }
+    if (!navigator.clipboard?.writeText) return fail()
+    navigator.clipboard.writeText(email).then(() => {
+      setCopyFailed(false)
+      setCopied(true)
+    }, fail)
   }
 
   return (
@@ -40,7 +57,7 @@ export default function KontaktPage() {
       <section className="photo-hero">
         <p className="hero-kicker">Hör av dig</p>
         <h1>Kontakt</h1>
-        <p className="hero-sub">Skicka ett meddelande till oss. Vi återkommer så snart vi kan.</p>
+        <p className="hero-sub">Skriv ditt meddelande här, så öppnas det i ditt e-postprogram.</p>
         {(phone || address) && (
           <p className="hero-sub">
             {address}
@@ -112,8 +129,20 @@ export default function KontaktPage() {
         </div>
 
         <Button type="submit" variant="primary" wide>
-          Skicka
+          Öppna i e-postprogrammet
         </Button>
+        {/* Live-regionen finns alltid, så skärmläsare läser upp texten när den fylls. */}
+        <p className="contact-form-status" role="status">
+          {opened && (
+            <>
+              Öppnades inget? Mejla oss på <a href={`mailto:${email}`}>{email}</a>.{' '}
+              <Button type="button" variant="secondary" size="sm" onClick={copyAddress}>
+                {copied ? 'Adressen är kopierad' : 'Kopiera adressen'}
+              </Button>
+              {copyFailed && <> Kunde inte kopiera. Markera adressen och kopiera den själv.</>}
+            </>
+          )}
+        </p>
       </form>
       )}
     </>

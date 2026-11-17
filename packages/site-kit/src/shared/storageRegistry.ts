@@ -121,7 +121,7 @@ export const STORAGE_REGISTRY: readonly StorageEntry[] = [
     purpose: 'Skydd mot kortbedrägerier när du betalar eller lämnar en kortgaranti. Sätts bara på de stegen.',
     lifetime: '1 år respektive 30 minuter',
     category: 'nödvändig',
-    where: 'Kortgaranti, betalning av beställning och catering',
+    where: 'Kortgaranti, betalning av beställning, catering, presentkort och evenemang',
   },
   {
     name: 'Cloudflare Turnstile',

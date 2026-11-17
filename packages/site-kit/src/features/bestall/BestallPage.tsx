@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { Button } from '@booqy/brand'
 import { isApiConfigured } from '../../shared/api'
 import { useSite } from '../../shared/SiteContext'
 import { Slot } from '../../shared/slots'
 import { useLocationInfo } from '../../shared/useLocationInfo'
 import { PhoneInput } from '../../shared/PhoneInput'
+import { PhoneLink } from '../../shared/PhoneLink'
+import { FlowSteps } from '../../shared/FlowSteps'
 import { normalizePhone, validEmail } from '../boka/bookingApi'
 import { TurnstileWidget } from '../boka/TurnstileWidget'
 import { Plate } from '../../shared/Plate'
@@ -31,6 +34,8 @@ import {
   createOrder,
   MENU_ITEM_REMOVED,
   getOrdering,
+  isGiftCardError,
+  knownOrderError,
   kronor,
   loadCart,
   loadLineNotes,
@@ -85,17 +90,23 @@ const STEP_TITLE: Record<Step, string> = {
   confirm: 'Godkänn och betala',
 }
 
-/** Det som saknas i ett steg (null när steget är klart). */
-function stepError(step: Step, g: Guest): string | null {
+/** Fältet som felet gäller: det markeras (aria-invalid) och får fokus. */
+type Field = 'name' | 'phone' | 'email' | 'notes' | 'accept' | 'giftCard'
+
+const ERROR_ID = 'order-error'
+const PHONE_ID = 'order-phone'
+
+/** Det som saknas i ett steg och i vilket fält (null när steget är klart). */
+function stepError(step: Step, g: Guest): { field: Field; message: string } | null {
   if (step === 'who') {
-    if (!g.name.trim()) return 'Fyll i ditt namn.'
-    if (!normalizePhone(g.phone)) return 'Fyll i ett giltigt mobilnummer, t.ex. 070-123 45 67.'
+    if (!g.name.trim()) return { field: 'name', message: 'Fyll i ditt namn.' }
+    if (!normalizePhone(g.phone)) return { field: 'phone', message: 'Fyll i ett giltigt mobilnummer, t.ex. 070-123 45 67.' }
   }
   if (step === 'receipt') {
-    if (!validEmail(g.email)) return 'Fyll i en giltig e-postadress - kvittot skickas dit.'
-    if (g.notes.length > NOTES_MAX) return `Meddelandet får vara högst ${NOTES_MAX} tecken.`
+    if (!validEmail(g.email)) return { field: 'email', message: 'Fyll i en giltig e-postadress - kvittot skickas dit.' }
+    if (g.notes.length > NOTES_MAX) return { field: 'notes', message: `Meddelandet får vara högst ${NOTES_MAX} tecken.` }
   }
-  if (step === 'confirm' && !g.accept) return 'Godkänn villkoren för att gå vidare till betalning.'
+  if (step === 'confirm' && !g.accept) return { field: 'accept', message: 'Godkänn villkoren för att gå vidare till betalning.' }
   return null
 }
 
@@ -136,6 +147,14 @@ export default function BestallPage() {
   const [cart, setCart] = useState<Cart>(() => loadCart(locationId))
   const [guest, setGuest] = useState<Guest>(EMPTY_GUEST)
   const [error, setError] = useState<string | null>(null)
+  // Fältet som felet gäller; markeras så länge felet visas.
+  const [errorField, setErrorField] = useState<Field | null>(null)
+  // Räknas upp vid varje fel, så att samma fel igen ger fokus igen.
+  const [errorTick, setErrorTick] = useState(0)
+  const fieldRefs = useRef<Partial<Record<Field, HTMLInputElement | HTMLTextAreaElement | null>>>({})
+  const giftRef = useRef<HTMLDivElement>(null)
+  const [loadError, setLoadError] = useState(false)
+  const [attempt, setAttempt] = useState(0)
   const [busy, setBusy] = useState(false)
   // Beställningen är registrerad: betalningskvittot visas (steg 3).
   const [payment, setPayment] = useState<OrderCreated | null>(null)
@@ -161,18 +180,32 @@ export default function BestallPage() {
     let cancelled = false
     getOrdering(locationId, tableCode)
       .then((s) => !cancelled && setOrdering(s))
-      .catch((err: unknown) => !cancelled && setStateError(orderErrorMessage(err)))
+      .catch((err: unknown) => {
+        if (cancelled) return
+        // QR-koden och liknande har ett eget svar; annars gick hämtningen fel.
+        const known = knownOrderError(err)
+        if (known) setStateError(known)
+        else setLoadError(true)
+      })
     getPublicMenuWithCategories(locationId)
       .then((res) => {
         if (cancelled) return
         setMenu(res.items)
         setCategories(res.categories)
       })
-      .catch(() => !cancelled && setMenu([]))
+      .catch(() => !cancelled && setLoadError(true))
     return () => {
       cancelled = true
     }
-  }, [locationId, tableCode])
+  }, [locationId, tableCode, attempt])
+
+  /** Hämta menyn och läget igen, på plats. */
+  function retryLoad() {
+    setLoadError(false)
+    setStateError(null)
+    setMenu(null)
+    setAttempt((n) => n + 1)
+  }
 
   useEffect(() => saveCart(locationId, cart), [locationId, cart])
   const [lineNotes, setLineNotes] = useState<LineNotes>(() => loadLineNotes(locationId))
@@ -205,6 +238,9 @@ export default function BestallPage() {
     ? lines.reduce((sum, l) => sum + discounted(l.unit, applied.percent) * l.quantity, 0)
     : subtotal
   const groups = groupByCategory(menu ?? [], categories)
+  // Kategoriraden markerar den kategori gästen scrollat till, som på menysidan.
+  const [activeCategory, setActiveCategory] = useState<string | null>(null)
+  const shownCategory = groups.some((g) => g.category === activeCategory) ? activeCategory : groups[0]?.category
   /** Antal av en rätt i varukorgen, alla tillval sammanräknade. */
   const inCart = (menuItemId: string) =>
     lines.reduce((n, l) => n + (l.dish.menuItemId === menuItemId ? l.quantity : 0), 0)
@@ -217,10 +253,31 @@ export default function BestallPage() {
   const step: Step = lines.length ? checkout : 'cart'
   // Stegraden: rätter -> uppgifter -> betala. Betala när sista steget är ifyllt.
   const stepAt = payment ? 3 : step === 'cart' ? 1 : step === 'confirm' && !firstGap(guest) ? 3 : 2
+  const onMenu = !payment && step === 'cart'
+
+  useEffect(() => {
+    if (!onMenu || groups.length < 2 || typeof IntersectionObserver === 'undefined') return
+    const io = new IntersectionObserver(
+      (entries) => {
+        const top = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0]
+        if (top) setActiveCategory(top.target.getAttribute('data-category'))
+      },
+      { rootMargin: '-35% 0px -55% 0px' },
+    )
+    document.querySelectorAll('.order-menu .menu-section[data-category]').forEach((el) => io.observe(el))
+    return () => io.disconnect()
+  }, [onMenu, groups.length])
+
+  /** Visa ett fel; med ett fält markeras det och får fokus. */
+  function fail(message: string | null, field: Field | null = null) {
+    setError(message)
+    setErrorField(message ? field : null)
+    if (message) setErrorTick((n) => n + 1)
+  }
 
   /** Till ett annat steg i kassan: fokus på rubriken, och sidan står still. */
   function go(next: Step) {
-    setError(null)
+    fail(null)
     stepMoved.current = true
     setCheckout(next)
   }
@@ -242,8 +299,35 @@ export default function BestallPage() {
     window.scrollBy?.({ top: top - header - 16, behavior: reduce ? 'auto' : 'smooth' })
   }, [step, payment])
 
+  // Fältet med felet: markerat och i fokus (efter rubriken ovan, så att fältet vinner).
+  useEffect(() => {
+    // Presentkortsfältet ritas av sin egen komponent: markeras här direkt i DOM.
+    const gift = giftRef.current?.querySelector('input')
+    if (gift) {
+      if (errorField === 'giftCard') {
+        gift.setAttribute('aria-invalid', 'true')
+        gift.setAttribute('aria-describedby', ERROR_ID)
+      } else {
+        gift.removeAttribute('aria-invalid')
+        gift.removeAttribute('aria-describedby')
+      }
+    }
+    if (!errorField) return
+    const el = errorField === 'giftCard'
+      ? gift
+      : errorField === 'phone' ? document.getElementById(PHONE_ID) : fieldRefs.current[errorField]
+    el?.focus()
+  }, [errorField, errorTick, step])
+
+  /** Markeringen för ett fält med fel. */
+  const invalid = (field: Field) =>
+    error && errorField === field ? { 'aria-invalid': true as const, 'aria-describedby': ERROR_ID } : {}
+  const fieldRef = (field: Field) => (el: HTMLInputElement | HTMLTextAreaElement | null) => {
+    fieldRefs.current[field] = el
+  }
+
   function change(id: string, delta: number) {
-    setError(null)
+    fail(null)
     setCart((prev) => {
       const next = { ...prev }
       const quantity = stepQuantity(prev[id] ?? 0, delta)
@@ -328,7 +412,7 @@ export default function BestallPage() {
     if (step === 'confirm') return void submit()
     if (!lines.length || tooLarge || !open) return
     const problem = stepError(step, guest)
-    if (problem) return setError(problem)
+    if (problem) return fail(problem.message, problem.field)
     go(STEP_ORDER[STEP_ORDER.indexOf(step) + 1])
   }
 
@@ -337,15 +421,15 @@ export default function BestallPage() {
   }
 
   async function submit() {
-    setError(null)
-    if (!lines.length) return setError('Lägg till något från menyn först.')
+    fail(null)
+    if (!lines.length) return fail('Lägg till något från menyn först.')
     const gap = firstGap(guest)
     if (gap) {
-      const problem = stepError(gap, guest)
+      const problem = stepError(gap, guest)!
       if (gap !== step) go(gap)
-      return setError(problem)
+      return fail(problem.message, problem.field)
     }
-    if (turnstileSiteKey && !turnstileToken) return setError('Bekräfta säkerhetskontrollen ovanför knappen.')
+    if (turnstileSiteKey && !turnstileToken) return fail('Bekräfta säkerhetskontrollen ovanför knappen.')
     setBusy(true)
     try {
       const created = await createOrder({
@@ -371,12 +455,17 @@ export default function BestallPage() {
         embedded: true,
       })
       rememberToken(created.orderId, created.statusToken)
+      if (created.chargedAmount === 0) {
+        // Presentkortet täckte allt: beställningen är redan betald och går till köket.
+        done(created)
+        return
+      }
       stepMoved.current = true
       setPayStatus({ ready: false, busy: false, paid: false })
       setPayment(created)
       setBusy(false)
     } catch (err) {
-      setError(orderErrorMessage(err))
+      fail(orderErrorMessage(err), isGiftCardError(err) ? 'giftCard' : null)
       if (err instanceof Error && /^discount_/.test(err.message)) setCode(null)
       if (err instanceof Error && (err.message === 'menu_item_unavailable' || /^option_/.test(err.message))) {
         // En rätt har gått ut eller stängts av sedan menyn hämtades: hämta om
@@ -397,7 +486,7 @@ export default function BestallPage() {
               setCart((prev) => Object.fromEntries(Object.entries(prev).filter(([key]) => keep(key))))
               // Tillbaka till brickan, så att gästen ser vad som ändrats.
               go('cart')
-              setError(MENU_ITEM_REMOVED)
+              fail(MENU_ITEM_REMOVED)
             }
           })
           .catch(() => undefined)
@@ -410,12 +499,16 @@ export default function BestallPage() {
     }
   }
 
-  const paid = useCallback(() => {
-    if (!payment) return
+  /** Betald: varukorgen töms och gästen följer beställningen på statussidan. */
+  const done = useCallback((order: OrderCreated) => {
     clearCart(locationId)
     setLineNotes({})
-    navigate(`/bestallning/${encodeURIComponent(payment.locationId)}/${encodeURIComponent(payment.orderId)}`)
-  }, [payment, locationId, navigate])
+    navigate(`/bestallning/${encodeURIComponent(order.locationId)}/${encodeURIComponent(order.orderId)}`)
+  }, [locationId, navigate])
+
+  const paid = useCallback(() => {
+    if (payment) done(payment)
+  }, [payment, done])
 
   /** Tillbaka till varukorgen: beställningen som inte betalades går ut av sig själv. */
   function back() {
@@ -428,8 +521,9 @@ export default function BestallPage() {
     }
   }
 
-  // Summan som betalas: serverns belopp när beställningen finns, annars sidans.
-  const payTotal = payment ? payment.totalAmount : total
+  // Summan som betalas: serverns belopp när beställningen finns (minus presentkortet), annars sidans.
+  const payTotal = payment ? payment.chargedAmount ?? payment.totalAmount : total
+  const gift = payment?.giftCard
   const vat = vatBreakdown(lines.map((l) => ({
     rate: vatRate(Boolean(l.dish.alcohol), mode),
     total: (applied ? discounted(l.unit, applied.percent) : l.unit) * l.quantity,
@@ -458,31 +552,13 @@ export default function BestallPage() {
         <div><dt>Delsumma</dt><dd>{kronor(subtotal)}</dd></div>
         {applied && <div><dt>Rabatt {applied.percent} % ({applied.code})</dt><dd>-{kronor(subtotal - total)}</dd></div>}
         {vat.map((v) => <div key={v.rate}><dt>Varav moms {v.rate} %</dt><dd>{kronor(v.vat)}</dd></div>)}
+        {gift && <div><dt>Presentkort ****{gift.last4}</dt><dd>-{kronor(gift.debitedOre)}</dd></div>}
       </dl>
       <div className="sum-total"><span>Totalt</span><span>{kronor(payTotal)}</span></div>
     </>
   )
 
-  const crumbs = (
-    <ol className="crumbs" aria-label={`Beställning: steg ${stepAt} av ${STEPS.length}`}>
-      {STEPS.map((s, i) => {
-        const n = i + 1
-        const state = n < stepAt ? 'done' : n === stepAt ? 'current' : 'next'
-        return (
-          <li key={s.label} className={`crumb is-${state}`} aria-current={state === 'current' ? 'step' : undefined}>
-            {n === 1 && state === 'done' && !payment ? (
-              <button type="button" className="crumb-link" onClick={() => go('cart')}>{s.label}</button>
-            ) : (
-              <span>{state === 'done' && <span className="sr-only">Klart: </span>}{s.label}</span>
-            )}
-            {n < STEPS.length && (
-              <svg className="crumb-sep" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5" /></svg>
-            )}
-          </li>
-        )
-      })}
-    </ol>
-  )
+  const crumbs = <FlowSteps steps={STEPS} current={stepAt} label="Beställning" />
 
   if (payment || step !== 'cart') {
     const formId = payment ? 'order-pay' : 'order-checkout'
@@ -493,6 +569,12 @@ export default function BestallPage() {
       : step === 'confirm'
         ? busy ? <><span className="spinner" aria-hidden="true" />Skickar beställningen…</> : `Till betalning · ${kronor(total)}`
         : <>Fortsätt<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" /></svg></>
+    // Ett klick tillbaka till varukorgen från alla kassasteg före betalningen.
+    const editCart = !payment && (
+      <button type="button" className="checkout-back" disabled={busy} onClick={() => go('cart')}>
+        Ändra varukorgen
+      </button>
+    )
     return (
       <div className="checkout" ref={headRef}>
         <header className="checkout-bar">
@@ -509,7 +591,7 @@ export default function BestallPage() {
             <strong>{kronor(payTotal)}</strong>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
           </summary>
-          <div className="checkout-peek-body">{summary}</div>
+          <div className="checkout-peek-body">{summary}{editCart}</div>
         </details>
 
         <div className="checkout-grid">
@@ -530,8 +612,8 @@ export default function BestallPage() {
                   <h2 id="checkout-pay" className="checkout-sub">Betala med</h2>
                   <PaymentPanel
                     publishableKey={config.stripe.publishableKey}
-                    stripeAccount={payment.stripeAccount}
-                    clientSecret={payment.clientSecret}
+                    stripeAccount={payment.stripeAccount ?? ''}
+                    clientSecret={payment.clientSecret ?? ''}
                     formId={formId}
                     onStatus={setPayStatus}
                     onPaid={paid}
@@ -555,7 +637,7 @@ export default function BestallPage() {
                     <>
                       <label className="booking-field">
                         <span>Namn</span>
-                        <input autoComplete="name" value={guest.name}
+                        <input autoComplete="name" value={guest.name} ref={fieldRef('name')} {...invalid('name')}
                           onChange={(e) => setGuest({ ...guest, name: e.target.value })} />
                       </label>
                       <label className="booking-field">
@@ -563,7 +645,8 @@ export default function BestallPage() {
                         <span className="field-hint">
                           {mode === 'pickup' ? 'Vi sms:ar när maten lagas och när den är klar.' : 'Vi sms:ar när maten lagas.'}
                         </span>
-                        <PhoneInput value={guest.phone} onChange={(phone) => setGuest({ ...guest, phone })} />
+                        <PhoneInput value={guest.phone} onChange={(phone) => setGuest({ ...guest, phone })}
+                          id={PHONE_ID} {...invalid('phone')} />
                       </label>
                     </>
                   )}
@@ -573,14 +656,14 @@ export default function BestallPage() {
                       <label className="booking-field">
                         <span>E-post</span>
                         <span className="field-hint">Hit skickar vi kvittot.</span>
-                        <input type="email" autoComplete="email" value={guest.email}
-                          onChange={(e) => setGuest({ ...guest, email: e.target.value })} />
+                        <input type="email" autoComplete="email" value={guest.email} ref={fieldRef('email')}
+                          {...invalid('email')} onChange={(e) => setGuest({ ...guest, email: e.target.value })} />
                       </label>
                       <label className="booking-field">
                         <span>Allergier eller önskemål</span>
                         <span className="field-hint">Valfritt, till exempel nötallergi.</span>
-                        <textarea rows={3} maxLength={NOTES_MAX} value={guest.notes}
-                          onChange={(e) => setGuest({ ...guest, notes: e.target.value })} />
+                        <textarea rows={3} maxLength={NOTES_MAX} value={guest.notes} ref={fieldRef('notes')}
+                          {...invalid('notes')} onChange={(e) => setGuest({ ...guest, notes: e.target.value })} />
                       </label>
                     </>
                   )}
@@ -589,14 +672,16 @@ export default function BestallPage() {
                     <fieldset className="order-fields" disabled={busy}>
                       <legend className="sr-only">{STEP_TITLE.confirm}</legend>
                       <label className="booking-check">
-                        <input type="checkbox" checked={guest.accept}
+                        <input type="checkbox" checked={guest.accept} ref={fieldRef('accept')} {...invalid('accept')}
                           onChange={(e) => setGuest({ ...guest, accept: e.target.checked })} />
                         <span>
                           Jag förstår att beställningen inte kan ändras efter betalning. Avbryter restaurangen får
                           jag pengarna tillbaka.
                         </span>
                       </label>
-                      <Slot id="bestall.checkout.giftcard" props={{ value: giftCardCode, onChange: setGiftCardCode, totalOre: total }} />
+                      <div ref={giftRef}>
+                        <Slot id="bestall.checkout.giftcard" props={{ value: giftCardCode, onChange: setGiftCardCode, totalOre: total }} />
+                      </div>
                       <MarketingConsent value={guest.consent} onChange={(consent) => setGuest({ ...guest, consent })} />
                       <details className="checkout-privacy">
                         <summary>
@@ -620,7 +705,7 @@ export default function BestallPage() {
                   </p>
                 )}
                 {error && !tooLarge && (
-                  <p className="notice error" role="alert">
+                  <p className="notice error" role="alert" id={ERROR_ID}>
                     {error}
                   </p>
                 )}
@@ -637,6 +722,7 @@ export default function BestallPage() {
             <div className="checkout-side-sum">
               <h2 className="checkout-sub">Din beställning</h2>
               {summary}
+              {editCart}
             </div>
             {!payStatus.paid && (
               <div className="checkout-cta">
@@ -679,6 +765,17 @@ export default function BestallPage() {
           {stateError}
         </p>
       )}
+      {loadError && (
+        <div className="notice error notice--stack" role="alert">
+          <p>
+            Vi kunde inte hämta menyn just nu. Försök igen
+            {info.phone ? <>, eller ring {config.tenant.name} på <PhoneLink phone={info.phone} /></> : null}.
+          </p>
+          <span data-bq-theme="restaurant">
+            <Button variant="primary" size="sm" onClick={retryLoad}>Försök igen</Button>
+          </span>
+        </div>
+      )}
       {ordering && !open && (
         <p className="notice" role="status">
           {ordering.open && !ordering[mode]
@@ -697,11 +794,13 @@ export default function BestallPage() {
 
       <div className="order-layout">
         <div className="order-menu">
-          {menu === null && <SkelDishes />}
+          {menu === null && !loadError && <SkelDishes />}
           {groups.length > 1 && (
             <nav className="chip-rail" aria-label="Kategorier">
               {groups.map((g) => (
-                <a key={g.category} className="chip" href={`#bestall-${g.category}`}>
+                <a key={g.category} className={`chip${shownCategory === g.category ? ' is-active' : ''}`}
+                  aria-current={shownCategory === g.category ? 'true' : undefined}
+                  href={`#bestall-${g.category}`} onClick={() => setActiveCategory(g.category)}>
                   {g.label}
                   <span className="chip-count">{g.items.length}</span>
                 </a>
@@ -709,7 +808,8 @@ export default function BestallPage() {
             </nav>
           )}
           {groups.map((group) => (
-            <section key={group.category} id={`bestall-${group.category}`} className="menu-section" aria-label={group.label}>
+            <section key={group.category} id={`bestall-${group.category}`} className="menu-section" aria-label={group.label}
+              data-category={group.category}>
               <h2 className="menu-section-title">{group.label}</h2>
               <ul className="dish-list">
                 {group.items.map((dish) => {

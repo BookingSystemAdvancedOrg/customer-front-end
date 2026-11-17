@@ -1,8 +1,0 @@
-{
-  "name": "Restaurang",
-  "short_name": "Restaurang",
-  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }],
-  "theme_color": "#f6f1ea",
-  "background_color": "#f6f1ea",
-  "display": "standalone"
-}

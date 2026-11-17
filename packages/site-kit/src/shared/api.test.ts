@@ -112,3 +112,17 @@ describe('omförsök', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 })
+
+describe('tomt svar', () => {
+  it('ger undefined för 204 utan kropp', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 204 })))
+    const { apiPost } = await loadApi('https://api.example.com')
+    await expect(apiPost('/public/waitlist/tok/leave')).resolves.toBeUndefined()
+  })
+
+  it('ger undefined för 200 med tom kropp', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('', { status: 200 })))
+    const { apiDelete } = await loadApi('https://api.example.com')
+    await expect(apiDelete('/x')).resolves.toBeUndefined()
+  })
+})

@@ -14,6 +14,15 @@
 .evenemang-description {
   white-space: pre-line;
 }
+/* Samma pillerknapp som sajtens andra formulär, inte en sträckt rad. */
+.evenemang-form > .bq-btn,
+.evenemang-pay > .bq-btn,
+.evenemang-page > .bq-btn {
+  justify-self: start;
+}
+.evenemang-page .evenemang-list {
+  margin-top: var(--bq-space-4);
+}
 
 /* Listan */
 .evenemang-list,
@@ -228,11 +237,6 @@
   text-align: center;
   font: 700 var(--bq-text-lg)/1 var(--bq-font-mono);
 }
-.evenemang-fields {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
-  gap: var(--bq-space-3);
-}
 .evenemang-error:focus {
   outline: none;
 }
@@ -275,4 +279,29 @@
   flex-wrap: wrap;
   gap: var(--bq-space-2);
   margin: 0;
+}
+
+/* Evenemangets bild (samma bild-CDN som menyn) */
+.evenemang-item--image {
+  padding-top: 0;
+}
+.evenemang-item__img {
+  display: block;
+  width: calc(100% + 2 * var(--bq-space-5));
+  max-width: none;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  margin: 0 calc(-1 * var(--bq-space-5)) var(--bq-space-3);
+  /* Kortet klipper inte (fokusringen ligger utanför), bilden rundar själv sina övre hörn. */
+  border-radius: var(--bq-radius-card) var(--bq-radius-card) 0 0;
+  object-fit: cover;
+}
+.evenemang-hero-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  margin-block: var(--bq-space-3) var(--bq-space-4);
+  border-radius: var(--bq-radius-card);
+  object-fit: cover;
 }

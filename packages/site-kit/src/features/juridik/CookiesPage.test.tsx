@@ -18,11 +18,16 @@ describe('CookiesPage', () => {
     const table = within(screen.getByRole('table'))
     for (const entry of STORAGE_REGISTRY) {
       // getAll: two entries may share a text without this test caring.
-      expect(table.getAllByText(entry.name).length).toBeGreaterThan(0)
+      const name = entry.name.split(', ').join('')
+      expect(table.getAllByText((_, el) => el?.tagName !== 'TD' && el?.textContent === name && el.children.length <= 1).length).toBeGreaterThan(0)
       expect(table.getAllByText(entry.purpose).length).toBeGreaterThan(0)
     }
     expect(screen.getByText(/inga cookies för statistik, spårning eller reklam/)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'integritetspolicyn' })).toHaveAttribute('href', '/integritetspolicy')
+    expect(screen.getByText(/Då glöms dina val på sajten \(plats, ljust\/mörkt läge, klickljud, varukorg och plats i kön\)/)).toBeInTheDocument()
+    const codes = [...document.querySelectorAll('.storage-table code')].map((c) => c.innerHTML)
+    expect(codes).toContain('__stripe_mid<br>__stripe_sid')
+    expect(codes).not.toContain('Besöksstatistik')
   })
 
   it('has no consent-requiring entries, so the site needs no banner', () => {

@@ -285,11 +285,21 @@ body::before {
 
 /* --- Sidhuvudet: en svävande glaspill ------------------------------------- */
 
+/* En bredd för alla glasytor i toppnivå: sidhuvud, hero, sidornas paneler
+   och sidfot har samma kantmarginal på alla skärmar (sidornas paneler tar
+   sin bredd från --gutter i site.css). */
+.site {
+  --panel-gutter: clamp(12px, 3vw, 24px);
+}
+.site .site-main {
+  --gutter: var(--panel-gutter);
+}
+
 .site .site-header {
   position: sticky;
   top: 0;
   z-index: 40;
-  padding: 12px clamp(12px, 3vw, 24px) 0;
+  padding: 12px var(--panel-gutter) 0;
   background: transparent;
   color: var(--ink);
   box-shadow: none;
@@ -371,7 +381,7 @@ body::before {
   max-width: 1180px;
   margin: 14px auto 0;
   padding: 0;
-  width: calc(100% - 2 * clamp(12px, 3vw, 24px));
+  width: calc(100% - 2 * var(--panel-gutter));
   border-radius: var(--r-panel);
   color: var(--ink);
   overflow: hidden;
@@ -642,7 +652,7 @@ body::before {
 .site .site-footer {
   max-width: 1180px;
   margin: clamp(28px, 5vw, 56px) auto 14px;
-  width: calc(100% - 2 * clamp(12px, 3vw, 24px));
+  width: calc(100% - 2 * var(--panel-gutter));
   border-radius: var(--r-panel);
   color: var(--muted);
 }
@@ -886,7 +896,7 @@ body::before {
 }
 .site .hero-kicker {
   font-size: 1.05rem;
-  color: var(--accent-ink);
+  color: var(--muted);
 }
 
 /* namnet till vänster, knapparna till höger, även när menyn är dold */
@@ -1104,7 +1114,6 @@ body::before {
 .bankid-box,
 .hold-bar,
 .next-up,
-.catering-dishes li,
 .consent-option,
 .glass-panel,
 .glass-quote,
@@ -1316,7 +1325,6 @@ body::before {
   .bankid-box,
   .hold-bar,
   .next-up,
-  .catering-dishes li,
   .consent-option,
   .glass-panel,
   .glass-quote,

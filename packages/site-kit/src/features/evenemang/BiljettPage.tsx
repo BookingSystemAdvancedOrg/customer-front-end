@@ -2,12 +2,13 @@ import { useCallback, useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useLocation } from 'react-router-dom'
 import QRCode from 'qrcode'
-import { Bar, Button, Card, Chip, Field, Input, LinkButton, tokens } from '@booqy/brand'
+import { Bar, Button, Card, Chip, Field, Input, LinkButton, Printing, tokens } from '@booqy/brand'
 import type { ChipTone } from '@booqy/brand'
 import './evenemang.css'
 import { useSite } from '../../shared/SiteContext'
 import {
   cancelGift,
+  codeOf,
   eventsErrorMessage,
   getTickets,
   giveTicket,
@@ -44,8 +45,9 @@ const STATUS: Record<TicketStatus, { label: string; tone: ChipTone }> = {
  * läggas ut till försäljning på restaurangens evenemangssida, alltid till
  * samma pris som den köptes för (K20 kind resale); den kan tas tillbaka tills
  * någon betalar (K22). När den sålts är den gamla biljetten ogiltig och
- * pengarna går tillbaka till säljarens kort. Wallet-pass är inte byggda än:
- * Wallet-länkarna visas bara när servern säger att de finns.
+ * pengarna går tillbaka till säljarens kort. Wallet-knapparna (K19) visas per
+ * giltig biljett bara när servern säger att Apple respektive Google Wallet
+ * finns (av som standard).
  */
 export default function BiljettPage() {
   const { hash } = useLocation()
@@ -71,10 +73,13 @@ export default function BiljettPage() {
       <section className="page-hero page-prose evenemang-page" data-bq-theme="restaurant">
         <h1>Dina biljetter</h1>
         {!token ? <p>Öppna länken i mejlet med dina biljetter för att visa dem här.</p> : null}
-        {token && load.kind === 'loading' ? <p className="cell-muted" role="status">Hämtar biljetterna…</p> : null}
+        {token && load.kind === 'loading' ? <Printing label="Hämtar biljetterna" /> : null}
         {token && load.kind === 'missing' ? <p>Länken gäller inte. Kontrollera att du har öppnat hela länken från mejlet.</p> : null}
         {token && load.kind === 'error' ? (
-          <Bar variant="banner" tone="danger">Biljetterna gick inte att hämta just nu. Ladda om sidan om en stund.</Bar>
+          <>
+            <Bar variant="banner" tone="danger">Biljetterna gick inte att hämta just nu. Kontrollera anslutningen och försök igen.</Bar>
+            <Button variant="primary" onClick={() => { setLoad({ kind: 'loading' }); reload() }}>Försök igen</Button>
+          </>
         ) : null}
       </section>
     )
@@ -156,8 +161,16 @@ function TicketCard({ token, ticket, n, count, data, onChanged }: {
       {ticket.status === 'void' && ticket.resale !== 'sold' ? <p className="evenemang-ticket-line">Biljetten gäller inte.</p> : null}
       {ticket.status === 'valid' && (data.wallet.apple || data.wallet.google) ? (
         <p className="evenemang-actions">
-          {data.wallet.apple ? <LinkButton size="sm" href={passUrl(token, ticket.ticketId, 'apple')}>Lägg till i Apple Wallet</LinkButton> : null}
-          {data.wallet.google ? <LinkButton size="sm" href={passUrl(token, ticket.ticketId, 'google')}>Spara i Google Wallet</LinkButton> : null}
+          {data.wallet.apple ? (
+            <LinkButton size="sm" href={passUrl(token, ticket.ticketId, 'apple')} aria-label={`Lägg till i Apple Wallet: ${title}`}>
+              Lägg till i Apple Wallet
+            </LinkButton>
+          ) : null}
+          {data.wallet.google ? (
+            <LinkButton size="sm" href={passUrl(token, ticket.ticketId, 'google')} aria-label={`Lägg till i Google Wallet: ${title}`}>
+              Lägg till i Google Wallet
+            </LinkButton>
+          ) : null}
         </p>
       ) : null}
       {ticket.status === 'valid' ? (
@@ -197,6 +210,11 @@ function Transfer({ token, ticket, giftOpen, resaleOpen, onChanged }: {
     } catch (err) {
       setError(eventsErrorMessage(err, fallback))
       setTransferId(newId())
+      // Biljetten har ändrats någon annanstans: hämta det senaste läget på plats.
+      if (codeOf(err) === 'invalid_state') {
+        setMode('idle')
+        onChanged()
+      }
     } finally {
       setBusy(false)
     }
