@@ -4,7 +4,7 @@ import { Link, useLocation, useParams } from 'react-router-dom'
 import { useSite } from '../../shared/SiteContext'
 import { PaidStamp, PaymentTicket, SecureNote } from '../../shared/payment/PaymentTicket'
 import { validEmail } from '../boka/bookingApi'
-import { clock, kronor, recallToken, tableCodeFrom } from '../bestall/orderApi'
+import { clock, kronor, recallToken } from '../bestall/orderApi'
 import {
   billErrorMessage,
   billFromError,
@@ -97,8 +97,6 @@ export default function NotanPage() {
   const [confirming, setConfirming] = useState<{ billId: string; billToken: string } | null>(returned)
   const [result, setResult] = useState<PaidBill | null>(null)
   const [gaveUp, setGaveUp] = useState(false)
-  // Servern svarade bill_being_paid fast fliken har en påbörjad betalning: den är inte längre vår.
-  const [takenOver, setTakenOver] = useState(false)
   const emailRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -180,9 +178,7 @@ export default function NotanPage() {
     } catch (err) {
       const code = err instanceof ApiError ? err.message : ''
       // Upptagen: notan hämtas om och säger det själv (med Försök igen).
-      // Servern tog inte vår påbörjade betalning, så någon annan betalar.
-      if (code === 'bill_being_paid') setTakenOver(true)
-      else setPayError(billErrorMessage(err))
+      if (code !== 'bill_being_paid') setPayError(billErrorMessage(err))
       if (code === 'email must be a valid email address') setEmailError(true)
       const fresh = billFromError(err)
       if (fresh) setBill(fresh)
@@ -208,7 +204,7 @@ export default function NotanPage() {
   const title = result?.tableTitle ?? bill?.tableTitle
   const heading = title ? `Notan för ${/^bord /i.test(title) ? `bord ${title.slice(5)}` : title}` : 'Notan'
   const resumable = Boolean(bill && recallPayment(locationId)?.amount === bill.amount)
-  const lockedByOther = bill?.status === 'paying' && (!resumable || takenOver)
+  const lockedByOther = bill?.status === 'paying' && !resumable
 
   return (
     <section className="booking-confirmation order-status notan">
@@ -266,7 +262,7 @@ export default function NotanPage() {
         bill.count === 0 || bill.status === 'empty' ? (
           <>
             <p className="notice" role="status">Det finns inget att betala för bordet just nu.</p>
-            {orderId && tableCodeFrom('') && <p><Link to="/bestall">Beställ mer</Link></p>}
+            {orderId && <p><Link to="/bestall">Beställ mer</Link></p>}
           </>
         ) : payment ? (
           <PaymentTicket
@@ -286,8 +282,7 @@ export default function NotanPage() {
             {lockedByOther ? (
               <div className="notice notice--stack" role="status">
                 <p>Någon vid bordet betalar notan just nu. Vänta en minut och försök igen, eller fråga personalen.</p>
-                <button type="button" className="btn-secondary"
-                  onClick={() => { setPayError(null); setTakenOver(false); setAttempt((n) => n + 1) }}>
+                <button type="button" className="btn-secondary" onClick={() => { setPayError(null); setAttempt((n) => n + 1) }}>
                   Försök igen
                 </button>
               </div>

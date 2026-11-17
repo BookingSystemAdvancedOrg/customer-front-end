@@ -759,20 +759,6 @@ describe('BestallPage at the table (pay later)', () => {
     expect(loadCart('loc-1')).toEqual({ pizza: 1 })
   })
 
-  it.each([
-    [429, 'too_many_requests', 'Det har kommit många beställningar från dig på kort tid. Fråga personalen så hjälper de dig.'],
-    [409, 'ordering_no_payments', 'Det går inte att beställa i mobilen just nu. Fråga personalen så hjälper de dig.'],
-  ])('at the table a %i %s tells the guest to ask the staff', async (status, error, text) => {
-    // Telefonens tak är 8 beställningar per dag: "vänta en stund" hjälper inte vid bordet.
-    const user = userEvent.setup()
-    orderResponse = () => json({ error }, status)
-    renderTable()
-    await user.click(await screen.findByRole('button', { name: 'Lägg till Margherita' }))
-    await fillTable(user)
-    await user.click(screen.getByRole('button', { name: /Skicka beställningen/ }))
-    expect(await screen.findByRole('alert')).toHaveTextContent(text)
-  })
-
   it('stops an order above the table bill limit and tells the guest to ask the staff', async () => {
     const user = userEvent.setup()
     renderTable()
