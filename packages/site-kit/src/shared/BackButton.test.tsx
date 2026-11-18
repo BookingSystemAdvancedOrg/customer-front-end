@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, statSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { BackButton } from './BackButton'
 
 const KIT = join(__dirname, '..')
+// customer-front-end's app (site-kit's own repo has none).
 const APP = join(__dirname, '../../../../src')
 
 function sourceFiles(dir: string): string[] {
@@ -32,7 +33,7 @@ describe('BackButton', () => {
 describe('no plain back controls', () => {
   it('finds no old back patterns in the kit or the app', () => {
     const bad: string[] = []
-    for (const f of [...sourceFiles(KIT), ...sourceFiles(APP)]) {
+    for (const f of [...sourceFiles(KIT), ...(existsSync(APP) ? sourceFiles(APP) : [])]) {
       if (f.endsWith('BackButton.tsx')) continue
       const text = readFileSync(f, 'utf8')
       text.split('\n').forEach((line, i) => {

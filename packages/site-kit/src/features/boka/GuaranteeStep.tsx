@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { FormEvent } from 'react'
+import type { FormEvent, ReactNode } from 'react'
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js'
 import { useTheme } from '../../shared/theme'
 import { paymentAppearance, paymentFonts } from '../../shared/payment/appearance'
@@ -12,7 +12,7 @@ import type { GuestReservation } from './bookingApi'
 
 /**
  * Kortgaranti: Stripes inbäddade kortformulär (Payment Element) på
- * restaurangens eget Stripe-konto. Inget dras nu - kortet sparas för en
+ * restaurangens eget Stripe-konto. 0 kr dras nu - kortet sparas för en
  * eventuell avgift vid utebliven gäst eller sen avbokning, enligt villkoren
  * som visas här. 3-D Secure sker direkt i formuläret. När Stripe bekräftat
  * kortet bokar backend bordet (POST .../confirm).
@@ -85,17 +85,19 @@ function CardForm({
   locationId,
   returnUrl,
   onConfirmed,
+  initialError,
 }: {
   booking: GuestReservation
   guest?: GuaranteeGuest
   locationId: string
   returnUrl: string
   onConfirmed: (b: GuestReservation) => void
+  initialError?: string | null
 }) {
   const stripe = useStripe()
   const elements = useElements()
   const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(initialError ?? null)
   const [ready, setReady] = useState(false)
   const [loadFailed, setLoadFailed] = useState(false)
 
@@ -169,6 +171,8 @@ export function GuaranteeStep({
   publishableKey,
   returnUrl,
   onConfirmed,
+  children,
+  initialError,
 }: {
   booking: GuestReservation
   guest?: GuaranteeGuest
@@ -176,6 +180,10 @@ export function GuaranteeStep({
   publishableKey: string | null
   returnUrl: string
   onConfirmed: (b: GuestReservation) => void
+  /** Visas under ingressen, t.ex. bokningens uppgifter på bokningssidan. */
+  children?: ReactNode
+  /** Ett fel att visa vid formuläret direkt, t.ex. nekad 3-D Secure efter omdirigering. */
+  initialError?: string | null
 }) {
   const setup = booking.setup!
   const stripePromise = useMemo(
@@ -201,6 +209,7 @@ export function GuaranteeStep({
         Restaurangen tar kortgaranti för den här bokningen. Lägg in ditt kort så är bordet bokat -
         det hålls åt dig {left > 0 ? `i ${left} min till` : 'en kort stund till'}.
       </p>
+      {children}
       <GuaranteeTermsText booking={booking} />
       {!stripePromise ? (
         <p className="notice error" role="alert">
@@ -222,7 +231,8 @@ export function GuaranteeStep({
             loader: 'never',
           }}
         >
-          <CardForm booking={booking} guest={guest} locationId={locationId} returnUrl={returnUrl} onConfirmed={onConfirmed} />
+          <CardForm booking={booking} guest={guest} locationId={locationId} returnUrl={returnUrl} onConfirmed={onConfirmed}
+            initialError={initialError} />
         </Elements>
       )}
       <SecureNote>Kortuppgifterna går direkt till Stripe och sparas aldrig hos oss.</SecureNote>

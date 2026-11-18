@@ -222,8 +222,15 @@ export interface GuestReservation {
   }
   /** En debiterad/försökt avgift. */
   fee?: { kind: 'no_show' | 'late_cancel'; status: string; amount: number; refundedAmount: number }
-  /** Bara direkt efter en bokning som kräver kort (status pending). */
+  /**
+   * Kortsteget: bara medan status är pending och kortet krävs, både direkt
+   * efter en bokning på sajten och på bokningssidan (bokad per telefon).
+   */
   setup?: { clientSecret: string; stripeAccount: string; expiresAt: string }
+  /** När ett pending-bord släpps om kortet inte läggs in (UTC). */
+  pendingExpiresAt?: string | null
+  /** Pending med kortsteg, men kortformuläret kunde inte hämtas från Stripe just nu (bordet hålls). */
+  setupUnavailable?: boolean
 }
 
 /** 30000 (öre) -> "300 kr". */

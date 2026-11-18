@@ -6,6 +6,14 @@ CSS variable or class name a site styles) is a major version.
 
 ## Unreleased
 
+- Card guarantee for a booking made by phone: `ManageBookingPage` shows the
+  booking flow's card step (`GuaranteeStep`) while the booking is `pending`
+  with `setup` in the guest view, comes back there from Stripe, confirms with
+  the manage token and shows the saved guarantee. Hold time from
+  `setup.expiresAt`. Card form not available while the hold runs
+  (`setupUnavailable`): try again, not a new booking. A failed 3-D Secure
+  redirect shows the bank error at the card form. `NOTHING_CHARGED` is
+  "0 kr dras nu.". Same as site-kit 0.4.0.
 - **Breaking:** the site builder is removed from Booqy. Gone:
   `sitePages.forhandsvisning`, `sitePages.builderPage`, the type
   `SiteBuilderState`, `SiteConfig.tenant.site`, and `"siteBuilder"` in
