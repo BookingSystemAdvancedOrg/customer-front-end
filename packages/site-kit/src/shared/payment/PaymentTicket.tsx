@@ -5,6 +5,7 @@ import { Celebrate } from '../Celebrate'
 import { useTheme } from '../theme'
 import { paymentAppearance, paymentFonts } from './appearance'
 import { stripeFor } from './stripe'
+import { BackButton } from '../BackButton'
 
 /**
  * Betalningen på sajtens egen sida: ett kvitto som skrivs ut, Stripes
@@ -133,11 +134,7 @@ function CheckoutForm({
         <p className="notice error" role="alert">
           Betalningen kunde inte startas. Gå tillbaka och försök igen om en liten stund.
         </p>
-        {onBack && (
-          <button type="button" className="btn-secondary" onClick={onBack}>
-            {backLabel}
-          </button>
-        )}
+        {onBack && <BackButton onClick={onBack}>{backLabel}</BackButton>}
       </>
     )
   }
@@ -177,11 +174,7 @@ function CheckoutForm({
         >
           {busy ? <><span className="spinner" aria-hidden="true" />Betalar…</> : payLabel}
         </button>
-        {onBack && (
-          <button type="button" className="link-button pay-back" disabled={busy} onClick={onBack}>
-            {backLabel}
-          </button>
-        )}
+        {onBack && <BackButton disabled={busy} onClick={onBack}>{backLabel}</BackButton>}
       </div>}
     </form>
   )

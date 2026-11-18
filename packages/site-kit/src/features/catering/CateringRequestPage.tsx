@@ -20,6 +20,7 @@ import type { CateringPayment, GuestRequest, Line, Totals } from './cateringApi'
 import { useSite } from '../../shared/SiteContext'
 import { PaidStamp, PaymentTicket } from '../../shared/payment/PaymentTicket'
 import { PhoneLink } from '../../shared/PhoneLink'
+import { BackButton } from '../../shared/BackButton'
 
 /** BankID: frågan om status en gång i sekunden (QR-koden byts varje sekund). */
 export const SIGN_POLL_MS = 1_000
@@ -435,7 +436,7 @@ export default function CateringRequestPage() {
               <button type="button" className={`btn-primary${busy ? ' is-busy' : ''}`} disabled={busy} onClick={() => void send()}>
                 Godkänn offerten
               </button>
-              <button type="button" className="btn-secondary" onClick={() => setMode(null)}>Tillbaka</button>
+              <BackButton onClick={() => setMode(null)} />
             </div>
           )}
 
@@ -449,7 +450,7 @@ export default function CateringRequestPage() {
                 onClick={() => void send()}>
                 {mode === 'change' ? 'Skicka till restaurangen' : 'Avböj offerten'}
               </button>
-              <button type="button" className="btn-secondary" onClick={() => setMode(null)}>Tillbaka</button>
+              <BackButton onClick={() => setMode(null)} />
             </div>
           )}
 

@@ -119,15 +119,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.pay-back {
-  font-size: 0.95rem;
-}
-
-.pay-back:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
 .pay-secure {
   display: flex;
   align-items: flex-start;

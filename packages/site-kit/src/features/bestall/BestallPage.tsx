@@ -63,6 +63,7 @@ import { MarketingConsent, NO_CONSENT, consentFields } from '../../shared/Market
 import type { ConsentChoice } from '../../shared/MarketingConsent'
 import { SkelDishes } from '../../shared/Skeleton'
 import { formatPhoneNational } from '../../shared/phone'
+import { BackButton } from '../../shared/BackButton'
 
 const STEPS = [{ label: 'Varukorg' }, { label: 'Dina uppgifter' }, { label: 'Betala' }, { label: 'Klart' }]
 
@@ -560,9 +561,7 @@ function PickupOrder() {
         : <>Fortsätt<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" /></svg></>
     // Ett klick tillbaka till varukorgen från alla kassasteg före betalningen.
     const editCart = !payment && (
-      <button type="button" className="checkout-back" disabled={busy} onClick={() => go('cart')}>
-        Ändra varukorgen
-      </button>
+      <BackButton className="checkout-back" disabled={busy} onClick={() => go('cart')}>Ändra varukorgen</BackButton>
     )
     return (
       <div className="checkout" ref={headRef}>
@@ -585,6 +584,9 @@ function PickupOrder() {
 
         <div className="checkout-grid">
           <div className="checkout-main">
+            {payment
+              ? <BackButton className="checkout-back" disabled={payStatus.busy || payStatus.paid} onClick={back}>Ändra beställningen</BackButton>
+              : <BackButton className="checkout-back" disabled={busy} onClick={previous} />}
             <h1 className="checkout-title" ref={titleRef} tabIndex={-1}>{title}</h1>
 
             {payment ? (
@@ -614,10 +616,6 @@ function PickupOrder() {
                     eller Klarna kan du skickas vidare en kort stund för att godkänna.
                   </SecureNote>
                 </section>
-                <button type="button" className="checkout-back" disabled={payStatus.busy || payStatus.paid} onClick={back}>
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
-                  Ändra beställningen
-                </button>
               </>
             ) : (
               <form id={formId} className="checkout-form" onSubmit={next} noValidate aria-busy={busy || undefined}>
@@ -695,10 +693,6 @@ function PickupOrder() {
                   </p>
                 )}
 
-                <button type="button" className="checkout-back" disabled={busy} onClick={previous}>
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
-                  Tillbaka
-                </button>
               </form>
             )}
           </div>

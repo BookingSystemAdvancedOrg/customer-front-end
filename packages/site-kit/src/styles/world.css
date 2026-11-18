@@ -2087,8 +2087,7 @@ h1, h2, h3, h4 {
   font-size: 1.08rem;
 }
 
-.checkout-next svg,
-.checkout-back svg {
+.checkout-next svg {
   width: 20px;
   height: 20px;
   fill: none;
@@ -2097,31 +2096,6 @@ h1, h2, h3, h4 {
   stroke-linecap: round;
   stroke-linejoin: round;
   flex: none;
-}
-
-.checkout-back {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  min-height: 48px;
-  padding: 0 12px;
-  border: 0;
-  border-radius: var(--r-md);
-  background: transparent;
-  color: var(--ink);
-  font: 650 1rem/1 var(--font);
-  cursor: pointer;
-  transition: background-color 160ms var(--ease);
-}
-
-.checkout-back:hover:not(:disabled) {
-  background: var(--fill);
-}
-
-.checkout-back:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
 }
 
 .checkout-privacy summary {
@@ -2321,8 +2295,12 @@ h1, h2, h3, h4 {
 }
 
 .checkout-main .checkout-back {
-  align-self: flex-start;
-  margin-left: -12px;
+  margin-bottom: 4px;
+}
+
+.checkout-side .checkout-back,
+.checkout-peek-body .checkout-back {
+  margin-top: 8px;
 }
 
 /* Sammanfattningen: rad, delsumma, moms, totalt. */
