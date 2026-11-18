@@ -119,10 +119,10 @@ export function tableReasonText(
     case 'phone':
       return `${table} bokas bara via telefon${phone ? ` - ring ${phone}` : ''}.`
     case 'too_small':
-      return `${table} tar ${sizeRange(u)} - ${party.toLowerCase()}. Välj ett större bord${
+      return `För litet bord för ${partySize}. ${table} tar ${sizeRange(u)} - ${party.toLowerCase()}. Välj ett större bord${
         hasCombinations ? ' eller bord som ställs ihop' : ''}.`
     case 'too_large':
-      return `${table} är till för ${sizeRange(u)} - ${party.toLowerCase()}. Välj ett mindre bord, så räcker de stora borden till större sällskap.`
+      return `För stort bord för ${partySize}. ${table} är till för ${sizeRange(u)} - ${party.toLowerCase()}. Välj ett mindre bord, så räcker de stora borden till större sällskap.`
     default:
       return `${table} går inte att boka för ${people(partySize)} kl ${startTime}.`
   }

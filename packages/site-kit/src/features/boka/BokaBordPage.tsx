@@ -39,6 +39,8 @@ import { GuaranteeConfirmation, GuaranteeNotice, GuaranteeStep } from './Guarant
 import { ApiError } from '../../shared/api'
 import { FloorPlanSvg } from './FloorPlanSvg'
 import { FloorPlan3D } from './FloorPlan3D'
+import { PICK_EFFECT_MS, playPickEffect } from './pickEffect'
+import { glideTo, prefersReducedMotion } from '../../shared/glide'
 import { FlowSteps } from '../../shared/FlowSteps'
 import { Celebrate } from '../../shared/Celebrate'
 import { GuestDataNotice } from '../../shared/GuestDataNotice'
@@ -77,11 +79,6 @@ function guestError(g: Guest): { field: GuestField; message: string } | null {
 }
 
 const FORM_ERROR_ID = 'booking-form-error'
-
-/** Mjuk rullning, utom för den som bett om mindre rörelse. */
-function scrollBehavior(): ScrollBehavior {
-  return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
-}
 
 /** Kvittot som hänger kvar högst upp medan bordet hålls: vilket bord, hur
  * länge till (klockan och en remsa som töms) och Byt bord. Under två
@@ -211,6 +208,13 @@ export default function BokaBordPage() {
   const secondsLeft = deadline === null ? null : Math.max(0, Math.ceil((deadline - now) / 1000))
   const headRef = useRef<HTMLElement>(null)
   const confirmRef = useRef<HTMLDivElement>(null)
+  const confirmButtonRef = useRef<HTMLButtonElement>(null)
+  /** Steg 3 (bordsvalet): klickeffekten letar bord och knappar här. */
+  const tablesRef = useRef<HTMLFieldSetElement>(null)
+  /** Steg 4:s rubrik: fokus flyttas hit när bordet hålls. */
+  const detailsHeadRef = useRef<HTMLLegendElement>(null)
+  /** Satt när borden just blivit hållna: rulla till steg 4 och flytta fokus dit. */
+  const justHeld = useRef(false)
   const terms = location.guarantee ?? null
   const cardNeeded = needsCard(terms, partySize, true)
   const specialByDate = useMemo(
@@ -391,10 +395,33 @@ export default function BokaBordPage() {
   const stepAt = pending ? 5 : hold ? 4 : slot ? 3 : 2
 
   // Ett valt bord: sammanfattningen och Bekräfta-knappen ligger under
-  // planritningen - rulla fram dem så gästen ser vad som händer härnäst.
+  // planritningen. Först får klickeffekten spela klart (en halv sekund),
+  // sedan rullar sidan mjukt fram dem och fokus flyttas till Bekräfta bord.
   useEffect(() => {
-    if (option && !hold) confirmRef.current?.scrollIntoView?.({ block: 'nearest', behavior: scrollBehavior() })
+    if (!option || hold) return undefined
+    const id = window.setTimeout(() => {
+      void glideTo(confirmRef.current, { block: 'nearest' }).then(() =>
+        confirmButtonRef.current?.focus({ preventScroll: true }),
+      )
+    }, prefersReducedMotion() ? 0 : PICK_EFFECT_MS)
+    return () => window.clearTimeout(id)
   }, [option, hold])
+
+  // Borden hålls: stegen 1-3 viks ihop. Visa stegraden och uppgifterna från
+  // början (inte sidfoten som sidan annars står kvar vid på en telefon) och
+  // flytta fokus till steg 4:s rubrik.
+  useEffect(() => {
+    if (!hold || !justHeld.current) return
+    justHeld.current = false
+    void glideTo(headRef.current, { block: 'start' }).then(() => detailsHeadRef.current?.focus({ preventScroll: true }))
+  }, [hold])
+
+  /** Klickeffekten på de valda borden och deras knapp i listan. */
+  function celebrate(o: TableOption) {
+    const key = o.tableIds.join('+')
+    const chip = tablesRef.current?.querySelector<HTMLElement>(`[data-option="${CSS.escape(key)}"]`)
+    playPickEffect(tablesRef.current, o.tableIds, chip)
+  }
 
   // Byter man dag, tid eller sällskap gäller inte gamla bordsval längre.
   function choose(change: () => void) {
@@ -448,18 +475,24 @@ export default function BokaBordPage() {
       setOption(null)
       return
     }
-    setOption(
+    const next =
       options.find((o) => o.tableIds.length === 1 && o.tableIds[0] === tableId) ??
-        options.find((o) => o.tableIds.includes(tableId)) ??
-        null,
-    )
+      options.find((o) => o.tableIds.includes(tableId)) ??
+      null
+    if (next) celebrate(next)
+    setOption(next)
   }
 
   function pickOption(o: TableOption) {
     setSlotNotice(null)
     setFormError(null)
     setTableInfo(null)
-    setOption(sameTables(o, option) ? null : o)
+    if (sameTables(o, option)) {
+      setOption(null)
+      return
+    }
+    celebrate(o)
+    setOption(o)
   }
 
   /** Bekräfta bord: borden spärras för andra i 15 minuter. */
@@ -487,9 +520,7 @@ export default function BokaBordPage() {
       setHold(held)
       setNow(Date.now())
       setDeadline(Date.now() + held.holdMinutes * 60_000)
-      // Stegen 1-3 viks ihop: visa stegraden och uppgifterna från början,
-      // inte sidfoten som sidan annars står kvar vid på en telefon.
-      headRef.current?.scrollIntoView?.({ block: 'start', behavior: scrollBehavior() })
+      justHeld.current = true
     } catch (err) {
       setFormError(bookingErrorMessage(err, formatPhoneNational(info.phone) || undefined))
       const stale = staleSelection(err)
@@ -514,7 +545,7 @@ export default function BokaBordPage() {
     setOption(null)
     setFormError(null)
     setRefresh((n) => n + 1)
-    headRef.current?.scrollIntoView?.({ block: 'start', behavior: scrollBehavior() })
+    void glideTo(headRef.current, { block: 'start' })
   }
 
   /** Ändra gästens uppgifter; ett ändrat fält är inte längre markerat som fel. */
@@ -799,10 +830,10 @@ export default function BokaBordPage() {
         </fieldset>
 
         {slot && (
-          <fieldset className="booking-step" disabled={holding}>
+          <fieldset className="booking-step" disabled={holding} ref={tablesRef}>
             <legend><span className="step-no">3</span>Välj ert bord</legend>
             <p className="cell-muted">
-              Tryck på ett grått bord för att välja det. Röda bord är upptagna - tryck på dem så berättar vi varför.
+              Borden som lyser går att boka för ert sällskap. Tryck på ett mörkt bord så berättar vi varför det inte går.
             </p>
             {slotNotice?.step === 'tables' && <p className="notice" role="status">{slotNotice.text}</p>}
             {floors === null && (
@@ -844,6 +875,7 @@ export default function BokaBordPage() {
                     onToggle={pickTable}
                     unavailable={unavailable}
                     onExplain={explainTable}
+                    partySize={partySize}
                   />
                 ) : (
                   <FloorPlan3D
@@ -853,6 +885,7 @@ export default function BokaBordPage() {
                     onToggle={pickTable}
                     unavailable={unavailable}
                     onExplain={explainTable}
+                    partySize={partySize}
                   />
                 )}
                 <FloorLegend />
@@ -863,6 +896,7 @@ export default function BokaBordPage() {
               {options.map((o) => (
                 <button
                   key={o.tableIds.join('+')}
+                  data-option={o.tableIds.join('+')}
                   type="button"
                   className={`filter-pill${sameTables(o, option) ? ' active' : ''}`}
                   aria-pressed={sameTables(o, option)}
@@ -903,6 +937,7 @@ export default function BokaBordPage() {
                 </p>
                 {formError && <p className="notice error" role="alert">{formError}</p>}
                 <button
+                  ref={confirmButtonRef}
                   type="button"
                   className={`btn-primary${holding ? ' is-busy' : ''}`}
                   disabled={holding}
@@ -922,7 +957,7 @@ export default function BokaBordPage() {
 
         {hold && (
           <fieldset className="booking-step step-enter" aria-busy={submitting || undefined}>
-            <legend><span className="step-no">4</span>Dina uppgifter</legend>
+            <legend ref={detailsHeadRef} tabIndex={-1}><span className="step-no">4</span>Dina uppgifter</legend>
             <div className="booking-summary-line" aria-live="polite">
               <span className="summary-kicker">Ditt bord</span>
               <span>

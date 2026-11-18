@@ -1,0 +1,269 @@
+/* Bordsvalet (steg 3), i 2D (FloorPlanSvg) och 3D (FloorPlan3D):
+   - går att boka för sällskapet: varmt, ljust och andas långsamt (ljusare
+     och tillbaka på 2,4 s), alla bord i takt (pickEffect.ts syncBreathing);
+   - fel storlek: nedtonat och avfärgat, ingen glöd;
+   - bokat: dämpat rött, ingen glöd; spärrat: samma, streckat;
+   - ditt val: fylld färg som lyfter från golvet, glöden slutar.
+   Färgerna är --seat-* (world.css, ljust och mörkt), sajten kan sätta egna.
+   Klickeffekten (pop, ring, knappen lyser) spelas av pickEffect.ts. */
+
+@keyframes plan-breathe-3d {
+  0%,
+  100% {
+    background-color: var(--seat-free);
+    box-shadow: 0 0 0 1px var(--seat-free-line), 0 0 4px 0 var(--seat-glow);
+  }
+  50% {
+    background-color: var(--seat-free-hi);
+    box-shadow: 0 0 0 1px var(--seat-free-line), 0 0 22px 6px var(--seat-glow);
+  }
+}
+
+@keyframes plan-breathe-2d {
+  0%,
+  100% {
+    fill: var(--seat-free);
+    filter: drop-shadow(0 0 0.04px var(--seat-glow));
+  }
+  50% {
+    fill: var(--seat-free-hi);
+    filter: drop-shadow(0 0 0.3px var(--seat-glow));
+  }
+}
+
+/* --- 3D ------------------------------------------------------------------ */
+
+.f3d-table.is-free .f3d-table-top {
+  background-color: var(--seat-free);
+  border: 1px solid var(--seat-free-line);
+  animation: plan-breathe-3d 2.4s ease-in-out infinite;
+}
+
+.f3d-table.is-free .f3d-table-face:not(.ring) {
+  background: var(--seat-free-side);
+}
+
+.f3d-table .f3d-table-body {
+  transition: transform 300ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Ditt val lyfter från golvet med en skugga under. */
+.f3d-table.is-selected .f3d-table-body {
+  transform: translateZ(12px);
+}
+
+.f3d-table.is-selected .f3d-table-top {
+  background: var(--seat-pick);
+  border: 2px solid var(--seat-pick-line);
+  box-shadow: 0 12px 22px rgba(0, 0, 0, 0.45);
+}
+
+.f3d-table.is-selected .f3d-table-face:not(.ring) {
+  background: var(--seat-pick-side);
+}
+
+.f3d-table.is-selected .f3d-table-face.ring {
+  box-shadow: 0 0 0 1px var(--seat-pick-line);
+}
+
+.f3d-table.is-selected .f3d-table-label,
+.f3d-table.is-selected .f3d-table-seats {
+  color: var(--seat-pick-ink);
+}
+
+.f3d-table.is-selected .f3d-chair-seat,
+.f3d-table.is-selected .f3d-chair-back {
+  background: color-mix(in srgb, var(--seat-pick) 55%, var(--surface));
+}
+
+.f3d-table.is-booked .f3d-table-top,
+.f3d-table.is-taken .f3d-table-top {
+  background: var(--seat-taken);
+  border: 1px solid var(--seat-taken-line);
+}
+
+.f3d-table.is-booked .f3d-table-face:not(.ring),
+.f3d-table.is-taken .f3d-table-face:not(.ring) {
+  background: var(--seat-taken-side);
+}
+
+.f3d-table.is-blocked .f3d-table-top {
+  background: var(--seat-blocked);
+  border: 1px dashed var(--seat-taken-line);
+}
+
+.f3d-table.is-blocked .f3d-table-face:not(.ring) {
+  background: var(--seat-taken-side);
+}
+
+/* Fel storlek: nästan bortsuddat. */
+.f3d-table.is-unfit .f3d-table-top {
+  background: var(--seat-unfit);
+  border: 1px dashed var(--seat-unfit-line);
+  filter: saturate(0.3);
+}
+
+.f3d-table.is-unfit .f3d-table-face:not(.ring) {
+  background: color-mix(in srgb, var(--seat-unfit) 70%, #000);
+}
+
+.f3d-table.is-unfit .f3d-table-label-wrap {
+  opacity: 0.55;
+}
+
+.f3d-table.is-unfit .f3d-chair-seat,
+.f3d-table.is-unfit .f3d-chair-back {
+  background: var(--seat-unfit);
+}
+
+/* Ringen vid klick: ligger i bordsskivans höjd, syns bara under effekten. */
+.f3d-table > .plan-ripple {
+  position: absolute;
+  inset: -5px;
+  border: 2px solid var(--seat-ring);
+  border-radius: 8px;
+  opacity: 0;
+  pointer-events: none;
+  translate: 0 0 var(--th, 26px);
+}
+
+.f3d-table--round > .plan-ripple {
+  border-radius: 50%;
+}
+
+/* --- 2D ------------------------------------------------------------------ */
+
+.floor-svg-pick {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.floor-svg-table.is-free {
+  fill: var(--seat-free);
+  stroke: var(--seat-free-line);
+  stroke-width: 0.05;
+  animation: plan-breathe-2d 2.4s ease-in-out infinite;
+}
+
+.floor-svg-chairs.is-free .floor-svg-chair {
+  stroke: var(--seat-free-line);
+}
+
+.floor-svg-table.is-selected {
+  fill: var(--seat-pick);
+  stroke: var(--seat-pick-line);
+  stroke-width: 0.07;
+  filter: drop-shadow(0 0.12px 0.14px rgba(0, 0, 0, 0.45));
+}
+
+.floor-svg-chairs.is-selected .floor-svg-chair {
+  fill: color-mix(in srgb, var(--seat-pick) 30%, var(--surface));
+  stroke: var(--seat-pick);
+}
+
+.floor-svg-pick .floor-svg-table.is-selected ~ .floor-svg-table-label,
+.floor-svg-pick .floor-svg-table.is-selected ~ .floor-svg-table-seats {
+  fill: var(--seat-pick-ink);
+}
+
+.floor-svg-table.is-booked,
+.floor-svg-table.is-taken {
+  fill: var(--seat-taken);
+  stroke: var(--seat-taken-line);
+  filter: none;
+}
+
+.floor-svg-table.is-blocked {
+  fill: var(--seat-blocked);
+  stroke: var(--seat-taken-line);
+  stroke-dasharray: 0.12 0.08;
+  filter: none;
+}
+
+.floor-svg-chairs.is-booked .floor-svg-chair,
+.floor-svg-chairs.is-taken .floor-svg-chair,
+.floor-svg-chairs.is-blocked .floor-svg-chair {
+  fill: var(--seat-blocked);
+}
+
+.floor-svg-table.is-unfit {
+  fill: var(--seat-unfit);
+  stroke: var(--seat-unfit-line);
+  stroke-dasharray: 0.12 0.08;
+  filter: saturate(0.3);
+}
+
+.floor-svg-chairs.is-unfit .floor-svg-chair {
+  fill: transparent;
+  stroke: var(--seat-unfit-line);
+}
+
+.floor-svg-table.is-unfit ~ .floor-svg-table-label,
+.floor-svg-table.is-unfit ~ .floor-svg-table-seats {
+  opacity: 0.55;
+}
+
+.plan-ripple {
+  opacity: 0;
+  pointer-events: none;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.floor-svg-ripple {
+  fill: none;
+  stroke: var(--seat-ring);
+  stroke-width: 0.07;
+}
+
+/* --- Förklaringen: samma färger som borden ------------------------------- */
+
+.floor-legend-swatch.is-free {
+  background: var(--seat-free-hi);
+  box-shadow: inset 0 0 0 1.5px var(--seat-free-line), 0 0 8px 1px var(--seat-glow);
+}
+
+.floor-legend-swatch.is-selected {
+  background: var(--seat-pick);
+  box-shadow: inset 0 0 0 1.5px var(--seat-pick-line), 0 3px 6px rgba(0, 0, 0, 0.35);
+}
+
+.floor-legend-swatch.is-booked {
+  background: var(--seat-taken);
+  box-shadow: inset 0 0 0 1.5px var(--seat-taken-line);
+}
+
+.floor-legend-swatch.is-blocked {
+  background: var(--seat-blocked);
+  box-shadow: none;
+  outline: 1.5px dashed var(--seat-taken-line);
+  outline-offset: -2px;
+}
+
+.floor-legend-swatch.is-unfit {
+  background: var(--seat-unfit);
+  box-shadow: none;
+  outline: 1.5px dashed var(--seat-unfit-line);
+  outline-offset: -2px;
+  opacity: 0.7;
+}
+
+/* Steg 4:s rubrik tar emot fokus när bordet hålls; den är ingen kontroll. */
+.booking-step > legend[tabindex='-1']:focus {
+  outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .f3d-table.is-free .f3d-table-top,
+  .floor-svg-table.is-free {
+    animation: none;
+  }
+
+  .f3d-table.is-free .f3d-table-top {
+    box-shadow: 0 0 0 1px var(--seat-free-line), 0 0 10px 2px var(--seat-glow);
+  }
+
+  .f3d-table .f3d-table-body {
+    transition: none;
+  }
+}

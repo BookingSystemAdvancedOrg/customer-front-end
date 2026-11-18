@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
 import { labelTables, layoutViewBox } from '../../shared/layoutApi'
 import type { FloorGroup, LayoutElement, LayoutTableElement } from '../../shared/layoutApi'
 import type { TableUnavailable } from './bookingApi'
 import { tableChoice } from './tableState'
+import { syncBreathing } from './pickEffect'
 import { CHAIR_D, CHAIR_W, chairs } from './chairs'
 
 /**
@@ -85,8 +86,11 @@ export function FloorPlan3D({
   onToggle,
   unavailable,
   onExplain,
+  partySize,
 }: {
   group: FloorGroup
+  /** Sällskapets storlek, för "för litet/stort bord för 6". */
+  partySize?: number
   /** tableId -> platser, för bord som är lediga vid den valda tiden. */
   free?: Map<string, number>
   selected?: ReadonlySet<string>
@@ -109,6 +113,8 @@ export function FloorPlan3D({
   const justRotated = useRef(false)
 
   const sceneRef = useRef<HTMLDivElement | null>(null)
+  // Lediga bord andas i takt, även efter ett nytt val.
+  useLayoutEffect(() => syncBreathing(sceneRef.current))
   const [sceneSize, setSceneSize] = useState({ w: 0, h: 0 })
 
   useEffect(() => {
@@ -246,7 +252,7 @@ export function FloorPlan3D({
               const h = t.depth * SCALE
               const label = labels.get(t.elementId) ?? '?'
               const c = tableChoice({
-                tableId: t.elementId, label, seats: t.seats, free, selected, unavailable,
+                tableId: t.elementId, label, seats: t.seats, free, selected, unavailable, partySize,
                 canToggle: Boolean(onToggle), canExplain: Boolean(onExplain),
               })
               const act = () => {
@@ -257,6 +263,7 @@ export function FloorPlan3D({
               return (
                 <div
                   key={t.elementId}
+                  data-table-id={t.elementId}
                   className={`f3d-table f3d-table--${t.shape}${c.state}${c.selectable ? ' f3d-pick' : c.explainable ? ' f3d-explain' : ''}`}
                   role={c.interactive ? 'button' : undefined}
                   tabIndex={c.interactive ? 0 : undefined}
@@ -300,6 +307,8 @@ export function FloorPlan3D({
                       <div className="f3d-chair-back" />
                     </div>
                   ))}
+                  {/* Ringen som sprider sig ut när bordet väljs (pickEffect.ts); osynlig annars. */}
+                  {c.selectable && <span className="plan-ripple" aria-hidden="true" />}
                   <div className="f3d-table-body">
                     {t.shape === 'rect' ? (
                       <>

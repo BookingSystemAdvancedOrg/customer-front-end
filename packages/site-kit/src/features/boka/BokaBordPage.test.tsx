@@ -524,11 +524,11 @@ describe('BokaBordPage - why a table cannot be chosen', () => {
     await user.click(await screen.findByRole('button', { name: '18:00' }))
 
     // The 2-seat table is shown, marked and tappable - but not selectable.
-    const small = screen.getByRole('button', { name: /^Bord 1, 2 platser, går inte att välja: 1-2 pers$/ })
+    const small = screen.getByRole('button', { name: /^Bord 1, 2 platser, går inte att välja: för litet bord för 3$/ })
     expect(small).not.toHaveAttribute('aria-pressed')
     await user.click(small)
     expect(screen.getByRole('status')).toHaveTextContent(
-      'Bord 1 tar 1-2 personer - ni är 3 personer. Välj ett större bord.')
+      'För litet bord för 3. Bord 1 tar 1-2 personer - ni är 3 personer. Välj ett större bord.')
     expect(screen.queryByRole('button', { name: 'Bekräfta bord' })).toBeNull()
 
     // The legend and the full list of reasons are there too.
@@ -538,6 +538,52 @@ describe('BokaBordPage - why a table cannot be chosen', () => {
     // Choosing a table that fits clears the explanation.
     await user.click(screen.getByRole('button', { name: /Bord 2 · 4 platser/ }))
     expect(screen.queryByRole('status')).toBeNull()
+  })
+
+  it('plays the pick effect on the table and its button, then moves on to Bekräfta bord', async () => {
+    const targets: Element[] = []
+    const animate = vi.fn(function (this: Element) {
+      targets.push(this)
+      return { cancel() {}, finished: Promise.resolve() } as unknown as Animation
+    })
+    Object.defineProperty(Element.prototype, 'animate', { value: animate, configurable: true, writable: true })
+    try {
+      const user = userEvent.setup()
+      render(<WithSite><BokaBordPage /></WithSite>)
+      await pickOption(user, screen.getByLabelText('Antal personer'), '3 personer')
+      await user.click(await screen.findByRole('button', { name: '18:00' }))
+      const chip = screen.getByRole('button', { name: /Bord 2 · 4 platser/ })
+      await user.click(chip)
+      // The chip lights up; the table (and its ring) pop where the plan is drawn.
+      expect(targets).toContain(chip)
+      // Focus waits for the effect (half a second), then lands on the next step.
+      const confirm = screen.getByRole('button', { name: 'Bekräfta bord' })
+      expect(confirm).not.toHaveFocus()
+      await waitFor(() => expect(confirm).toHaveFocus(), { timeout: 2000 })
+    } finally {
+      // @ts-expect-error the stub is removed again
+      delete Element.prototype.animate
+    }
+  })
+
+  it('skips the effect and the wait with reduced motion', async () => {
+    const animate = vi.fn()
+    Object.defineProperty(Element.prototype, 'animate', { value: animate, configurable: true, writable: true })
+    const matchMedia = window.matchMedia
+    window.matchMedia = ((q: string) => ({ matches: q.includes('reduce'), media: q, addEventListener() {}, removeEventListener() {} })) as unknown as typeof window.matchMedia
+    try {
+      const user = userEvent.setup()
+      render(<WithSite><BokaBordPage /></WithSite>)
+      await pickOption(user, screen.getByLabelText('Antal personer'), '3 personer')
+      await user.click(await screen.findByRole('button', { name: '18:00' }))
+      await user.click(screen.getByRole('button', { name: /Bord 2 · 4 platser/ }))
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Bekräfta bord' })).toHaveFocus(), { timeout: 300 })
+      expect(animate).not.toHaveBeenCalled()
+    } finally {
+      window.matchMedia = matchMedia
+      // @ts-expect-error the stub is removed again
+      delete Element.prototype.animate
+    }
   })
 
   it('tells a table blocked by the restaurant from one that is booked', async () => {

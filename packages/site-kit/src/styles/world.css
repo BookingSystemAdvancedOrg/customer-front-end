@@ -1024,64 +1024,6 @@ svg {
   stroke-width: 0.03;
 }
 
-/* Bordens färger (ägarens val, samma i 3D och förklaringen):
-   grått = ledigt, rött = bokat, grönt = ditt val. Spärrat är rött och
-   streckat; fel storlek bara en streckad kontur. Medvetet inte
-   restaurangens --accent: färgerna ska betyda samma sak på alla sajter. */
-.floor-svg-table.is-free {
-  fill: color-mix(in srgb, var(--muted) 22%, var(--surface));
-  stroke: var(--muted);
-  stroke-width: 0.07;
-}
-
-.floor-svg-chairs.is-free .floor-svg-chair {
-  stroke: color-mix(in srgb, var(--muted) 60%, transparent);
-}
-
-.floor-svg-table.is-selected {
-  fill: var(--success);
-  stroke: color-mix(in srgb, var(--success) 70%, var(--ink));
-  stroke-width: 0.06;
-}
-
-.floor-svg-chairs.is-selected .floor-svg-chair {
-  fill: color-mix(in srgb, var(--success) 30%, var(--surface));
-  stroke: var(--success);
-}
-
-.floor-svg-table.is-booked,
-.floor-svg-table.is-blocked,
-.floor-svg-table.is-taken {
-  fill: color-mix(in srgb, var(--danger) 28%, var(--table));
-  stroke: var(--danger);
-  stroke-width: 0.04;
-  filter: none;
-}
-
-.floor-svg-table.is-blocked {
-  fill: color-mix(in srgb, var(--danger) 14%, var(--table));
-  stroke-dasharray: 0.12 0.08;
-}
-
-.floor-svg-chairs.is-booked .floor-svg-chair,
-.floor-svg-chairs.is-blocked .floor-svg-chair,
-.floor-svg-chairs.is-taken .floor-svg-chair {
-  fill: color-mix(in srgb, var(--danger) 14%, var(--table));
-  stroke: transparent;
-}
-
-.floor-svg-table.is-unfit {
-  fill: var(--table);
-  stroke: color-mix(in srgb, var(--ink) 35%, transparent);
-  stroke-dasharray: 0.12 0.08;
-  filter: none;
-}
-
-.floor-svg-chairs.is-unfit .floor-svg-chair {
-  fill: transparent;
-  stroke: color-mix(in srgb, var(--ink) 25%, transparent);
-}
-
 .floor-svg-table-label {
   font: 800 0.3px var(--font);
   fill: var(--ink);
@@ -1092,18 +1034,9 @@ svg {
   fill: var(--muted);
 }
 
-.floor-svg-pick .floor-svg-table.is-selected ~ .floor-svg-table-label,
-.floor-svg-pick .floor-svg-table.is-selected ~ .floor-svg-table-seats {
-  fill: #fdfaf6;
-}
-
 .floor-svg-pick,
 .floor-svg-explain {
   cursor: pointer;
-}
-
-.floor-svg-pick:hover .floor-svg-table.is-free {
-  fill: color-mix(in srgb, var(--muted) 34%, var(--surface));
 }
 
 .floor-svg-pick:focus-visible {
@@ -1138,35 +1071,6 @@ svg {
   border-radius: var(--r-md);
   background: var(--surface);
   box-shadow: inset 0 0 0 1px var(--line);
-}
-
-.floor-legend-swatch.is-free {
-  background: color-mix(in srgb, var(--muted) 22%, var(--surface));
-  box-shadow: inset 0 0 0 2px var(--muted);
-}
-
-.floor-legend-swatch.is-selected {
-  background: var(--success);
-  box-shadow: none;
-}
-
-.floor-legend-swatch.is-booked {
-  background: color-mix(in srgb, var(--danger) 28%, var(--table));
-  box-shadow: inset 0 0 0 1.5px var(--danger);
-}
-
-.floor-legend-swatch.is-blocked {
-  background: color-mix(in srgb, var(--danger) 14%, var(--table));
-  box-shadow: none;
-  outline: 1.5px dashed var(--danger);
-  outline-offset: -2px;
-}
-
-.floor-legend-swatch.is-unfit {
-  background: var(--table);
-  box-shadow: none;
-  outline: 1.5px dashed color-mix(in srgb, var(--ink) 35%, transparent);
-  outline-offset: -2px;
 }
 
 .booking-step .filter-row {
@@ -3087,12 +2991,16 @@ h1, h2, h3, h4 {
   --danger-ink: var(--bad);
   --warning: var(--warn);
 
-  /* Borden: grått ledigt, rött upptaget, grönt ditt val. Samma i 2D, 3D
-     och förklaringen, oavsett restaurangens färg. */
-  --seat-free: #dedbd3;
-  --seat-free-hover: #cfcbc1;
-  --seat-free-line: #8c8680;
-  --seat-free-side: #b5b0a8;
+  /* Borden (table-picker.css): varmt ljust och andas = går att boka,
+     dämpat rött = upptaget, grönt = ditt val, nedtonat = fel storlek. Samma
+     i 2D, 3D och förklaringen. En sajt kan sätta egna --seat-* (Anar: guld). */
+  --seat-free: #f1e3c6;
+  --seat-free-hover: #f7ebd2;
+  --seat-free-line: #b48a45;
+  --seat-free-side: #d3bb8e;
+  --seat-free-hi: #fbf2df;
+  --seat-glow: rgba(214, 160, 70, 0.55);
+  --seat-ring: #c9a14a;
   --seat-pick: #2c6a3f;
   --seat-pick-line: #1f4d2d;
   --seat-pick-side: #245735;
@@ -3127,10 +3035,13 @@ h1, h2, h3, h4 {
     --warn-soft: #3a2f16;
     --bad: #ee8a90;
     --bad-soft: #432326;
-    --seat-free: #6b655f;
-    --seat-free-hover: #7a746d;
-    --seat-free-line: #a8a29b;
-    --seat-free-side: #4f4a45;
+    --seat-free: #d8c29a;
+    --seat-free-hover: #e6d3ad;
+    --seat-free-line: #e6c88c;
+    --seat-free-side: #8f774f;
+    --seat-free-hi: #f3e4c4;
+    --seat-glow: rgba(236, 196, 120, 0.5);
+    --seat-ring: #e6c88c;
     --seat-pick: #2f7a48;
     --seat-pick-line: #7cc695;
     --seat-pick-side: #245735;
@@ -3160,10 +3071,13 @@ h1, h2, h3, h4 {
   --warn-soft: #3a2f16;
   --bad: #ee8a90;
   --bad-soft: #432326;
-  --seat-free: #6b655f;
-  --seat-free-hover: #7a746d;
-  --seat-free-line: #a8a29b;
-  --seat-free-side: #4f4a45;
+  --seat-free: #d8c29a;
+  --seat-free-hover: #e6d3ad;
+  --seat-free-line: #e6c88c;
+  --seat-free-side: #8f774f;
+  --seat-free-hi: #f3e4c4;
+  --seat-glow: rgba(236, 196, 120, 0.5);
+  --seat-ring: #e6c88c;
   --seat-pick: #2f7a48;
   --seat-pick-line: #7cc695;
   --seat-pick-side: #245735;
@@ -3616,70 +3530,12 @@ a,
   font-weight: 500;
 }
 
-.f3d-table.is-free .f3d-table-top {
-  background: var(--seat-free);
-  border-color: var(--seat-free-line);
-}
-
-.f3d-table.is-free .f3d-table-face:not(.ring) {
-  background: var(--seat-free-side);
-}
-
 .f3d-pick:hover .f3d-table-top {
   background: var(--seat-free-hover);
 }
 
 .f3d-pick:hover .f3d-table-body {
   transform: translateZ(6px);
-}
-
-/* Det valda bordet lyfter från golvet. */
-.f3d-table.is-selected .f3d-table-body {
-  transform: translateZ(14px);
-}
-
-.f3d-table.is-selected .f3d-table-top {
-  background: var(--seat-pick);
-  border: 2px solid var(--seat-pick-line);
-}
-
-.f3d-table.is-selected .f3d-table-face:not(.ring) {
-  background: var(--seat-pick-side);
-}
-
-.f3d-table.is-selected .f3d-table-face.ring {
-  box-shadow: 0 0 0 1px var(--seat-pick-line);
-}
-
-.f3d-table.is-selected .f3d-table-label,
-.f3d-table.is-selected .f3d-table-seats {
-  color: var(--seat-pick-ink);
-}
-
-.f3d-table.is-booked .f3d-table-top,
-.f3d-table.is-taken .f3d-table-top {
-  background: var(--seat-taken);
-  border-color: var(--seat-taken-line);
-}
-
-.f3d-table.is-booked .f3d-table-face:not(.ring),
-.f3d-table.is-taken .f3d-table-face:not(.ring) {
-  background: var(--seat-taken-side);
-}
-
-.f3d-table.is-blocked .f3d-table-top {
-  background: var(--seat-blocked);
-  border: 1px dashed var(--seat-taken-line);
-}
-
-.f3d-table.is-unfit .f3d-table-top {
-  background: var(--seat-unfit);
-  border: 1px dashed var(--seat-unfit-line);
-}
-
-.f3d-table.is-unfit .f3d-table-face:not(.ring),
-.f3d-table.is-blocked .f3d-table-face:not(.ring) {
-  background: var(--seat-free-side);
 }
 
 .f3d-hint {
@@ -3710,89 +3566,9 @@ a,
   transition: fill 160ms var(--ease), stroke 160ms var(--ease), transform 240ms var(--ease);
 }
 
-.floor-svg-table.is-free {
-  fill: var(--seat-free);
-  stroke: var(--seat-free-line);
-}
-
-.floor-svg-chairs.is-free .floor-svg-chair {
-  stroke: var(--seat-free-line);
-}
-
-.floor-svg-pick:hover .floor-svg-table.is-free {
-  fill: var(--seat-free-hover);
-}
-
-.floor-svg-table.is-selected {
-  fill: var(--seat-pick);
-  stroke: var(--seat-pick-line);
-  transform: scale(1.08);
-}
-
-.floor-svg-chairs.is-selected .floor-svg-chair {
-  fill: color-mix(in srgb, var(--seat-pick) 30%, var(--surface));
-  stroke: var(--seat-pick);
-}
-
-.floor-svg-table.is-booked,
-.floor-svg-table.is-taken {
-  fill: var(--seat-taken);
-  stroke: var(--seat-taken-line);
-}
-
-.floor-svg-chairs.is-booked .floor-svg-chair,
-.floor-svg-chairs.is-taken .floor-svg-chair,
-.floor-svg-chairs.is-blocked .floor-svg-chair {
-  fill: var(--seat-blocked);
-}
-
-.floor-svg-table.is-blocked {
-  fill: var(--seat-blocked);
-  stroke: var(--seat-taken-line);
-}
-
-.floor-svg-table.is-unfit {
-  fill: var(--seat-unfit);
-  stroke: var(--seat-unfit-line);
-}
-
 .floor-svg-table-label,
 .floor-svg-table-seats {
   font-family: var(--mono);
-}
-
-.floor-svg-pick .floor-svg-table.is-selected ~ .floor-svg-table-label,
-.floor-svg-pick .floor-svg-table.is-selected ~ .floor-svg-table-seats {
-  fill: var(--seat-pick-ink);
-}
-
-.floor-legend-swatch.is-free {
-  background: var(--seat-free);
-  box-shadow: inset 0 0 0 1.5px var(--seat-free-line);
-}
-
-.floor-legend-swatch.is-selected {
-  background: var(--seat-pick);
-  box-shadow: inset 0 0 0 1.5px var(--seat-pick-line);
-}
-
-.floor-legend-swatch.is-booked {
-  background: var(--seat-taken);
-  box-shadow: inset 0 0 0 1.5px var(--seat-taken-line);
-}
-
-.floor-legend-swatch.is-blocked {
-  background: var(--seat-blocked);
-  box-shadow: none;
-  outline: 1.5px dashed var(--seat-taken-line);
-  outline-offset: -2px;
-}
-
-.floor-legend-swatch.is-unfit {
-  background: var(--seat-unfit);
-  box-shadow: none;
-  outline: 1.5px dashed var(--seat-unfit-line);
-  outline-offset: -2px;
 }
 
 /* --- Brickan: det som lades till syns ------------------------------------- */
@@ -4054,10 +3830,6 @@ a,
 
 .floor-svg-chair-back {
   fill: color-mix(in srgb, var(--ink) 30%, var(--surface));
-}
-
-.floor-svg-chairs.is-selected .floor-svg-chair-back {
-  fill: var(--success);
 }
 
 /* Light/dark switch: the new colours sweep over the page in a circle from
