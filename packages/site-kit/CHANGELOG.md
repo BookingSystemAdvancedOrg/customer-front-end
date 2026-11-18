@@ -15,7 +15,7 @@ CSS variable or class name a site styles) is a major version.
   glides (about 0.6 s, eased) to Bekräfta bord and focus moves there. After
   the hold the page glides to the steps and focus moves to "Dina uppgifter".
   No animation with reduced motion. New colour tokens `--seat-free-hi`,
-  `--seat-glow`, `--seat-ring` (with the existing `--seat-*`); the state
+  `--seat-glow`, `--seat-ring`, `--seat-free-ink` (dark text on the light tables) (with the existing `--seat-*`); the state
   rules live in `styles/table-picker.css`. Tables carry `data-table-id`.
 - Card guarantee for a booking made by phone: `ManageBookingPage` shows the
   booking flow's card step (`GuaranteeStep`) while the booking is `pending`

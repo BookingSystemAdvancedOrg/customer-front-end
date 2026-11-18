@@ -47,6 +47,33 @@
   transition: transform 300ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
+/* Mörk text på de ljusa, lediga borden (bordsnummer och platser). */
+.f3d-table.is-free .f3d-table-label,
+.f3d-table.is-free .f3d-table-seats {
+  color: var(--seat-free-ink);
+}
+
+.f3d-table.is-free .f3d-table-seats {
+  color: color-mix(in srgb, var(--seat-free-ink) 80%, transparent);
+}
+
+/* I 3D står etiketten upp från bordet och sticker ut över golvet: en ljus
+   bricka bakom den, så att den mörka texten alltid ligger på ljust. */
+.f3d-table.is-free .f3d-table-label-wrap {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--seat-free-hi);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+.floor-svg-table.is-free ~ .floor-svg-table-label {
+  fill: var(--seat-free-ink);
+}
+
+.floor-svg-table.is-free ~ .floor-svg-table-seats {
+  fill: color-mix(in srgb, var(--seat-free-ink) 80%, transparent);
+}
+
 /* Ditt val lyfter från golvet med en skugga under. */
 .f3d-table.is-selected .f3d-table-body {
   transform: translateZ(12px);
