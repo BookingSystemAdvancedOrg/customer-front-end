@@ -6,20 +6,6 @@ import { WithSite } from '../../test/siteFixture'
 import { guestView, json, partyOf, siteConfig } from '../../test/siteData'
 import { pickOption } from '../../test/select'
 
-// The bot check widget (Cloudflare) is never loaded in tests: a button hands
-// the page a token, and every reset is recorded.
-const turnstileResets: number[] = []
-vi.mock('./TurnstileWidget', () => ({
-  TurnstileWidget: ({ resetKey, onToken }: { resetKey: number; onToken: (t: string | null) => void }) => {
-    turnstileResets.push(resetKey)
-    return (
-      <button type="button" onClick={() => onToken(`token-${resetKey}`)}>
-        Jag är inte en robot
-      </button>
-    )
-  },
-}))
-
 const LAYOUT = {
   floors: [],
   elements: [
@@ -61,7 +47,6 @@ beforeEach(() => {
     }, 201)
   availabilityBody = availability()
   combos = []
-  turnstileResets.length = 0
   fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
     if (url.includes('/availability')) return json(guestView(availabilityBody, partyOf(url), combos))
     if (url.includes('/layout/active')) return json(LAYOUT)
@@ -438,37 +423,22 @@ describe('BokaBordPage', () => {
     expect(days[1]).not.toHaveTextContent('Stängt')
   })
 
-  it('sends the bot check token when confirming the table and asks for a new one after a failed attempt', async () => {
+  it('holds the table without any bot check field (the check runs in the background)', async () => {
     const user = userEvent.setup()
-    const config = siteConfig()
-    config.turnstile = { siteKey: '1x00000000000000000000AA' }
-    holdResponse = () => json({ error: 'table_taken' }, 409)
-    render(<WithSite config={config}><BokaBordPage /></WithSite>)
-    await chooseTable(user)
-
-    await user.click(screen.getByRole('button', { name: 'Bekräfta bord' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent('Bekräfta säkerhetskontrollen')
-    expect(posts('/holds')).toHaveLength(0)
-
-    await user.click(screen.getByRole('button', { name: 'Jag är inte en robot' }))
-    await user.click(screen.getByRole('button', { name: 'Bekräfta bord' }))
-    expect(JSON.parse(posts('/holds')[0][1].body).turnstileToken).toBe('token-0')
-    expect(await screen.findByRole('alert')).toHaveTextContent('hann bokas av någon annan')
-
-    // The token was used up: picking again shows a fresh widget, the old token isn't sent.
-    await user.click(await screen.findByRole('button', { name: /Bord 2 · 4 platser/ }))
-    expect(turnstileResets.at(-1)).toBe(1)
-    await user.click(screen.getByRole('button', { name: 'Bekräfta bord' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent('Bekräfta säkerhetskontrollen')
-  })
-
-  it('asks for a reload when the server wants a bot check this page does not show', async () => {
-    const user = userEvent.setup()
-    holdResponse = () => json({ error: 'turnstile token is required' }, 400)
     render(<WithSite config={siteConfig()}><BokaBordPage /></WithSite>)
     await chooseTable(user)
     await user.click(screen.getByRole('button', { name: 'Bekräfta bord' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent('Ladda om sidan')
+    await waitFor(() => expect(posts('/holds')).toHaveLength(1))
+    expect(Object.keys(JSON.parse(posts('/holds')[0][1].body)).sort()).toEqual(['date', 'partySize', 'startTime', 'tableIds'])
+  })
+
+  it('says who acts when the server rejects the bot check', async () => {
+    const user = userEvent.setup()
+    holdResponse = () => json({ error: 'bot_check_failed' }, 400)
+    render(<WithSite config={siteConfig()}><BokaBordPage /></WithSite>)
+    await chooseTable(user)
+    await user.click(screen.getByRole('button', { name: 'Bekräfta bord' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Säkerhetskontrollen gick inte igenom. Försök igen om en stund. Fungerar det ändå inte, kontakta restaurangen.')
   })
 
   describe('the table is held for 15 minutes', () => {

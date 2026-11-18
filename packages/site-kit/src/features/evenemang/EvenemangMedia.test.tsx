@@ -17,7 +17,6 @@ vi.mock('./eventsApi', async (orig) => ({
   listEvents: vi.fn(), getEvent: vi.fn(), getTickets: vi.fn(),
 }))
 vi.mock('../../shared/payment/stripe', () => ({ stripeFor: () => null }))
-vi.mock('../boka/TurnstileWidget', () => ({ TurnstileWidget: () => null }))
 vi.mock('qrcode', () => ({ default: { toDataURL: vi.fn(async (data: string) => `data:image/png;base64,${btoa(data)}`) } }))
 
 const FEATURES = { reservations: true, ordering: false, catering: false, terminal: false, events: true }

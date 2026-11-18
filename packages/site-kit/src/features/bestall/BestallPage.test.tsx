@@ -24,14 +24,6 @@ vi.mock('@stripe/react-stripe-js/checkout', () => ({
   useCheckoutElements: () => ({ type: 'success', checkout: { confirm: stripe.confirm } }),
 }))
 
-vi.mock('../boka/TurnstileWidget', () => ({
-  TurnstileWidget: ({ onToken, action }: { onToken: (t: string | null) => void; action: string }) => (
-    <button type="button" onClick={() => onToken(`token-${action}`)}>
-      Jag är inte en robot
-    </button>
-  ),
-}))
-
 const MENU = {
   items: [
     { menuItemId: 'pizza', name: 'Margherita', description: '', price: 125, category: 'mains', imageKey: 'k' },
@@ -45,17 +37,16 @@ let ordering: Record<string, unknown>
 let orderResponse: () => Response
 const assign = vi.fn()
 
-function config(turnstile: string | null = null) {
+function config() {
   const c = siteConfig({ features: { reservations: true, ordering: true, catering: false, terminal: false } })
   c.stripe = { publishableKey: 'pk_test_1', accountId: 'acct_1' }
-  c.locations[0].ordering = { pickup: true, table: true, prepMinutes: 20 }
-  c.turnstile = { siteKey: turnstile }
+  c.locations[0].ordering = { pickup: true, prepMinutes: 20 }
   return c
 }
 
 beforeEach(() => {
   sessionStorage.clear()
-  ordering = { open: true, pickup: true, table: true, prepMinutes: 20, lastOrderAt: '21:45' }
+  ordering = { open: true, pickup: true, prepMinutes: 20, lastOrderAt: '21:45' }
   orderResponse = () => json({ orderId: 'o'.repeat(32), locationId: 'loc-1', clientSecret: 'cs_test_secret',
     stripeAccount: 'acct_1', statusToken: 'tok', totalAmount: 28550 }, 201)
   stripe.confirm.mockReset().mockResolvedValue({ type: 'success', session: {} })
@@ -260,23 +251,24 @@ describe('BestallPage', () => {
     expect(plus).toBeDisabled()
   })
 
-  it('keeps alcohol for table orders and names the table from the QR code', async () => {
+  it('sends pickup with no table and leaves alcohol out', async () => {
     const user = userEvent.setup()
-    ordering = { ...ordering, forTable: { label: '5', title: 'Bord 5' } }
-    render(<WithSite config={config()} path="/bestall?bord=code-5"><BestallPage /></WithSite>)
-    expect(await screen.findByText(/vi serverar vid bord 5/)).toBeInTheDocument()
-    expect(screen.getByLabelText('Ditt bord: Bord 5')).toHaveTextContent('Bord 5')
-    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/ordering?table=code-5'))).toBe(true)
-    await user.click(await screen.findByRole('button', { name: 'Lägg till Rödvin' }))
+    sessionStorage.setItem('order-table-code', 'code-5')
+    render(<WithSite config={config()} path="/bestall"><BestallPage /></WithSite>)
+    expect(await screen.findByRole('heading', { level: 1, name: 'Beställ för avhämtning' })).toBeInTheDocument()
+    expect(screen.getByText('Ej för avhämtning')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Lägg till Rödvin' })).not.toBeInTheDocument()
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('?table='))).toBe(false)
+    await user.click(await screen.findByRole('button', { name: 'Lägg till Margherita' }))
     await fill(user)
     await user.click(screen.getByRole('button', { name: /Till betalning/ }))
-    expect(postedOrder()).toMatchObject({ mode: 'table', tableCode: 'code-5', items: [{ menuItemId: 'wine', quantity: 1 }] })
+    expect(postedOrder()).toMatchObject({ mode: 'pickup', items: [{ menuItemId: 'pizza', quantity: 1 }] })
+    expect(postedOrder()).not.toHaveProperty('tableCode')
   })
 
   it('sends a dish\'s wish and allergy with the order, for the kitchen ticket', async () => {
     const user = userEvent.setup()
-    ordering = { ...ordering, forTable: { label: '5', title: 'Bord 5' } }
-    render(<WithSite config={config()} path="/bestall?bord=code-5"><BestallPage /></WithSite>)
+    render(<WithSite config={config()} path="/bestall"><BestallPage /></WithSite>)
     await user.click(await screen.findByRole('button', { name: 'Lägg till Margherita' }))
     await user.click(screen.getByText('Önskemål eller allergi?'))
     await user.type(screen.getByLabelText('Önskemål'), 'ingen lök')
@@ -288,42 +280,45 @@ describe('BestallPage', () => {
     })
   })
 
-  it('names a renamed table by its name', async () => {
-    ordering = { ...ordering, forTable: { label: 'Terrassen', title: 'Terrassen' } }
-    render(<WithSite config={config()} path="/bestall?bord=code-t"><BestallPage /></WithSite>)
-    expect(await screen.findByText(/vi serverar vid Terrassen/)).toBeInTheDocument()
+  it('sends an old table QR code to the counter, with no order form', async () => {
+    render(<WithSite config={config()} path="/bestall?bord=code-5"><BestallPage /></WithSite>)
+    expect(screen.getByRole('heading', { level: 1, name: 'Beställ och betala i kassan' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Se menyn' })).toHaveAttribute('href', '/meny')
+    expect(screen.getByRole('link', { name: 'Boka bord' })).toHaveAttribute('href', '/boka-bord')
+    expect(screen.queryByRole('button', { name: /Lägg till/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(sessionStorage.getItem('order-table-code')).toBeNull()
   })
 
-  it.each([
-    ['table code revoked', /QR-koden gäller inte längre/],
-    ['table removed', /Bordet med den här QR-koden finns inte längre/],
-  ])('explains a %s code and blocks ordering', async (error, message) => {
-    fetchMock.mockImplementation(async (url: string) => {
-      if (url.includes('/ordering')) return json({ error }, 400)
-      if (url.endsWith('/menu')) return json(MENU)
-      return json({ error: 'not found' }, 404)
-    })
-    render(<WithSite config={config()} path="/bestall?bord=old-code"><BestallPage /></WithSite>)
-    expect(await screen.findByRole('alert')).toHaveTextContent(message)
-    expect(await screen.findByRole('button', { name: 'Lägg till Margherita' })).toBeDisabled()
+  it('leaves out Boka bord on the counter page without bookings', () => {
+    const c = config()
+    c.tenant.features.reservations = false
+    render(<WithSite config={c} path="/bestall?bord=code-5"><BestallPage /></WithSite>)
+    expect(screen.getByRole('link', { name: 'Se menyn' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Boka bord' })).not.toBeInTheDocument()
   })
 
-  it('shows alcohol as table-only for pickup', async () => {
+  it('tells the guest to order at the counter when the server refuses table orders', async () => {
+    const user = userEvent.setup()
+    orderResponse = () => json({ error: 'table_ordering_off' }, 410)
     render(<WithSite config={config()} path="/bestall"><BestallPage /></WithSite>)
-    expect(await screen.findByText('Bara vid bordet')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Lägg till Rödvin' })).not.toBeInTheDocument()
+    await user.click(await screen.findByRole('button', { name: 'Lägg till Margherita' }))
+    await fill(user)
+    await user.click(screen.getByRole('button', { name: /Till betalning/ }))
+    expect(await screen.findByText('Beställ och betala i kassan i restaurangen.')).toBeInTheDocument()
   })
 
   it('says when ordering is closed and blocks payment', async () => {
-    ordering = { open: false, reason: 'closed', pickup: true, table: true }
+    ordering = { open: false, reason: 'closed', pickup: true }
     render(<WithSite config={config()} path="/bestall"><BestallPage /></WithSite>)
     expect(await screen.findByText(/utanför öppettiderna/)).toBeInTheDocument()
     expect(await screen.findByRole('button', { name: 'Lägg till Margherita' })).toBeDisabled()
   })
 
-  it('checks the guest before sending and sends the bot check with the order action', async () => {
+  it('checks the guest before sending, with no bot check field in the order', async () => {
     const user = userEvent.setup()
-    render(<WithSite config={config('site-key')} path="/bestall"><BestallPage /></WithSite>)
+    render(<WithSite config={config()} path="/bestall"><BestallPage /></WithSite>)
     await user.click(await screen.findByRole('button', { name: 'Lägg till Cola' }))
     await forward(user)
     await forward(user)
@@ -342,10 +337,9 @@ describe('BestallPage', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Godkänn villkoren')
     await user.click(screen.getByRole('checkbox', { name: /inte kan ändras/ }))
     await user.click(screen.getByRole('button', { name: /Till betalning/ }))
-    expect(screen.getByRole('alert')).toHaveTextContent('säkerhetskontrollen')
-    await user.click(screen.getByRole('button', { name: 'Jag är inte en robot' }))
-    await user.click(screen.getByRole('button', { name: /Till betalning/ }))
-    expect(postedOrder()).toMatchObject({ turnstileToken: 'token-order' })
+    await waitFor(() => expect(postedOrder()).not.toBeNull())
+    expect(postedOrder()).toMatchObject({ name: 'Anna', email: 'anna@example.se', acceptTerms: true })
+    expect(Object.keys(postedOrder()).some((k) => /token/i.test(k))).toBe(false)
   })
 
   it('explains a closed kitchen from the server', async () => {

@@ -35,7 +35,7 @@ export type {
   SitePrivacy,
   SpecialDay,
 } from './shared/site'
-export type { LocationWaitlist, SiteBuilderState, SiteFeatureKey, SiteSlotId } from './shared/contracts'
+export type { LocationWaitlist, SiteFeatureKey, SiteSlotId } from './shared/contracts'
 
 /* --- API --------------------------------------------------------------- */
 export { ApiError, apiBaseUrl, apiDelete, apiGet, apiPost, isApiConfigured } from './shared/api'
@@ -83,6 +83,8 @@ export type { MenuCategory, MenuCategoryEntry, OptionGroup, PublicMenuItem } fro
 export { default as BookingFlow } from './features/boka/BokaBordPage'
 export { default as ManageBooking } from './features/bokning/ManageBookingPage'
 export { default as OrderFlow } from './features/bestall/BestallPage'
+export { default as KassanPage } from './features/bestall/KassanPage'
+export { isTableQrLink } from './features/bestall/orderApi'
 export { default as OrderStatus } from './features/bestall/OrderStatusPage'
 export { default as CateringFlow } from './features/catering/CateringPage'
 export { default as CateringRequest } from './features/catering/CateringRequestPage'
@@ -90,7 +92,6 @@ export { OfferCard } from './features/erbjudande/OfferCard'
 export { FloorPlan3D } from './features/boka/FloorPlan3D'
 export { FloorPlanSvg } from './features/boka/FloorPlanSvg'
 export { GuaranteeConfirmation, GuaranteeNotice, GuaranteeStep, GuaranteeTermsText } from './features/boka/GuaranteeStep'
-export { TurnstileWidget } from './features/boka/TurnstileWidget'
 
 /* --- Betalning (Stripe Elements) ------------------------------------------ */
 export { PaidStamp, PaymentPanel, PaymentPrinting, PaymentTicket, SecureNote } from './shared/payment/PaymentTicket'

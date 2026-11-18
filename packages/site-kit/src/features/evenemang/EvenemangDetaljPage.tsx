@@ -9,7 +9,6 @@ import { useTheme } from '../../shared/theme'
 import { paymentAppearance, paymentFonts } from '../../shared/payment/appearance'
 import { SecureNote } from '../../shared/payment/PaymentTicket'
 import { stripeFor } from '../../shared/payment/stripe'
-import { TurnstileWidget } from '../boka/TurnstileWidget'
 import {
   checkout,
   clampQty,
@@ -154,15 +153,12 @@ function Purchase({ event, onPaid, onStale }: { event: PublicEvent; onPaid: (p: 
   const [buyerEmail, setBuyerEmail] = useState('')
   const [buyerPhone, setBuyerPhone] = useState('')
   const [orderId, setOrderId] = useState(newId)
-  const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
-  const [turnstileReset, setTurnstileReset] = useState(0)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [emailError, setEmailError] = useState<string | null>(null)
   const [held, setHeld] = useState<TicketCheckout | null>(null)
   const errorRef = useRef<HTMLDivElement>(null)
   const emailRef = useRef<HTMLInputElement>(null)
-  const siteKey = config.turnstile?.siteKey ?? null
 
   const occurrence = event.occurrences.find((o) => o.occurrenceId === occurrenceId)
   const listings = listingsFor(event, occurrenceId)
@@ -211,7 +207,6 @@ function Purchase({ event, onPaid, onStale }: { event: PublicEvent; onPaid: (p: 
         ...(picked.length ? { resaleTransferIds: picked.map((r) => r.transferId) } : { lines }),
         buyerName: buyerName.trim(), buyerEmail: buyerEmail.trim(),
         ...(buyerPhone.trim() ? { buyerPhone: buyerPhone.trim() } : {}),
-        ...(turnstileToken ? { turnstileToken } : {}),
       })
       if (!out.clientSecret) {
         onPaid('free')
@@ -224,9 +219,6 @@ function Purchase({ event, onPaid, onStale }: { event: PublicEvent; onPaid: (p: 
       const msg = eventsErrorMessage(err, 'Det gick inte att starta köpet. Försök igen.')
       if (code === 'invalid_email') setEmailError(msg)
       else setError(msg)
-      // En Turnstile-token gäller en gång: en ny kontroll innan nästa försök.
-      setTurnstileToken(null)
-      setTurnstileReset((n) => n + 1)
       if (code && ['sold_out', 'type_sold_out', 'sales_closed', 'changed_retry', 'resale_taken'].includes(code)) {
         setOrderId(newId())
         if (code === 'resale_taken') setPicked([])
@@ -248,8 +240,6 @@ function Purchase({ event, onPaid, onStale }: { event: PublicEvent; onPaid: (p: 
         <PayStep checkout={held} onPaid={onPaid} />
         <Button variant="ghost" onClick={() => {
           setHeld(null); setOrderId(newId()); rememberPurchase(null)
-          // En Turnstile-token gäller en gång: en ny kontroll innan nästa försök.
-          setTurnstileToken(null); setTurnstileReset((n) => n + 1)
         }}>
           Ändra biljetterna
         </Button>
@@ -258,7 +248,7 @@ function Purchase({ event, onPaid, onStale }: { event: PublicEvent; onPaid: (p: 
   }
 
   const canBuy = Boolean(occurrence && total > 0 && (picked.length ? occurrence.salesOpen !== false : bookable(occurrence))
-    && buyerName.trim() && buyerEmail.trim() && (!siteKey || turnstileToken))
+    && buyerName.trim() && buyerEmail.trim())
   return (
     <form onSubmit={submit} noValidate className="evenemang-form">
       <fieldset className="evenemang-fieldset">
@@ -370,7 +360,6 @@ function Purchase({ event, onPaid, onStale }: { event: PublicEvent; onPaid: (p: 
         {config.tenant.name} är personuppgiftsansvarig.{' '}
         <Link to="/integritetspolicy" target="_blank" rel="noopener">Läs integritetspolicyn</Link>
       </p>
-      {siteKey ? <TurnstileWidget siteKey={siteKey} resetKey={turnstileReset} onToken={setTurnstileToken} /> : null}
       <div ref={errorRef} tabIndex={-1} className="evenemang-error">
         {error ? <Bar variant="banner" tone="danger">{error}</Bar> : null}
       </div>

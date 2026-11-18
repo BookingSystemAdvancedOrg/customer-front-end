@@ -12,11 +12,6 @@ vi.mock('./giftApi', async (orig) => ({
   ...(await orig<typeof import('./giftApi')>()),
   getOffer: vi.fn(), startCheckout: vi.fn(), checkBalance: vi.fn(),
 }))
-vi.mock('../boka/TurnstileWidget', () => ({
-  TurnstileWidget: ({ resetKey, onToken }: { resetKey: number; onToken: (t: string | null) => void }) => (
-    <button type="button" onClick={() => onToken(`token-${resetKey}`)}>Jag är inte en robot</button>
-  ),
-}))
 vi.mock('../../shared/payment/stripe', () => ({ stripeFor: () => null }))
 
 const FEATURES = { reservations: true, ordering: true, catering: false, terminal: false, giftCards: true }
@@ -146,18 +141,25 @@ describe('SaldoPage', () => {
     expect(vi.mocked(api.checkBalance).mock.calls[0][1]).toBe('ABCD-EFGH-JKMN-PQRS')
   })
 
-  it('waits for a new Turnstile token after a failed check', async () => {
+  it('can try again after a failed check, with no bot check step', async () => {
     vi.mocked(api.checkBalance).mockRejectedValue(new ApiError(404, 'not_found', { error: 'not_found' }))
-    const config = siteConfig({ features: FEATURES })
-    config.turnstile = { siteKey: '1x00000000000000000000AA' }
-    render(<WithSite config={config}><SaldoPage /></WithSite>)
+    site(<SaldoPage />)
     fireEvent.change(screen.getByLabelText(/Kod/), { target: { value: 'abcd-efgh-jkmn-pqrs' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Jag är inte en robot' }))
-    const submit = screen.getByRole('button', { name: 'Visa saldo' })
-    expect(submit).toBeEnabled()
-    fireEvent.click(submit)
+    fireEvent.click(screen.getByRole('button', { name: 'Visa saldo' }))
     expect(await screen.findByText(/Vi hittar inget presentkort/)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Visa saldo' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Visa saldo' })).toBeEnabled()
+    expect(vi.mocked(api.checkBalance).mock.calls[0]).toHaveLength(2)
+  })
+
+  it('says who acts when the bot check cannot load or does not pass', async () => {
+    vi.mocked(api.checkBalance).mockRejectedValueOnce(new ApiError(0, 'bot_check_unavailable'))
+    site(<SaldoPage />)
+    fireEvent.change(screen.getByLabelText(/Kod/), { target: { value: 'abcd-efgh-jkmn-pqrs' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Visa saldo' }))
+    expect(await screen.findByText(/stäng av blockerande tillägg/)).toBeInTheDocument()
+    vi.mocked(api.checkBalance).mockRejectedValueOnce(new ApiError(400, 'x', { code: 'bot_check_failed' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Visa saldo' }))
+    expect(await screen.findByText(/Fungerar det ändå inte, kontakta restaurangen/)).toBeInTheDocument()
   })
 })
 

@@ -5,7 +5,6 @@ import { useSite } from '../../shared/SiteContext'
 import { OFFER_CARD_KEY } from '../../shared/storageRegistry'
 import { trackOfferView } from '../../shared/visits'
 import { validEmail } from '../boka/bookingApi'
-import { TurnstileWidget } from '../boka/TurnstileWidget'
 import { kronor } from '../bestall/orderApi'
 import { getOffer, offerAllowedOn, signUp, signupErrorMessage } from './offerApi'
 import type { Offer } from './offerApi'
@@ -57,15 +56,12 @@ export function OfferCard() {
   const [expanded, setExpanded] = useState(false)
   const [email, setEmail] = useState('')
   const [consent, setConsent] = useState(false)
-  const [token, setToken] = useState<string | null>(null)
-  const [reset, setReset] = useState(0)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState(false)
   const [touched, setTouched] = useState(false)
   const counted = useRef(false)
   const titleId = useId()
-  const siteKey = config.turnstile?.siteKey ?? null
 
   useEffect(() => {
     if (!enabled || !locationId) return
@@ -164,18 +160,13 @@ export function OfferCard() {
     setError(null)
     if (!validEmail(email)) return setError('Fyll i en giltig e-postadress.')
     if (!consent) return setError('Kryssa i att du vill få erbjudanden, så kan vi skicka koden.')
-    if (siteKey && !token) return setError('Bekräfta säkerhetskontrollen.')
     setBusy(true)
     try {
-      await signUp({ locationId, email: email.trim(), consent: true, ...(token ? { turnstileToken: token } : {}) })
+      await signUp({ locationId, email: email.trim(), consent: true })
       setDone(true)
       remember('claimed')
     } catch (err) {
       setError(signupErrorMessage(err))
-      if (siteKey) {
-        setToken(null)
-        setReset((n) => n + 1)
-      }
     } finally {
       setBusy(false)
     }
@@ -246,10 +237,6 @@ export function OfferCard() {
                     när jag vill. <Link to="/integritetspolicy">Integritetspolicy</Link>
                   </span>
                 </label>
-                {siteKey && email.length > 2 && (
-                  <TurnstileWidget siteKey={siteKey} resetKey={reset} action="signup" appearance="interaction-only"
-                    onToken={setToken} />
-                )}
                 {error && <p className="offer-error" role="alert">{error}</p>}
                 <button type="submit" className="offer-submit" disabled={busy}>
                   {busy ? 'Skickar…' : offer.buttonLabel}

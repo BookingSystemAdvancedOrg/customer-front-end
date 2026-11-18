@@ -1,4 +1,4 @@
-/* Beställning vid bordet: bordet från QR-koden syns tydligt överst (BestallPage). */
+/* Platsen under ordernumret (OrderStatusPage): Avhämtning, eller bordet på äldre beställningar (Bord 3). */
 .order-table-chip {
   display: inline-flex;
   align-items: center;
@@ -58,4 +58,12 @@
   outline: none;
   background: var(--surface);
   border-color: var(--ink);
+}
+
+/* Statussidan: bordet (eller Avhämtning) under numret, lika stort som i kassan. */
+.order-status .order-place {
+  justify-self: start;
+  align-self: flex-start;
+  width: fit-content;
+  margin: 0;
 }

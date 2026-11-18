@@ -142,9 +142,7 @@ export function deepenForLight(hex: string, min: number): string {
 
 function applyBranding(config: SiteConfig): void {
   const { branding, name } = config.tenant
-  // A page pre-rendered by the site builder (the embedded document, id
-  // EMBED_ID in BuilderPage) already has its own SEO title: keep it.
-  if (!document.getElementById('booqy-site')) document.title = name
+  document.title = name
   const root = document.documentElement.style
   // Restaurangens färg blir designsystemets enda accent (knappar, länkar,
   // valda bord); hover/fokus-nyanser räknas fram ur den i index.css. Mörkt

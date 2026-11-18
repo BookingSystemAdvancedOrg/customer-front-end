@@ -1,11 +1,12 @@
 import { apiGet, apiPost, ApiError } from '../../shared/api'
+import { botCheckMessage } from '../../shared/botCheckMessage'
 import { withAttribution } from '../../shared/visits'
-import { CART_KEY_PREFIX, ORDER_TOKEN_PREFIX, TABLE_KEY } from '../../shared/storageRegistry'
+import { CART_KEY_PREFIX, ORDER_TOKEN_PREFIX } from '../../shared/storageRegistry'
 
 /**
  * Matbeställning (backend payment-intent / get-order, docs/ORDERS.md).
  *
- *   GET  /locations/{id}/ordering[?table=<kod>]  öppet nu? (och QR-kodens bord)
+ *   GET  /locations/{id}/ordering                öppet nu för avhämtning?
  *   POST /order                                  beställningen -> betalningen (Checkout
  *                                                Session som sajten visar själv, embedded)
  *   GET  /locations/{id}/order-status/{orderId}  gästens beställning (X-Order-Token)
@@ -22,25 +23,23 @@ export const NOTES_MAX = 300
  * (shared/orders.py MAX_ORDER_ORE). */
 export const MAX_ORDER_ORE = 5_000_000
 
+/** Nya beställningar är alltid avhämtning; 'table' finns bara på äldre
+ * beställningar från QR-koden på bordet (borttagen 2026-11-17). */
 export type OrderMode = 'pickup' | 'table'
 
 export interface OrderingState {
   open: boolean
   reason?: 'disabled' | 'no_payments' | 'paused' | 'closed'
   pickup?: boolean
-  table?: boolean
   prepMinutes?: number
   closesAt?: string
   lastOrderAt?: string
   pausedUntil?: string
-  /** Bordet QR-koden hör till, med namnet i den gällande planritningen. */
-  forTable?: { label: string; title?: string }
 }
 
 export interface OrderRequest {
   locationId: string
-  mode: OrderMode
-  tableCode?: string
+  mode: 'pickup'
   /** note ("ingen lök") och allergy ("jordnötsallergi") följer rätten till köksbongen. */
   items: { menuItemId: string; quantity: number; note?: string; allergy?: string; options?: OptionPick[] }[]
   name: string
@@ -49,7 +48,6 @@ export interface OrderRequest {
   notes?: string
   language: 'sv'
   acceptTerms: true
-  turnstileToken?: string
   /** Välkomsterbjudandets kod (ABCD-EFGH). */
   discountCode?: string
   /** Presentkortets kod (bara med presentkort i planen). */
@@ -107,9 +105,8 @@ export interface GuestOrder {
 
 const path = (locationId: string) => `/locations/${encodeURIComponent(locationId)}`
 
-export function getOrdering(locationId: string, tableCode?: string | null): Promise<OrderingState> {
-  const query = tableCode ? `?table=${encodeURIComponent(tableCode)}` : ''
-  return apiGet<OrderingState>(`${path(locationId)}/ordering${query}`)
+export function getOrdering(locationId: string): Promise<OrderingState> {
+  return apiGet<OrderingState>(`${path(locationId)}/ordering`)
 }
 
 export function createOrder(request: OrderRequest): Promise<OrderCreated> {
@@ -257,31 +254,11 @@ export function stepQuantity(current: number, delta: number): number {
   return Math.min(MAX_QUANTITY, Math.max(0, current + delta))
 }
 
-// --- QR-kod: bordet gästen sitter vid (behålls i fliken) ---------------------
+// --- gamla QR-koder på borden -------------------------------------------------
 
-
-/** "Bord 7" för ett nummer, annars bordets namn ("Terrassen"). */
-export function tableTitle(forTable: { label: string; title?: string } | undefined): string | null {
-  if (!forTable) return null
-  return forTable.title || (/^\d/.test(forTable.label) ? `Bord ${forTable.label}` : forTable.label)
-}
-
-export function tableCodeFrom(search: string): string | null {
-  const fromUrl = new URLSearchParams(search).get('bord')
-  try {
-    if (fromUrl) sessionStorage.setItem(TABLE_KEY, fromUrl)
-    return fromUrl ?? sessionStorage.getItem(TABLE_KEY)
-  } catch {
-    return fromUrl
-  }
-}
-
-export function forgetTableCode(): void {
-  try {
-    sessionStorage.removeItem(TABLE_KEY)
-  } catch {
-    // Som ovan.
-  }
+/** En gammal QR-kod från ett bord (/bestall?bord=<kod>): leder till KassanPage. */
+export function isTableQrLink(search: string): boolean {
+  return new URLSearchParams(search).has('bord')
 }
 
 // --- text ------------------------------------------------------------------------
@@ -294,8 +271,8 @@ export function stockholmDate(now = new Date()): string {
 
 /**
  * Momssatsen för en rad, samma regel som servern (shared/orders.py):
- * alkohol 25 %, vid bordet 12 %, avhämtning 6 % under den tillfälliga
- * matmomsen 2026-04-01 till 2027-12-31 och annars 12 %.
+ * alkohol 25 %, vid bordet 12 % (äldre beställningar), avhämtning 6 % under
+ * den tillfälliga matmomsen 2026-04-01 till 2027-12-31 och annars 12 %.
  */
 export function vatRate(alcohol: boolean, mode: OrderMode, today = stockholmDate()): number {
   if (alcohol) return 25
@@ -348,14 +325,12 @@ const ORDER_ERRORS: Record<string, string> = {
   ordering_no_payments: 'Betalningen är inte tillgänglig just nu.',
   ordering_no_site: 'Det går inte att beställa online just nu.',
   ordering_pickup_off: 'Avhämtning går inte att beställa just nu.',
-  ordering_table_off: 'Beställning vid bordet går inte just nu - fråga personalen.',
+  ordering_table_off: 'Beställ och betala i kassan i restaurangen.',
+  table_ordering_off: 'Beställ och betala i kassan i restaurangen.',
   menu_item_unavailable: 'En rätt i varukorgen finns inte längre på menyn. Ta bort den och försök igen.',
-  alcohol_not_for_pickup: 'Drycker med alkohol kan bara beställas vid bordet.',
+  alcohol_not_for_pickup: 'Drycker med alkohol går inte att beställa för avhämtning. Ta bort dem och försök igen.',
   option_invalid: 'Ett tillval i varukorgen finns inte längre. Ta bort rätten och lägg till den igen.',
   option_required: 'Välj de tillval som krävs, till exempel storlek, och försök igen.',
-  'table code is invalid': 'QR-koden känns inte igen. Skanna koden på bordet igen.',
-  'table code revoked': 'Den här QR-koden gäller inte längre. Fråga personalen så hjälper de dig att beställa.',
-  'table removed': 'Bordet med den här QR-koden finns inte längre. Fråga personalen så hjälper de dig att beställa.',
   payment_unavailable: 'Betalningen är inte tillgänglig just nu. Försök igen om en stund.',
   verification_unavailable: 'Säkerhetskontrollen svarar inte just nu. Försök igen om en stund.',
   too_many_requests: 'För många försök. Vänta en stund och försök igen.',
@@ -392,7 +367,7 @@ export function isGiftCardError(err: unknown): boolean {
   return err instanceof ApiError && GIFT_CARD_ERRORS.has(err.message)
 }
 
-/** Ett fel från servern med eget svar (t.ex. QR-koden); null = hämtningen misslyckades. */
+/** Ett fel från servern med eget svar (t.ex. pausat); null = hämtningen misslyckades. */
 export function knownOrderError(err: unknown): string | null {
   return err instanceof ApiError && ORDER_ERRORS[err.message] ? ORDER_ERRORS[err.message] : null
 }
@@ -402,13 +377,13 @@ export function orderErrorMessage(err: unknown): string {
     return 'Det tog för lång tid att svara. Försök igen.'
   }
   if (!(err instanceof ApiError)) return 'Något gick fel. Försök igen.'
+  const botCheck = botCheckMessage(err)
+  if (botCheck) return botCheck
   if (ORDER_ERRORS[err.message]) return ORDER_ERRORS[err.message]
   if (/^phone/.test(err.message)) return 'Fyll i ett giltigt mobilnummer, t.ex. 070-123 45 67.'
   if (/^email/.test(err.message)) return 'Fyll i en giltig e-postadress.'
   if (/^name/.test(err.message)) return 'Fyll i ditt namn.'
   if (/^quantity|^items may have/.test(err.message)) return `Högst ${MAX_QUANTITY} av varje rätt och ${MAX_LINES} olika rätter per beställning.`
-  if (/^turnstile token expired/.test(err.message)) return 'Säkerhetskontrollen hann gå ut. Bekräfta igen.'
-  if (/^turnstile/.test(err.message)) return 'Bekräfta säkerhetskontrollen och försök igen.'
   if (err.status === 404) return 'Beställningen hittades inte. Kontrollera länken.'
   if (err.status === 429) return ORDER_ERRORS.too_many_requests
   return 'Beställningen kunde inte skickas just nu. Försök igen om en stund.'

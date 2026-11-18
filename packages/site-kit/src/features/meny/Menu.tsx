@@ -12,7 +12,7 @@ import { SkelDishes } from '../../shared/Skeleton'
  * lägger sin egen hero ovanför (se site-template:s MenyPage).
  */
 export function Menu({ hideHeading = false }: {
-  /** Rubriken finns redan ovanför (blocket i webbplatsbyggaren): ingen egen "Meny". */
+  /** Rubriken finns redan ovanför på sidan: ingen egen "Meny". */
   hideHeading?: boolean
 } = {}) {
   const { configured, loading, error, retry, items, categories } = useMenuList()

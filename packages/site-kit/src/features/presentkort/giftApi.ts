@@ -1,4 +1,5 @@
 import { ApiError, apiGet, apiPost } from '../../shared/api'
+import { botCheckMessage } from '../../shared/botCheckMessage'
 import { GIFT_CARD_PURCHASE_KEY } from '../../shared/storageRegistry'
 
 /** Presentkort på restaurangens sajt (CONTRACTS.md 6.E E1-E3). */
@@ -11,11 +12,11 @@ const base = (locationId: string) => `/public/locations/${encodeURIComponent(loc
 export const getOffer = (locationId: string) => apiGet<Offer>(`${base(locationId)}/offer`)
 export const startCheckout = (locationId: string, body: {
   purchaseId: string; amountSek: number; buyerEmail: string; recipientName?: string; recipientEmail?: string
-  message?: string; turnstileToken?: string
+  message?: string
 }) => apiPost<Checkout>(`${base(locationId)}/checkout`, body)
-export const checkBalance = (locationId: string, code: string, turnstileToken?: string) =>
+export const checkBalance = (locationId: string, code: string) =>
   apiPost<{ balanceSek: number; balanceOre: number; expiresAt: string; status: string }>(`${base(locationId)}/balance`,
-    { code, ...(turnstileToken ? { turnstileToken } : {}) })
+    { code })
 
 export function newPurchaseId(): string {
   return crypto.randomUUID().replace(/-/g, '')
@@ -44,13 +45,14 @@ const ERRORS: Record<string, string> = {
   invalid_amount: 'Välj ett av beloppen eller ett eget belopp inom gränserna.',
   invalid_email: 'Kontrollera e-postadressen.',
   message_too_long: 'Hälsningen får vara högst 300 tecken.',
-  turnstile_failed: 'Säkerhetskontrollen gick inte igenom. Försök igen.',
   stripe_unavailable: 'Kortbetalningen svarar inte just nu. Försök igen om en stund.',
   no_stripe_account: 'Restaurangen kan inte ta emot kortbetalningar just nu.',
   too_many_requests: 'För många försök. Vänta en stund och försök igen.',
 }
 
 export function giftErrorMessage(err: unknown, fallback: string): string {
+  const botCheck = botCheckMessage(err)
+  if (botCheck) return botCheck
   if (err instanceof ApiError) {
     const code = String(err.body.code ?? err.body.error ?? '')
     if (ERRORS[code]) return ERRORS[code]

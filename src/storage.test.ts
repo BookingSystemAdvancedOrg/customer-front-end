@@ -10,7 +10,7 @@ describe('index.html', () => {
     const known = STORAGE_REGISTRY.map((e) => e.setBy.toLowerCase()).join(' ')
     expect(scriptHosts.length).toBeGreaterThan(0)
     for (const host of scriptHosts) {
-      const vendor = host.includes('stripe') ? 'stripe' : host.includes('cloudflare') ? 'cloudflare' : host
+      const vendor = host.includes('stripe') ? 'stripe' : host.includes('awswaf') ? 'aws' : host
       expect(known, host).toContain(vendor)
     }
   })

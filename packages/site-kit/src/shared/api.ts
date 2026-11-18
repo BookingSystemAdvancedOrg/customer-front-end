@@ -8,9 +8,14 @@
  * kortgarantin) och avbokningen. Den enda "behörigheten" är
  * gästens hanteringstoken för sin egen bokning, som skickas som header
  * (X-Manage-Token) - aldrig i URL:en, så den hamnar inte i loggar.
+ *
+ * Undantag: formulären med säkerhetskontroll (shared/botCheck.ts) går till
+ * /api på sajtens egen domän och skickar med AWS WAF:s cookie
+ * (aws-waf-token), som bara visar att en riktig webbläsare skickade dem.
  */
 
 import { siteKitConfig } from '../config'
+import { ensureBotCheckToken, isBotChallenge, isBotChecked, SAME_ORIGIN_API } from './botCheck'
 
 /** API:ts bas-URL från sajtens configureSiteKit (läses vid varje anrop). */
 export function apiBaseUrl(): string | undefined {
@@ -88,6 +93,11 @@ async function fetchWithRetry(method: string, send: () => Promise<Response>): Pr
   }
 }
 
+/** Säkerhetskontrollen kunde inte laddas (t.ex. blockerad av ett tillägg). */
+export const BOT_CHECK_UNAVAILABLE = 'bot_check_unavailable'
+/** Servern eller WAF godtog inte säkerhetskontrollen. */
+export const BOT_CHECK_FAILED = 'bot_check_failed'
+
 /** Hur länge vi väntar på API:t innan anropet ges upp (per försök). */
 const REQUEST_TIMEOUT_MS = 15_000
 
@@ -99,7 +109,15 @@ async function request<T>(
   if (!isApiConfigured()) {
     throw new Error('VITE_API_BASE_URL är inte satt - se .env.example och README.')
   }
-  const res = await fetchWithRetry(method, () => fetch(`${apiBaseUrl()}${path}`, {
+  const checked = isBotChecked(method, path)
+  if (checked) {
+    try {
+      await ensureBotCheckToken()
+    } catch {
+      throw new ApiError(0, BOT_CHECK_UNAVAILABLE)
+    }
+  }
+  const send = () => fetchWithRetry(method, () => fetch(`${checked ? SAME_ORIGIN_API : apiBaseUrl()}${path}`, {
     method,
     headers: {
       Accept: 'application/json',
@@ -107,12 +125,24 @@ async function request<T>(
       ...headers,
     },
     body: body !== undefined ? JSON.stringify(body) : undefined,
-    // Inga cookies eller sparade inloggningar följer någonsin med anropet.
-    credentials: 'omit',
+    // Inga cookies eller sparade inloggningar följer med anropet, utom
+    // säkerhetskontrollens egen cookie till sajtens /api.
+    credentials: checked ? 'same-origin' : 'omit',
     referrerPolicy: 'no-referrer',
     // keepalive: anropet hinner iväg även när sidan stängs (släppa ett bord).
     ...(keepalive ? { keepalive: true } : { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) }),
   }))
+  let res = await send()
+  if (checked && isBotChallenge(res)) {
+    // Token hann gå ut: hämta en ny och skicka en gång till.
+    try {
+      await ensureBotCheckToken()
+    } catch {
+      throw new ApiError(0, BOT_CHECK_UNAVAILABLE)
+    }
+    res = await send()
+    if (isBotChallenge(res)) throw new ApiError(403, BOT_CHECK_FAILED)
+  }
   if (!res.ok) {
     throw await toApiError(res)
   }

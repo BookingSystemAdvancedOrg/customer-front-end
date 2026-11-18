@@ -3,7 +3,7 @@ import type { StorageEntry } from '../../shared/storageRegistry'
 
 /**
  * Namnet i lagringstabellen: nyckelnamn som kod, ett per rad (Stripes två
- * cookies), och poster utan lagring (Turnstile, Besöksstatistik) som vanlig text.
+ * cookies), och poster utan lagring (Besöksstatistik) som vanlig text.
  */
 export function StorageName({ entry }: { entry: StorageEntry }) {
   if (entry.kind === 'ingen') return <span className="storage-name">{entry.name}</span>

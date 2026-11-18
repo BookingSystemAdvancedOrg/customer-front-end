@@ -6,6 +6,11 @@ CSS variable or class name a site styles) is a major version.
 
 ## Unreleased
 
+- **Breaking:** the site builder is removed from Booqy. Gone:
+  `sitePages.forhandsvisning`, `sitePages.builderPage`, the type
+  `SiteBuilderState`, `SiteConfig.tenant.site`, and `"siteBuilder"` in
+  `FEATURE_KEYS` and `SITE_CONFIG_FEATURES` (the generated contract).
+  `SiteProvider` now always sets `document.title` to the restaurant's name.
 - `Select`: a dropdown in the site's look instead of the system menu
   (ARIA select-only combobox, list in a portal, a sheet from the bottom on
   phones). Every dropdown in the kit uses it (`CategoryNav`, party size in

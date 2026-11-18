@@ -9,7 +9,7 @@ import * as testing from './testing'
 const COMPONENTS = [
   'SiteProvider', 'Menu', 'CategoryNav', 'DishImage', 'Plate',
   'BookingFlow', 'ManageBooking', 'OrderFlow', 'OrderStatus', 'CateringFlow', 'CateringRequest',
-  'OfferCard', 'FloorPlan3D', 'FloorPlanSvg', 'GuaranteeStep', 'TurnstileWidget',
+  'OfferCard', 'FloorPlan3D', 'FloorPlanSvg', 'GuaranteeStep',
   'PaymentTicket', 'PaymentPanel', 'AddToCalendar', 'Celebrate', 'DateInput', 'TimeInput',
   'DateTimeInput', 'FlowSteps', 'Select', 'OpeningHoursModal', 'PhoneInput', 'PhoneLink', 'ThemeToggle',
   'GuestDataNotice', 'MarketingConsent', 'PrivacyPolicy', 'CookiePolicy', 'BookingTermsPage', 'NoticeText',

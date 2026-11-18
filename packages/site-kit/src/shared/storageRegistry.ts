@@ -1,6 +1,6 @@
 /**
  * Allt som restaurangens webbplats sparar i gästens webbläsare, på ett
- * ställe, inklusive det tredje parter (Stripe, Cloudflare) sätter.
+ * ställe, inklusive det tredje parter (Stripe, AWS) sätter.
  *
  * Det här är facit: koden hämtar sina nyckelnamn härifrån, integritets-
  * policyns tabell ritas härifrån, och ett test (storageRegistry.test.ts)
@@ -35,7 +35,6 @@ export interface StorageEntry {
 export const LOCATION_KEY_PREFIX = 'site-location:'
 export const SLUG_KEY = 'site-tenant-slug'
 export const CART_KEY_PREFIX = 'order-cart:'
-export const TABLE_KEY = 'order-table-code'
 export const ORDER_TOKEN_PREFIX = 'order-token:'
 export const CATERING_TOKEN_PREFIX = 'catering-token:'
 export const OFFER_CARD_KEY = 'offer-card'
@@ -79,15 +78,6 @@ export const STORAGE_REGISTRY: readonly StorageEntry[] = [
     where: 'Beställning',
   },
   {
-    name: TABLE_KEY,
-    kind: 'sessionStorage',
-    setBy: 'Webbplatsen',
-    purpose: 'Bordet från QR-koden du skannade, så att beställningen kommer till rätt bord.',
-    lifetime: 'Tills fliken stängs',
-    category: 'nödvändig',
-    where: 'Beställning vid bordet',
-  },
-  {
     name: `${ORDER_TOKEN_PREFIX}{beställning}`,
     kind: 'sessionStorage',
     setBy: 'Webbplatsen',
@@ -124,13 +114,13 @@ export const STORAGE_REGISTRY: readonly StorageEntry[] = [
     where: 'Kortgaranti, betalning av beställning, catering, presentkort och evenemang',
   },
   {
-    name: 'Cloudflare Turnstile',
-    kind: 'ingen',
-    setBy: 'Cloudflare',
-    purpose: 'Kontrollerar att en bokning, beställning eller förfrågan görs av en människa och inte en robot. Sätter inga cookies.',
-    lifetime: '-',
+    name: 'aws-waf-token',
+    kind: 'cookie',
+    setBy: 'Booqy (AWS)',
+    purpose: 'Säkerhetskontroll: visar att en bokning, beställning eller förfrågan skickas från en riktig webbläsare och inte av en robot. Sätts bara när ett formulär skickas.',
+    lifetime: 'Några minuter, förnyas medan sidan är öppen',
     category: 'nödvändig',
-    where: 'Bokning, beställning, catering och välkomsterbjudandet',
+    where: 'Bokning, beställning, catering, presentkort, evenemang, kö och välkomsterbjudandet',
   },
   {
     name: OFFER_CARD_KEY,

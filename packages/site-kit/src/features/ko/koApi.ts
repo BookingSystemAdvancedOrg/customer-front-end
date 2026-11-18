@@ -11,7 +11,7 @@ export interface QueueStatus {
 }
 
 export const joinQueue = (locationId: string, body: {
-  entryId: string; name: string; partySize: number; phone: string; email?: string; turnstileToken?: string
+  entryId: string; name: string; partySize: number; phone: string; email?: string
 }) => apiPost<{ token: string; position: number | null }>(`/public/locations/${encodeURIComponent(locationId)}/waitlist`, body)
 export const queueStatus = (token: string) => apiGet<QueueStatus>(`/public/waitlist/${encodeURIComponent(token)}`)
 export const acceptTable = (token: string) =>

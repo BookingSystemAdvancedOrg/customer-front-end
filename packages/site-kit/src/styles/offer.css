@@ -256,10 +256,6 @@
   color: var(--danger-ink);
 }
 
-.offer-card .booking-turnstile {
-  margin: 0 0 10px;
-}
-
 /* Tagen: stubben rivs av en bit, kupongen visar bekräftelsen. */
 .offer-card--done .offer-stub {
   animation: offer-tear 700ms var(--ease) both;

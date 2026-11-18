@@ -1,6 +1,7 @@
 import { siteKitConfig } from '../config'
 import { apiGet } from './api'
-import type { LocationWaitlist, SiteBuilderState, SiteFeatureKey } from './contracts'
+import { configureBotCheck } from './botCheck'
+import type { LocationWaitlist, SiteFeatureKey } from './contracts'
 import type { BusinessHours } from './locationApi'
 import { LOCATION_KEY_PREFIX, SLUG_KEY } from './storageRegistry'
 
@@ -51,7 +52,7 @@ export interface SiteLocation {
   gracePeriodMinutes?: number | null
   specialDays?: SpecialDay[]
   /** Hur man kan beställa här (null/saknas = ingen beställning). */
-  ordering?: { pickup: boolean; table: boolean; prepMinutes: number } | null
+  ordering?: { pickup: boolean; prepMinutes: number } | null
   /** Cateringkalkylen är påslagen för platsen (cateringSettings.enabled). */
   catering?: boolean
   /** Med kö påslaget: om gäster själva får ställa sig i kö på sajten. */
@@ -78,8 +79,6 @@ export interface SiteConfig {
     branding: SiteBranding
     /** Saknad nyckel = av. Strängindexet finns kvar för sajter byggda före de typade nycklarna. */
     features: Record<string, boolean> & Partial<Record<SiteFeatureKey, boolean>>
-    /** Med webbplatsbyggaren påslagen och något sparat: hur sajten ritas. */
-    site?: SiteBuilderState
   }
   legal: {
     legalName: string
@@ -90,7 +89,8 @@ export interface SiteConfig {
   }
   locations: SiteLocation[]
   stripe: { publishableKey: string | null; accountId: string | null }
-  turnstile: { siteKey: string | null }
+  /** Säkerhetskontrollen på formulären (AWS WAF, shared/botCheck.ts). */
+  botCheck?: { integrationUrl: string | null }
   /** Saknas från äldre backend: sidorna faller då tillbaka på standardtexterna. */
   privacy?: SitePrivacy
 }
@@ -159,7 +159,10 @@ export function siteQuery(
 }
 
 export function getSiteConfig(query: string): Promise<SiteConfig> {
-  return apiGet<SiteConfig>(`/site-config?${query}`)
+  return apiGet<SiteConfig>(`/site-config?${query}`).then((config) => {
+    configureBotCheck(config.botCheck)
+    return config
+  })
 }
 
 // Vald plats minns per restaurang (bara bekvämlighet - servern äger listan).

@@ -8,6 +8,8 @@ export const sitePages = {
   booking: () => import('./features/boka/BokaBordPage'),
   manageBooking: () => import('./features/bokning/ManageBookingPage'),
   order: () => import('./features/bestall/BestallPage'),
+  /** Dit en gammal QR-kod på bordet leder: beställ och betala i kassan. */
+  kassan: () => import('./features/bestall/KassanPage'),
   orderStatus: () => import('./features/bestall/OrderStatusPage'),
   catering: () => import('./features/catering/CateringPage'),
   cateringRequest: () => import('./features/catering/CateringRequestPage'),
@@ -17,8 +19,6 @@ export const sitePages = {
   presentkort: () => import('./features/presentkort/PresentkortPage'),
   presentkortSaldo: () => import('./features/presentkort/SaldoPage'),
   ko: () => import('./features/ko/KoPage'),
-  forhandsvisning: () => import('./features/site-builder/PreviewPage'),
-  builderPage: () => import('./features/site-builder/BuilderPage'),
   evenemang: () => import('./features/evenemang/EvenemangPage'),
   evenemangDetalj: () => import('./features/evenemang/EvenemangDetaljPage'),
   biljett: () => import('./features/evenemang/BiljettPage'),

@@ -27,9 +27,8 @@ describe('PrivacyPage cookie table', () => {
     const { container } = render(<PrivacyPage />)
     const codes = [...container.querySelectorAll('.storage-table code')].map((c) => c.innerHTML)
     expect(codes).toContain('__stripe_mid<br>__stripe_sid')
-    expect(codes).not.toContain('Cloudflare Turnstile')
+    expect(codes).toContain('aws-waf-token')
     expect(codes).not.toContain('Besöksstatistik')
-    expect(screen.getByText('Cloudflare Turnstile')).toBeInTheDocument()
   })
 
   it('names everything clearing the browser forgets', () => {
