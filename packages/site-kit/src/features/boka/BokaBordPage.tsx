@@ -769,7 +769,10 @@ export default function BokaBordPage() {
             </div>
           </div>
           <p className="cell-muted">
-            Fler än {maxParty} personer? Ring {info.phone ? <PhoneLink phone={info.phone} /> : 'restaurangen'}.
+            {/* One text node per sentence part, so the translator gets the whole question. */}
+            {info.phone
+              ? <>{`Fler än ${maxParty} personer? Ring `}<PhoneLink phone={info.phone} />.</>
+              : `Fler än ${maxParty} personer? Ring restaurangen.`}
           </p>
           <div className="booking-dates" role="group" aria-label="Välj datum">
             {dates.map((d) => {

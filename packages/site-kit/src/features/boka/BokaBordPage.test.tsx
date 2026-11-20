@@ -205,6 +205,11 @@ describe('BokaBordPage', () => {
     )
     const note = await screen.findByText(/Fler än \d+ personer\? Ring/)
     expect(within(note).getByRole('link', { name: '08-123 456 78' })).toHaveAttribute('href', 'tel:+46812345678')
+    // One text node for the sentence before the number, so it is translated
+    // as a whole ("Fler än {0} personer? Ring" in the glossary).
+    expect([...note.childNodes].map((n) => n.nodeType === Node.TEXT_NODE ? n.textContent : '#')).toEqual([
+      'Fler än 8 personer? Ring ', '#', '.',
+    ])
   })
 
   it('shows phone booking only when the plan has no reservations', () => {
