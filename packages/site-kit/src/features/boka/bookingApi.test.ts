@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../../shared/api'
 import {
+  BOOKING_HORIZON_DAYS,
   bookableDates,
   bookingErrorMessage,
   cancelGuestReservation,
@@ -20,12 +21,43 @@ import { json } from '../../test/siteData'
 afterEach(() => vi.unstubAllGlobals())
 
 describe('dates', () => {
-  it('gives 21 bookable days across month ends', () => {
+  it('gives today through today + 21 days: 22 bookable days', () => {
+    expect(BOOKING_HORIZON_DAYS).toBe(21)
+    const days = bookableDates('2026-11-20')
+    expect(days).toHaveLength(22)
+    expect(days[0]).toBe('2026-11-20')
+    expect(days.at(-1)).toBe('2026-12-11')
+    expect(new Set(days).size).toBe(22)
+  })
+
+  it('rolls over month ends', () => {
     const days = bookableDates('2026-09-25')
-    expect(days).toHaveLength(21)
+    expect(days).toHaveLength(22)
     expect(days[0]).toBe('2026-09-25')
+    expect(days[5]).toBe('2026-09-30')
     expect(days[6]).toBe('2026-10-01')
-    expect(days[20]).toBe('2026-10-15')
+    expect(days.at(-1)).toBe('2026-10-16')
+  })
+
+  it('rolls over the year end', () => {
+    const days = bookableDates('2026-12-20')
+    expect(days).toHaveLength(22)
+    expect(days[11]).toBe('2026-12-31')
+    expect(days[12]).toBe('2027-01-01')
+    expect(days.at(-1)).toBe('2027-01-10')
+  })
+
+  it('rolls over a leap day and the end of March (summer time)', () => {
+    const days = bookableDates('2028-02-20')
+    expect(days[9]).toBe('2028-02-29')
+    expect(days[10]).toBe('2028-03-01')
+    expect(days.at(-1)).toBe('2028-03-12')
+    expect(bookableDates('2026-03-20').at(-1)).toBe('2026-04-10')
+  })
+
+  it('takes another number of dates', () => {
+    expect(bookableDates('2026-11-20', 1)).toEqual(['2026-11-20'])
+    expect(bookableDates('2026-11-20', 3)).toEqual(['2026-11-20', '2026-11-21', '2026-11-22'])
   })
 
   it("uses the restaurant's time zone for today", () => {
@@ -51,6 +83,7 @@ describe('errors', () => {
     [new ApiError(400, 'phone must be a valid phone number, e.g. +46701234567'), 'giltigt telefonnummer'],
     [new ApiError(400, 'partySize must be at most 8 for online bookings'), 'högst 8 personer'],
     [new ApiError(400, 'date must not be in the past'), 'redan passerat'],
+    [new ApiError(400, 'date must not be more than 21 days ahead'), 'Det går att boka högst 21 dagar fram.'],
   ])('%s', (err, text) => {
     expect(bookingErrorMessage(err)).toContain(text)
   })

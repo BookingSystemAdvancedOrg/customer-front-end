@@ -267,7 +267,7 @@ const VALIDATION_TEXT: [RegExp, (m: RegExpMatchArray) => string][] = [
     (m) => `Online går det att boka för högst ${m[1]} personer. Ring restaurangen för större sällskap.`],
   [/^partySize must be/, () => 'Välj antal personer i listan.'],
   [/^date must not be in the past/, () => 'Den dagen har redan passerat. Välj en annan dag.'],
-  [/^date must not be more than 21 days ahead/, () => 'Det går att boka högst 21 dagar fram.'],
+  [/^date must not be more than (\d+) days ahead/, (m) => `Det går att boka högst ${m[1]} dagar fram.`],
   [/^phone must be a valid/, () => 'Fyll i ett giltigt telefonnummer, t.ex. 070-123 45 67.'],
   [/^email must be a valid/, () => 'Fyll i en giltig e-postadress.'],
   [/^(name|email|phone) is required/, () => 'Fyll i namn, e-post och telefon.'],
@@ -473,8 +473,17 @@ export function todayIn(timezone: string | null | undefined, now: Date = new Dat
   }
 }
 
-/** De bokningsbara dagarna: idag + 20 dagar framåt (API:ts horisont). */
-export function bookableDates(today: string, days = 21): string[] {
+/**
+ * Hur långt fram gäster kan boka: idag + 21 dagar, hela dagar i restaurangens
+ * tidszon (samma regel som servern, BOOKING_HORIZON_DAYS i shared/availability.py).
+ */
+export const BOOKING_HORIZON_DAYS = 21
+
+/**
+ * De bokningsbara dagarna: idag till och med idag + BOOKING_HORIZON_DAYS, alltså
+ * 22 datum (t.ex. idag fre 20 nov 2026, sista dagen fre 11 dec). `days` är antalet datum.
+ */
+export function bookableDates(today: string, days = BOOKING_HORIZON_DAYS + 1): string[] {
   const [y, m, d] = today.split('-').map(Number)
   return Array.from({ length: days }, (_, i) => {
     const date = new Date(Date.UTC(y, m - 1, d + i))

@@ -428,6 +428,23 @@ describe('BokaBordPage', () => {
     expect(days[1]).not.toHaveTextContent('Stängt')
   })
 
+  it('lists today through today + 21 days and books on the last one', async () => {
+    const user = userEvent.setup()
+    const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Stockholm' }).format(new Date())
+    const [y, m, d] = today.split('-').map(Number)
+    const last = new Date(Date.UTC(y, m - 1, d + 21)).toISOString().slice(0, 10)
+    render(<WithSite><BokaBordPage /></WithSite>)
+    const days = within(screen.getByRole('group', { name: 'Välj datum' })).getAllByRole('button')
+    expect(days).toHaveLength(22)
+    expect(days[0]).toHaveTextContent('Idag')
+    expect(days[21]).toHaveTextContent(String(Number(last.slice(8, 10))))
+    await user.click(days[21])
+    expect(days[21]).toHaveAttribute('aria-pressed', 'true')
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/availability') && String(url).includes(`date=${last}`)))
+        .toBe(true))
+  })
+
   it('holds the table without any bot check field (the check runs in the background)', async () => {
     const user = userEvent.setup()
     render(<WithSite config={siteConfig()}><BokaBordPage /></WithSite>)
