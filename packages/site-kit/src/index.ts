@@ -146,8 +146,20 @@ export {
   lateCancelApplies,
 } from './shared/bookingTerms'
 export type { TermsContext, TermsSection } from './shared/bookingTerms'
-export { GIFT_CARD_PURCHASE_KEY, SOUND_KEY, STORAGE_REGISTRY, THEME_KEY, TICKET_PURCHASE_KEY, WAITLIST_TOKEN_PREFIX } from './shared/storageRegistry'
+export { GIFT_CARD_PURCHASE_KEY, LANG_KEY, SOUND_KEY, STORAGE_REGISTRY, THEME_KEY, TICKET_PURCHASE_KEY, WAITLIST_TOKEN_PREFIX } from './shared/storageRegistry'
 export type { StorageCategory, StorageEntry, StorageKind } from './shared/storageRegistry'
+
+/* --- Språk (sv standard; en, es, ar, fa via Amazon Translate) ------------- */
+export { LanguagePicker } from './shared/lang/LanguagePicker'
+export { LanguageProvider } from './shared/lang/LanguageProvider'
+export { useKeepTerms, useLanguage } from './shared/lang/LanguageContext'
+export type { LanguageContextValue } from './shared/lang/LanguageContext'
+export { DEFAULT_LANG, LANGUAGES, PARTIAL_NOTE, PICKER_LABEL, currentLang, isLang } from './shared/lang/languages'
+export { prefetchTexts } from './shared/lang/loads'
+export type { Lang, Language } from './shared/lang/languages'
+export { Flag } from './shared/lang/flags'
+export { MachineTranslationNote } from './shared/lang/MachineTranslationNote'
+export { formatDate, formatNumber, formatTime, formatWeekday } from './shared/lang/format'
 
 /* --- Besöksstatistik ------------------------------------------------------ */
 export { captureAttribution, currentAttribution, trackOfferView, trackPage, withAttribution } from './shared/visits'

@@ -1,3 +1,4 @@
+import { MachineTranslationNote } from '../../shared/lang/MachineTranslationNote'
 import { useSite } from '../../shared/SiteContext'
 import { NoticeText } from './NoticeText'
 import { PhoneLink } from '../../shared/PhoneLink'
@@ -32,7 +33,8 @@ export default function PrivacyPage() {
   return (
     <article className="page-prose">
       <h1>Integritetspolicy</h1>
-      <p className="cell-muted">Gäller för bokningar och besök på {tenant.name}s webbplats.</p>
+      <MachineTranslationNote />
+      <p className="cell-muted">{`Gäller för bokningar och besök på webbplatsen för ${tenant.name}.`}</p>
 
       {/* Restaurangens egen text (redigeras i admin) från en nyare backend;
           annars standardtexten nedan. Cookietabellen kommer alltid efter. */}

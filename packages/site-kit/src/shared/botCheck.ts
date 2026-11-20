@@ -26,6 +26,8 @@ const GUARDED: readonly RegExp[] = [
   /^\/public\/locations\/[^/]+\/gift-cards\/(checkout|balance)$/,
   /^\/public\/locations\/[^/]+\/events\/checkout$/,
   /^\/public\/locations\/[^/]+\/waitlist$/,
+  // Sidans översättning (shared/lang): samma väg, så servern vet vilken sajt som frågar.
+  /^\/translate$/,
 ]
 
 /** Sökvägen på sajtens egen domän som CloudFront skickar till API:t. */

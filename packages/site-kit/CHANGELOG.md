@@ -6,6 +6,25 @@ CSS variable or class name a site styles) is a major version.
 
 ## Unreleased
 
+- Table picker (step 3, 2D and 3D): tables that can be booked for the party
+  are warm and light and breathe slowly (2.4 s, all in step); tables of the
+  wrong size are dimmed and their title and tap say "För litet bord för 6" /
+  "För stort bord för 2"; booked is muted red; the chosen table is filled and
+  lifts. The legend matches. Picking a table (on the plan or its button) pops
+  it, sends a ring out from it and lights its button for 0.5 s; then the page
+  glides (about 0.6 s, eased) to Bekräfta bord and focus moves there. After
+  the hold the page glides to the steps and focus moves to "Dina uppgifter".
+  No animation with reduced motion. New colour tokens `--seat-free-hi`,
+  `--seat-glow`, `--seat-ring`, `--seat-free-ink` (dark text on the light tables) (with the existing `--seat-*`); the state
+  rules live in `styles/table-picker.css`. Tables carry `data-table-id`.
+- Card guarantee for a booking made by phone: `ManageBookingPage` shows the
+  booking flow's card step (`GuaranteeStep`) while the booking is `pending`
+  with `setup` in the guest view, comes back there from Stripe, confirms with
+  the manage token and shows the saved guarantee. Hold time from
+  `setup.expiresAt`. Card form not available while the hold runs
+  (`setupUnavailable`): try again, not a new booking. A failed 3-D Secure
+  redirect shows the bank error at the card form. `NOTHING_CHARGED` is
+  "0 kr dras nu.". Same as site-kit 0.4.0.
 - **Breaking:** the site builder is removed from Booqy. Gone:
   `sitePages.forhandsvisning`, `sitePages.builderPage`, the type
   `SiteBuilderState`, `SiteConfig.tenant.site`, and `"siteBuilder"` in

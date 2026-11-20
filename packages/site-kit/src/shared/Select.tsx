@@ -35,6 +35,16 @@ export type SelectProps = {
   'aria-labelledby'?: string
   'aria-describedby'?: string
   'aria-invalid'?: boolean
+  /** Visas i knappen i stället för det valda alternativets label (t.ex. flagga + kod). */
+  valueLabel?: ReactNode
+  /** Listans namn och arkets rubrik, om de ska skilja sig från knappens namn. */
+  listLabel?: string
+  /** Listan översätts aldrig (translate="no" på portalen), t.ex. språkväljaren. */
+  noTranslate?: boolean
+  /** Listans kant mot knappens början (standard) eller slut (t.ex. längst till höger i sidhuvudet). */
+  align?: 'start' | 'end'
+  /** Listans minsta bredd i px (standard 160), när knappen är smalare än raderna. */
+  minListWidth?: number
 }
 
 /** Smalare än så här: arket nerifrån i stället för en lista under knappen. */
@@ -87,6 +97,11 @@ export function Select({
   required,
   disabled,
   className,
+  valueLabel,
+  listLabel,
+  noTranslate,
+  align = 'start',
+  minListWidth = 160,
   ...aria
 }: SelectProps) {
   const baseId = useId()
@@ -128,7 +143,7 @@ export function Select({
       ?.split(/\s+/)
       .map((x) => document.getElementById(x)?.textContent ?? '')
       .join(' ')
-    setTitle((labelled || labelText(t) || aria['aria-label'] || '').trim())
+    setTitle((listLabel || labelled || labelText(t) || aria['aria-label'] || '').trim())
     setSheet(typeof window.matchMedia === 'function' && window.matchMedia(SELECT_SHEET_QUERY).matches)
     setPlace(null)
     setActive(enabled(at) ? at : first())
@@ -228,14 +243,18 @@ export function Select({
       const above = r.top - GAP - EDGE
       const up = below < want + chrome && above > below
       const maxHeight = Math.max(96, Math.min(MAX_H, (up ? above : below) - chrome))
-      const width = Math.min(Math.max(r.width, 160), vw - EDGE * 2)
-      const left = Math.min(Math.max(r.left, EDGE), vw - width - EDGE)
+      const width = Math.min(Math.max(r.width, minListWidth), vw - EDGE * 2)
+      // Höger till vänster: listans början är knappens högra kant.
+      const rtl = cs.direction === 'rtl'
+      const fromRight = (align === 'end') !== rtl
+      const left = Math.min(Math.max(fromRight ? r.right - width : r.left, EDGE), vw - width - EDGE)
       const top = up ? r.top - GAP - (Math.min(want, maxHeight) + chrome) : r.bottom + GAP
       setPlace({ top, left, width, maxHeight, above: up })
     }
     measure()
     window.addEventListener('resize', measure)
     return () => window.removeEventListener('resize', measure)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, sheet])
 
   // Arket nerifrån: sidan under står still (roten låses, inte body, som menyn).
@@ -317,6 +336,7 @@ export function Select({
             className={`combo-pop ${sheet ? 'combo-pop--sheet' : place?.above ? 'combo-pop--above' : 'combo-pop--below'}`}
             style={sheet ? undefined : place ? { top: place.top, left: place.left, width: place.width } : { top: 0, left: 0, visibility: 'hidden' }}
             onMouseDown={(e) => e.preventDefault()}
+            translate={noTranslate ? 'no' : undefined}
           >
             {sheet && title ? <p className="combo-title" aria-hidden="true">{title}</p> : null}
             <div
@@ -369,7 +389,7 @@ export function Select({
         if (open && !pop.current?.contains(e.relatedTarget as Node | null)) close(false)
       }}
     >
-      <span className="combo-value">{selected ? selected.label : placeholder ?? ''}</span>
+      <span className="combo-value">{selected ? (valueLabel ?? selected.label) : placeholder ?? ''}</span>
       <Chevron />
     </button>
   )

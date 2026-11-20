@@ -21,7 +21,6 @@ import {
   createReservation,
   dayMessage,
   formatDate,
-  formatShortDate,
   getAvailability,
   holdTables,
   lengthText,
@@ -39,7 +38,11 @@ import { GuaranteeConfirmation, GuaranteeNotice, GuaranteeStep } from './Guarant
 import { ApiError } from '../../shared/api'
 import { FloorPlanSvg } from './FloorPlanSvg'
 import { FloorPlan3D } from './FloorPlan3D'
+import { PICK_EFFECT_MS, playPickEffect } from './pickEffect'
+import { glideTo, prefersReducedMotion } from '../../shared/glide'
 import { FlowSteps } from '../../shared/FlowSteps'
+import { currentLang, language } from '../../shared/lang/languages'
+import { useLanguage } from '../../shared/lang/LanguageContext'
 import { Celebrate } from '../../shared/Celebrate'
 import { GuestDataNotice } from '../../shared/GuestDataNotice'
 import { MarketingConsent, NO_CONSENT, consentFields } from '../../shared/MarketingConsent'
@@ -78,9 +81,12 @@ function guestError(g: Guest): { field: GuestField; message: string } | null {
 
 const FORM_ERROR_ID = 'booking-form-error'
 
-/** Mjuk rullning, utom för den som bett om mindre rörelse. */
-function scrollBehavior(): ScrollBehavior {
-  return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+/** Veckodag och månad på datumknapparna i gästens språk ("sön", "nov" / "Sun", "Nov"). */
+function tileParts(date: string, locale: string): { weekday: string; month: string } {
+  const [y, m, d] = date.split('-').map(Number)
+  const at = new Date(Date.UTC(y, m - 1, d))
+  const fmt = (o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(locale, { ...o, timeZone: 'UTC' }).format(at).replace('.', '')
+  return { weekday: fmt({ weekday: 'short' }), month: fmt({ month: 'short' }) }
 }
 
 /** Kvittot som hänger kvar högst upp medan bordet hålls: vilket bord, hur
@@ -95,12 +101,13 @@ function HoldBanner({ secondsLeft, totalSeconds, tables, onChange }: {
   const urgent = secondsLeft <= 120
   const left = totalSeconds > 0 ? Math.min(1, Math.max(0, secondsLeft / totalSeconds)) : 0
   return (
-    <div className={`hold-banner${urgent ? ' urgent' : ''}`} role="timer" aria-label={`Bordet hålls i ${clockText(secondsLeft)}`}>
+    <div className={`hold-banner${urgent ? ' urgent' : ''}`} role="timer" aria-label={`Tid kvar att slutföra bokningen: ${clockText(secondsLeft)}`}>
       <div className="hold-text">
         <span className="hold-kicker">{urgent ? 'Snart släpps bordet' : 'Bordet är ditt'}</span>
+        {/* Hela meningar per textnod (översätts som meningar); klockan för sig. */}
         <span>
-          Bord {tables} hålls åt dig i <strong className="hold-clock">{clockText(secondsLeft)}</strong>
-          {urgent ? ' - slutför bokningen nu.' : '.'}
+          {`Bord ${tables} hålls åt dig:`} <strong className="hold-clock" translate="no">{clockText(secondsLeft)}</strong>
+          {urgent ? ' Slutför bokningen nu.' : null}
         </span>
       </div>
       {onChange && (
@@ -155,6 +162,7 @@ function sameTables(a: TableOption | null, b: TableOption | null): boolean {
  */
 export default function BokaBordPage() {
   const { config, location } = useSite()
+  const { intlLocale } = useLanguage()
   const info = useLocationInfo()
   const enabled = config.tenant.features.reservations
   const maxParty = location.maxPartySizeOnline || DEFAULT_MAX_PARTY
@@ -211,6 +219,13 @@ export default function BokaBordPage() {
   const secondsLeft = deadline === null ? null : Math.max(0, Math.ceil((deadline - now) / 1000))
   const headRef = useRef<HTMLElement>(null)
   const confirmRef = useRef<HTMLDivElement>(null)
+  const confirmButtonRef = useRef<HTMLButtonElement>(null)
+  /** Steg 3 (bordsvalet): klickeffekten letar bord och knappar här. */
+  const tablesRef = useRef<HTMLFieldSetElement>(null)
+  /** Steg 4:s rubrik: fokus flyttas hit när bordet hålls. */
+  const detailsHeadRef = useRef<HTMLLegendElement>(null)
+  /** Satt när borden just blivit hållna: rulla till steg 4 och flytta fokus dit. */
+  const justHeld = useRef(false)
   const terms = location.guarantee ?? null
   const cardNeeded = needsCard(terms, partySize, true)
   const specialByDate = useMemo(
@@ -391,10 +406,33 @@ export default function BokaBordPage() {
   const stepAt = pending ? 5 : hold ? 4 : slot ? 3 : 2
 
   // Ett valt bord: sammanfattningen och Bekräfta-knappen ligger under
-  // planritningen - rulla fram dem så gästen ser vad som händer härnäst.
+  // planritningen. Först får klickeffekten spela klart (en halv sekund),
+  // sedan rullar sidan mjukt fram dem och fokus flyttas till Bekräfta bord.
   useEffect(() => {
-    if (option && !hold) confirmRef.current?.scrollIntoView?.({ block: 'nearest', behavior: scrollBehavior() })
+    if (!option || hold) return undefined
+    const id = window.setTimeout(() => {
+      void glideTo(confirmRef.current, { block: 'nearest' }).then(() =>
+        confirmButtonRef.current?.focus({ preventScroll: true }),
+      )
+    }, prefersReducedMotion() ? 0 : PICK_EFFECT_MS)
+    return () => window.clearTimeout(id)
   }, [option, hold])
+
+  // Borden hålls: stegen 1-3 viks ihop. Visa stegraden och uppgifterna från
+  // början (inte sidfoten som sidan annars står kvar vid på en telefon) och
+  // flytta fokus till steg 4:s rubrik.
+  useEffect(() => {
+    if (!hold || !justHeld.current) return
+    justHeld.current = false
+    void glideTo(headRef.current, { block: 'start' }).then(() => detailsHeadRef.current?.focus({ preventScroll: true }))
+  }, [hold])
+
+  /** Klickeffekten på de valda borden och deras knapp i listan. */
+  function celebrate(o: TableOption) {
+    const key = o.tableIds.join('+')
+    const chip = tablesRef.current?.querySelector<HTMLElement>(`[data-option="${CSS.escape(key)}"]`)
+    playPickEffect(tablesRef.current, o.tableIds, chip)
+  }
 
   // Byter man dag, tid eller sällskap gäller inte gamla bordsval längre.
   function choose(change: () => void) {
@@ -448,18 +486,24 @@ export default function BokaBordPage() {
       setOption(null)
       return
     }
-    setOption(
+    const next =
       options.find((o) => o.tableIds.length === 1 && o.tableIds[0] === tableId) ??
-        options.find((o) => o.tableIds.includes(tableId)) ??
-        null,
-    )
+      options.find((o) => o.tableIds.includes(tableId)) ??
+      null
+    if (next) celebrate(next)
+    setOption(next)
   }
 
   function pickOption(o: TableOption) {
     setSlotNotice(null)
     setFormError(null)
     setTableInfo(null)
-    setOption(sameTables(o, option) ? null : o)
+    if (sameTables(o, option)) {
+      setOption(null)
+      return
+    }
+    celebrate(o)
+    setOption(o)
   }
 
   /** Bekräfta bord: borden spärras för andra i 15 minuter. */
@@ -487,9 +531,7 @@ export default function BokaBordPage() {
       setHold(held)
       setNow(Date.now())
       setDeadline(Date.now() + held.holdMinutes * 60_000)
-      // Stegen 1-3 viks ihop: visa stegraden och uppgifterna från början,
-      // inte sidfoten som sidan annars står kvar vid på en telefon.
-      headRef.current?.scrollIntoView?.({ block: 'start', behavior: scrollBehavior() })
+      justHeld.current = true
     } catch (err) {
       setFormError(bookingErrorMessage(err, formatPhoneNational(info.phone) || undefined))
       const stale = staleSelection(err)
@@ -514,7 +556,7 @@ export default function BokaBordPage() {
     setOption(null)
     setFormError(null)
     setRefresh((n) => n + 1)
-    headRef.current?.scrollIntoView?.({ block: 'start', behavior: scrollBehavior() })
+    void glideTo(headRef.current, { block: 'start' })
   }
 
   /** Ändra gästens uppgifter; ett ändrat fält är inte längre markerat som fel. */
@@ -557,7 +599,8 @@ export default function BokaBordPage() {
           email: guest.email.trim(),
           phone: guest.phone.trim(),
           notes: guest.notes.trim() || undefined,
-          language: 'sv',
+          // SMS och mejl: svenska, annars engelska (API:t har bara de två).
+          language: language(currentLang()).messageLanguage,
           ...consentFields(guest.consent, config.privacy, !!config.tenant.features.marketing),
           acceptTerms: true,
           holdId: hold.holdId,
@@ -636,20 +679,20 @@ export default function BokaBordPage() {
       <section className="booking-confirmation is-success" aria-live="polite">
         <Celebrate />
         <p className="booking-status stamp-ok">Bokat</p>
-        <p className="hero-kicker">Tack, {booked.customerName}!</p>
+        <p className="hero-kicker">Tack, <span translate="no">{booked.customerName}</span>!</p>
         <h1>Ditt bord är bokat</h1>
-        <p className="confirmation-lede">Vi ses {formatDate(booked.date)} kl {booked.startTime}. Välkommen!</p>
+        <p className="confirmation-lede">{`Vi ses ${formatDate(booked.date)} kl ${booked.startTime}. Välkommen!`}</p>
         <dl className="booking-summary">
-          <div><dt>Restaurang</dt><dd>{booked.location?.name ?? info.name}</dd></div>
+          <div><dt>Restaurang</dt><dd translate="no">{booked.location?.name ?? info.name}</dd></div>
           <div><dt>Datum</dt><dd>{formatDate(booked.date)}</dd></div>
           <div><dt>Tid</dt><dd>{booked.startTime}-{booked.endTime}</dd></div>
           {lengthText(booked) && <div><dt>Bokningstid</dt><dd>{lengthText(booked)}</dd></div>}
-          <div><dt>Antal</dt><dd>{booked.partySize} personer</dd></div>
+          <div><dt>Antal</dt><dd>{`${booked.partySize} personer`}</dd></div>
           <div>
             <dt>Bord</dt>
             <dd>{booked.tableIds.map((id) => labels.get(id) ?? id).join(', ')}</dd>
           </div>
-          {booked.location?.address && <div><dt>Adress</dt><dd>{booked.location.address}</dd></div>}
+          {booked.location?.address && <div><dt>Adress</dt><dd translate="no">{booked.location.address}</dd></div>}
         </dl>
         <AddToCalendar
           event={bookingEvent(booked, {
@@ -664,7 +707,7 @@ export default function BokaBordPage() {
           <ol>
             <li>Vi mejlar en bekräftelse till <strong>{guest.email.trim()}</strong> inom några minuter.</li>
             <li>I mejlet finns en länk där du kan se eller avboka bokningen.</li>
-            <li>Kom {formatDate(booked.date)} kl {booked.startTime}, så står bordet klart.</li>
+            <li>{`Kom ${formatDate(booked.date)} kl ${booked.startTime}, så står bordet klart.`}</li>
           </ol>
         </div>
         {link && (
@@ -691,7 +734,7 @@ export default function BokaBordPage() {
   return (
     <>
       <section className="page-head" ref={headRef}>
-        {info.name !== config.tenant.name && <p className="hero-kicker">{info.name}</p>}
+        {info.name !== config.tenant.name && <p className="hero-kicker" translate="no">{info.name}</p>}
         <h1>Boka bord</h1>
         <p className="page-lede">Välj hur många ni är, dag och tid - sedan ert bord.</p>
         <FlowSteps steps={steps} current={stepAt} label="Bokning" />
@@ -726,7 +769,10 @@ export default function BokaBordPage() {
             </div>
           </div>
           <p className="cell-muted">
-            Fler än {maxParty} personer? Ring {info.phone ? <PhoneLink phone={info.phone} /> : 'restaurangen'}.
+            {/* One text node per sentence part, so the translator gets the whole question. */}
+            {info.phone
+              ? <>{`Fler än ${maxParty} personer? Ring `}<PhoneLink phone={info.phone} />.</>
+              : `Fler än ${maxParty} personer? Ring restaurangen.`}
           </p>
           <div className="booking-dates" role="group" aria-label="Välj datum">
             {dates.map((d) => {
@@ -742,9 +788,14 @@ export default function BokaBordPage() {
                   aria-pressed={d === date}
                   onClick={() => chooseDate(d)}
                 >
-                  <span className="date-tile-wd">{d === today ? 'Idag' : formatShortDate(d).split(' ')[0]}</span>
+                  {/* Förkortningar översätts inte ("sön" blev "så långt som"): Intl i gästens språk. */}
+                  {d === today ? (
+                    <span className="date-tile-wd">Idag</span>
+                  ) : (
+                    <span className="date-tile-wd" translate="no">{tileParts(d, intlLocale).weekday}</span>
+                  )}
                   <span className="date-tile-day">{Number(d.slice(8, 10))}</span>
-                  {mark ? <span className="pill-note">{mark}</span> : <span className="date-tile-mon">{formatShortDate(d).split(' ').slice(2).join(' ') || ''}</span>}
+                  {mark ? <span className="pill-note">{mark}</span> : <span className="date-tile-mon" translate="no">{tileParts(d, intlLocale).month}</span>}
                 </button>
               )
             })}
@@ -772,7 +823,7 @@ export default function BokaBordPage() {
           {!loadingSlots && dayText && <p className="notice" role="status">{dayText}</p>}
           {!loadingSlots && !slotsError && slots.length === 0 && (!day || day.kind === 'hours') && (
             <div className="notice notice--stack" role="status">
-              <p>Inga lediga tider för {partySize} personer {formatDate(date)}.</p>
+              <p>{`Inga lediga tider för ${partySize} personer ${formatDate(date)}.`}</p>
               <p className="cell-muted">Prova en annan dag, eller ändra antalet personer.</p>
               {nextDate && (
                 <button type="button" className="btn-secondary btn-small" onClick={() => chooseDate(nextDate)}>
@@ -799,10 +850,10 @@ export default function BokaBordPage() {
         </fieldset>
 
         {slot && (
-          <fieldset className="booking-step" disabled={holding}>
+          <fieldset className="booking-step" disabled={holding} ref={tablesRef}>
             <legend><span className="step-no">3</span>Välj ert bord</legend>
             <p className="cell-muted">
-              Tryck på ett grått bord för att välja det. Röda bord är upptagna - tryck på dem så berättar vi varför.
+              Borden som lyser går att boka för ert sällskap. Tryck på ett mörkt bord så berättar vi varför det inte går.
             </p>
             {slotNotice?.step === 'tables' && <p className="notice" role="status">{slotNotice.text}</p>}
             {floors === null && (
@@ -844,6 +895,7 @@ export default function BokaBordPage() {
                     onToggle={pickTable}
                     unavailable={unavailable}
                     onExplain={explainTable}
+                    partySize={partySize}
                   />
                 ) : (
                   <FloorPlan3D
@@ -853,6 +905,7 @@ export default function BokaBordPage() {
                     onToggle={pickTable}
                     unavailable={unavailable}
                     onExplain={explainTable}
+                    partySize={partySize}
                   />
                 )}
                 <FloorLegend />
@@ -863,6 +916,7 @@ export default function BokaBordPage() {
               {options.map((o) => (
                 <button
                   key={o.tableIds.join('+')}
+                  data-option={o.tableIds.join('+')}
                   type="button"
                   className={`filter-pill${sameTables(o, option) ? ' active' : ''}`}
                   aria-pressed={sameTables(o, option)}
@@ -888,14 +942,13 @@ export default function BokaBordPage() {
                 <p className="booking-summary-line" aria-live="polite">
                   <span className="summary-kicker">Ditt val</span>
                   <span>
-                    {formatDate(date)} kl {slot.startTime}-{slot.endTime} · {partySize} personer · bord{' '}
-                    {option.tableIds.map((id) => labels.get(id) ?? id).join(' + ')}
+                    {`${formatDate(date)} kl ${slot.startTime}-${slot.endTime} · ${partySize} personer · bord ${option.tableIds.map((id) => labels.get(id) ?? id).join(' + ')}`}
                   </span>
                 </p>
-                {lengthText(slot) && <p className="cell-muted booking-length">Bokningstid: {lengthText(slot)}.</p>}
+                {lengthText(slot) && <p className="cell-muted booking-length">{`Bokningstid: ${lengthText(slot)}.`}</p>}
                 {option.tableIds.length > 1 && (
                   <p className="cell-muted">
-                    Borden {option.tableIds.map((id) => labels.get(id) ?? id).join(' och ')} ställs ihop för ert sällskap.
+                    {`Borden ${option.tableIds.map((id) => labels.get(id) ?? id).join(' och ')} ställs ihop för ert sällskap.`}
                   </p>
                 )}
                 <p className="cell-muted">
@@ -903,6 +956,7 @@ export default function BokaBordPage() {
                 </p>
                 {formError && <p className="notice error" role="alert">{formError}</p>}
                 <button
+                  ref={confirmButtonRef}
                   type="button"
                   className={`btn-primary${holding ? ' is-busy' : ''}`}
                   disabled={holding}
@@ -922,15 +976,14 @@ export default function BokaBordPage() {
 
         {hold && (
           <fieldset className="booking-step step-enter" aria-busy={submitting || undefined}>
-            <legend><span className="step-no">4</span>Dina uppgifter</legend>
+            <legend ref={detailsHeadRef} tabIndex={-1}><span className="step-no">4</span>Dina uppgifter</legend>
             <div className="booking-summary-line" aria-live="polite">
               <span className="summary-kicker">Ditt bord</span>
               <span>
-                {formatDate(hold.date)} kl {hold.startTime}-{hold.endTime} · {hold.partySize} personer · bord{' '}
-                {heldTables}
+                {`${formatDate(hold.date)} kl ${hold.startTime}-${hold.endTime} · ${hold.partySize} personer · bord ${heldTables}`}
               </span>
             </div>
-            {lengthText(hold) && <p className="cell-muted booking-length">Bokningstid: {lengthText(hold)}.</p>}
+            {lengthText(hold) && <p className="cell-muted booking-length">{`Bokningstid: ${lengthText(hold)}.`}</p>}
             <div className="booking-grid">
               <label className="booking-field">
                 <span>Namn</span>

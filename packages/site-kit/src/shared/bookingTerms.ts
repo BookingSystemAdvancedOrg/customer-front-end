@@ -12,7 +12,7 @@ import type { GuaranteeTerms } from './site'
  * eller en sen avbokning kan debiteras.
  */
 
-export const NOTHING_CHARGED = 'Inget dras från kortet nu.'
+export const NOTHING_CHARGED = '0 kr dras nu.'
 export const WAIVER = 'Restaurangen kan efterskänka avgiften vid sjukdom eller liknande.'
 
 /** 1000 -> "1 000 kr". */

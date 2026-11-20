@@ -13,6 +13,7 @@ const COMPONENTS = [
   'PaymentTicket', 'PaymentPanel', 'AddToCalendar', 'Celebrate', 'DateInput', 'TimeInput',
   'DateTimeInput', 'FlowSteps', 'Select', 'OpeningHoursModal', 'PhoneInput', 'PhoneLink', 'ThemeToggle',
   'GuestDataNotice', 'MarketingConsent', 'PrivacyPolicy', 'CookiePolicy', 'BookingTermsPage', 'NoticeText',
+  'LanguagePicker', 'LanguageProvider', 'Flag', 'MachineTranslationNote',
 ] as const
 
 const FUNCTIONS = [
@@ -21,9 +22,10 @@ const FUNCTIONS = [
   'openStatus', 'businessHoursToRows', 'formatPrice', 'menuImageUrl', 'groupByCategory',
   'bookingTerms', 'toE164', 'formatPhone', 'formatPhoneNational', 'phoneHref', 'buildIcs', 'googleCalendarUrl',
   'setTheme', 'currentTheme', 'trackPage', 'captureAttribution', 'paymentAppearance', 'stripeFor',
+  'useLanguage', 'useKeepTerms', 'isLang', 'currentLang', 'formatDate', 'formatTime', 'formatWeekday', 'formatNumber',
 ] as const
 
-describe('@booqy/site-kit public API', () => {
+describe('@bookingsystemadvancedorg/site-kit public API', () => {
   it.each(COMPONENTS)('exports the component %s', (name) => {
     expect(typeof kit[name]).toBe('function')
   })

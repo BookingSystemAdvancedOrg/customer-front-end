@@ -31,7 +31,7 @@ export function GuestDataNotice({ kind }: { kind: NoticeKind }) {
   }[kind]
   return (
     <p className="guest-notice">
-      {what} {name} är personuppgiftsansvarig. Inget sparas förrän du skickar.{' '}
+      {`${what} ${name} är personuppgiftsansvarig. Inget sparas förrän du skickar.`}{' '}
       <Link to="/integritetspolicy" target="_blank" rel="noopener">
         Läs integritetspolicyn
       </Link>

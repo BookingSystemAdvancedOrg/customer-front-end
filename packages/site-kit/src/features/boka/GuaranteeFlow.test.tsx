@@ -90,7 +90,7 @@ describe('card guarantee', () => {
     await bookThree(user)
 
     const note = screen.getByRole('note')
-    expect(note).toHaveTextContent('Kortgaranti krävs för sällskap om 3 personer eller fler. Inget dras från kortet nu.')
+    expect(note).toHaveTextContent('Kortgaranti krävs för sällskap om 3 personer eller fler. 0 kr dras nu.')
     expect(note).toHaveTextContent('Uteblivet besök: 200 kr/person (600 kr för 3 personer).')
     expect(note).toHaveTextContent('Avbokning senare än 24 timmar före: 100 kr/person (300 kr för 3 personer).')
     expect(note).toHaveTextContent('Restaurangen kan efterskänka avgiften vid sjukdom eller liknande.')

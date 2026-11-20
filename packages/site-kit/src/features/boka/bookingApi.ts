@@ -119,10 +119,10 @@ export function tableReasonText(
     case 'phone':
       return `${table} bokas bara via telefon${phone ? ` - ring ${phone}` : ''}.`
     case 'too_small':
-      return `${table} tar ${sizeRange(u)} - ${party.toLowerCase()}. Välj ett större bord${
+      return `För litet bord för ${partySize}. ${table} tar ${sizeRange(u)} - ${party.toLowerCase()}. Välj ett större bord${
         hasCombinations ? ' eller bord som ställs ihop' : ''}.`
     case 'too_large':
-      return `${table} är till för ${sizeRange(u)} - ${party.toLowerCase()}. Välj ett mindre bord, så räcker de stora borden till större sällskap.`
+      return `För stort bord för ${partySize}. ${table} är till för ${sizeRange(u)} - ${party.toLowerCase()}. Välj ett mindre bord, så räcker de stora borden till större sällskap.`
     default:
       return `${table} går inte att boka för ${people(partySize)} kl ${startTime}.`
   }
@@ -222,8 +222,15 @@ export interface GuestReservation {
   }
   /** En debiterad/försökt avgift. */
   fee?: { kind: 'no_show' | 'late_cancel'; status: string; amount: number; refundedAmount: number }
-  /** Bara direkt efter en bokning som kräver kort (status pending). */
+  /**
+   * Kortsteget: bara medan status är pending och kortet krävs, både direkt
+   * efter en bokning på sajten och på bokningssidan (bokad per telefon).
+   */
   setup?: { clientSecret: string; stripeAccount: string; expiresAt: string }
+  /** När ett pending-bord släpps om kortet inte läggs in (UTC). */
+  pendingExpiresAt?: string | null
+  /** Pending med kortsteg, men kortformuläret kunde inte hämtas från Stripe just nu (bordet hålls). */
+  setupUnavailable?: boolean
 }
 
 /** 30000 (öre) -> "300 kr". */
@@ -260,7 +267,7 @@ const VALIDATION_TEXT: [RegExp, (m: RegExpMatchArray) => string][] = [
     (m) => `Online går det att boka för högst ${m[1]} personer. Ring restaurangen för större sällskap.`],
   [/^partySize must be/, () => 'Välj antal personer i listan.'],
   [/^date must not be in the past/, () => 'Den dagen har redan passerat. Välj en annan dag.'],
-  [/^date must not be more than 21 days ahead/, () => 'Det går att boka högst 21 dagar fram.'],
+  [/^date must not be more than (\d+) days ahead/, (m) => `Det går att boka högst ${m[1]} dagar fram.`],
   [/^phone must be a valid/, () => 'Fyll i ett giltigt telefonnummer, t.ex. 070-123 45 67.'],
   [/^email must be a valid/, () => 'Fyll i en giltig e-postadress.'],
   [/^(name|email|phone) is required/, () => 'Fyll i namn, e-post och telefon.'],
@@ -466,8 +473,17 @@ export function todayIn(timezone: string | null | undefined, now: Date = new Dat
   }
 }
 
-/** De bokningsbara dagarna: idag + 20 dagar framåt (API:ts horisont). */
-export function bookableDates(today: string, days = 21): string[] {
+/**
+ * Hur långt fram gäster kan boka: idag + 21 dagar, hela dagar i restaurangens
+ * tidszon (samma regel som servern, BOOKING_HORIZON_DAYS i shared/availability.py).
+ */
+export const BOOKING_HORIZON_DAYS = 21
+
+/**
+ * De bokningsbara dagarna: idag till och med idag + BOOKING_HORIZON_DAYS, alltså
+ * 22 datum (t.ex. idag fre 20 nov 2026, sista dagen fre 11 dec). `days` är antalet datum.
+ */
+export function bookableDates(today: string, days = BOOKING_HORIZON_DAYS + 1): string[] {
   const [y, m, d] = today.split('-').map(Number)
   return Array.from({ length: days }, (_, i) => {
     const date = new Date(Date.UTC(y, m - 1, d + i))

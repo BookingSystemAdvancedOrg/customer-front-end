@@ -57,3 +57,36 @@ describe('SiteProvider', () => {
     expect(await screen.findByRole('button', { name: 'Försök igen' })).toBeInTheDocument()
   })
 })
+
+describe('SiteProvider and the site language', () => {
+  afterEach(() => {
+    localStorage.clear()
+    document.documentElement.removeAttribute('lang')
+    document.documentElement.removeAttribute('dir')
+  })
+
+  it('translates the page after the restaurant is known, keeping its name', async () => {
+    window.history.replaceState(null, '', '/?restaurang=testkrogen&lang=en')
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      if (url.includes('/site-config')) return json(siteConfig())
+      const body = JSON.parse(String(init?.body)) as { texts: string[] }
+      return json({ lang: 'en', texts: body.texts.map((t) => `EN ${t}`) })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    render(
+      <MemoryRouter>
+        <SiteProvider>
+          <p>Välkommen</p>
+        </SiteProvider>
+      </MemoryRouter>,
+    )
+    expect(document.documentElement).toHaveAttribute('lang', 'en')
+    expect(await screen.findByText('EN Välkommen')).toBeInTheDocument()
+    const calls = fetchMock.mock.calls.map((c) => c[0])
+    expect(calls[0]).toContain('/site-config')
+    const translate = fetchMock.mock.calls.find((c) => c[0] === 'https://api.test/translate')!
+    const body = JSON.parse(String(translate[1]?.body)) as { slug: string; keep: string[] }
+    expect(body.slug).toBe('testkrogen')
+    expect(body.keep).toContain('Testkrogen')
+  })
+})

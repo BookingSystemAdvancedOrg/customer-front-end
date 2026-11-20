@@ -70,8 +70,10 @@ let installed = false
 export function installGlide() {
   if (installed || typeof document === 'undefined' || typeof MutationObserver === 'undefined') return
   installed = true
+  // characterData: översatt text (site-kit språk) ändrar knapparnas bredd.
   new MutationObserver(placeAll).observe(document.body, {
     childList: true,
+    characterData: true,
     subtree: true,
     attributes: true,
     attributeFilter: ['class', 'aria-pressed', 'aria-selected', 'aria-checked', 'aria-current'],

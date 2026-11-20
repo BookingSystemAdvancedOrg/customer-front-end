@@ -139,7 +139,7 @@ export default function OrderStatusPage() {
       {order && CELEBRATE.has(order.status) && <Celebrate key={order.status} />}
       {/* the number is what the guest says at the counter: big and green, top right */}
       <h1 className="order-head">
-        {order?.number ? <>Beställning <span className="order-code">#{order.number}</span></> : 'Din beställning'}
+        {order?.number ? <>Beställning <span className="order-code" translate="no">#{order.number}</span></> : 'Din beställning'}
       </h1>
       {!order && !error && (
         <div className="printing printing--inline" role="status" aria-label="Hämtar beställningen">
@@ -164,7 +164,7 @@ export default function OrderStatusPage() {
             </p>
           )}
           {order.status === 'ready' && order.mode === 'pickup' && order.location?.address && (
-            <p className="order-hint">Hämta hos {order.location.name} - {order.location.address}.</p>
+            <p className="order-hint">{`Hämta hos ${order.location.name} - ${order.location.address}.`}</p>
           )}
           {order.status === 'pending_payment' && gaveUp && (
             <p className="notice" role="status">
@@ -180,14 +180,14 @@ export default function OrderStatusPage() {
           )}
           {order.status === 'cancelled' && (
             <p className="notice" role="status">
-              Hela beloppet, {kronor(order.totalAmount)}, betalas tillbaka till ditt kort inom några bankdagar.
+              {`Hela beloppet, ${kronor(order.totalAmount)}, betalas tillbaka till ditt kort inom några bankdagar.`}
             </p>
           )}
           <ul className="cart-list order-status-lines">
             {order.lines.map((line, i) => (
               <li key={`${line.menuItemId}-${i}`}>
                 <span className="cart-item-name">
-                  {line.quantity} × {line.name}
+                  <span translate="no">{`${line.quantity} × ${line.name}`}</span>
                   {line.options?.length ? (
                     <span className="cart-item-options">{line.options.map((o) => o.choice).join(', ')}</span>
                   ) : null}
@@ -199,7 +199,7 @@ export default function OrderStatusPage() {
           </ul>
           {order.discount && (
             <div className="cart-discount">
-              <span>Rabatt {order.discount.percent} % ({order.discount.code})</span>
+              <span>{`Rabatt ${order.discount.percent} %`} (<span translate="no">{order.discount.code}</span>)</span>
               <span>-{kronor(order.discount.amount)}</span>
             </div>
           )}

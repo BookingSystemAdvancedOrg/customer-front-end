@@ -92,7 +92,7 @@
 .opening-hours-table th,
 .opening-hours-table td {
   padding: 0.4rem 0.5rem;
-  text-align: left;
+  text-align: start;
   font-weight: 400;
   border-top: 1px solid color-mix(in srgb, var(--ink) 8%, transparent);
 }
@@ -112,7 +112,7 @@
 .floating-cart {
   position: fixed;
   top: clamp(80px, 11vw, 116px);
-  right: clamp(16px, 4vw, 48px);
+  inset-inline-end: clamp(16px, 4vw, 48px);
   z-index: 25;
 }
 
@@ -155,7 +155,7 @@
 .cart-panel {
   position: absolute;
   top: calc(100% + 10px);
-  right: 0;
+  inset-inline-end: 0;
   width: min(340px, calc(100vw - 32px));
   background: var(--surface);
   border: 1px solid var(--border);
@@ -251,7 +251,7 @@
 }
 
 .cart-total-before {
-  margin-right: 4px;
+  margin-inline-end: 4px;
   font-weight: 400;
   color: var(--muted);
 }
@@ -825,7 +825,7 @@
 .notice {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-left: 4px solid var(--gold);
+  border-inline-start: 4px solid var(--gold);
   border-radius: var(--r-md);
   padding: 16px 18px;
   color: var(--muted);
@@ -833,7 +833,7 @@
 }
 
 .notice.error {
-  border-left-color: var(--danger);
+  border-inline-start-color: var(--danger);
 }
 
 /* --- Glaspaneler (Historia/Parkering/Kontakt-innehåll) ----------------------------------- */
@@ -870,7 +870,7 @@
 .glass-quote {
   margin: 0 0 clamp(18px, 3.5vw, 26px);
   padding: clamp(1.1rem, 2.8vw, 1.4rem);
-  border-left: 3px solid var(--gold);
+  border-inline-start: 3px solid var(--gold);
   border-radius: 0 var(--r-md) var(--r-md) 0;
   background: var(--fill);
 }
@@ -1077,7 +1077,7 @@
 /* float + full width keeps the legend inside the card as a heading instead
    of cutting through the top edge (fieldset default). */
 .booking-step legend {
-  float: left;
+  float: inline-start;
   width: 100%;
   margin: 0 0 4px;
   padding: 0;
@@ -1102,7 +1102,7 @@
   /* Tonar ut i högerkanten: visar att raden går att svepa. */
   -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent);
   mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent);
-  padding-right: 32px;
+  padding-inline-end: 32px;
 }
 
 .booking-dates .filter-pill {
@@ -1332,41 +1332,10 @@
   outline: none;
 }
 
-.floor-svg-table.is-free {
-  fill: color-mix(in srgb, var(--gold) 35%, transparent);
-  stroke: var(--gold);
-}
-
-.floor-svg-table.is-selected {
-  fill: var(--gold);
-  stroke: var(--gold-bright);
-}
-
-.floor-svg-table.is-taken {
-  opacity: 0.25;
-}
-
 /* Bord som inte går att välja - tryck förklarar varför. */
 .floor-svg-explain {
   cursor: help;
   outline: none;
-}
-
-.floor-svg-table.is-booked {
-  fill: color-mix(in srgb, var(--muted) 30%, transparent);
-  stroke: color-mix(in srgb, var(--muted) 60%, transparent);
-}
-
-.floor-svg-table.is-blocked {
-  fill: color-mix(in srgb, var(--danger) 22%, transparent);
-  stroke: var(--danger);
-  stroke-dasharray: 0.08 0.06;
-}
-
-.floor-svg-table.is-unfit {
-  fill: color-mix(in srgb, var(--ink) 12%, transparent);
-  stroke: color-mix(in srgb, var(--accent) 45%, transparent);
-  stroke-dasharray: 0.04 0.06;
 }
 
 .floor-svg-explain:focus-visible .floor-svg-table {
@@ -1398,31 +1367,6 @@
   border: 1px solid transparent;
 }
 
-.floor-legend-swatch.is-free {
-  background: color-mix(in srgb, var(--gold) 35%, transparent);
-  border-color: var(--gold);
-}
-
-.floor-legend-swatch.is-selected {
-  background: var(--gold);
-  border-color: var(--gold-bright);
-}
-
-.floor-legend-swatch.is-booked {
-  background: color-mix(in srgb, var(--muted) 30%, transparent);
-  border-color: color-mix(in srgb, var(--muted) 60%, transparent);
-}
-
-.floor-legend-swatch.is-blocked {
-  background: color-mix(in srgb, var(--danger) 22%, transparent);
-  border: 1px dashed var(--danger);
-}
-
-.floor-legend-swatch.is-unfit {
-  background: color-mix(in srgb, var(--ink) 12%, transparent);
-  border: 1px dashed color-mix(in srgb, var(--accent) 45%, transparent);
-}
-
 .table-reasons {
   margin-top: 12px;
   color: var(--muted);
@@ -1436,7 +1380,7 @@
 
 .table-reasons ul {
   margin: 8px 0 0;
-  padding-left: 18px;
+  padding-inline-start: 18px;
 }
 
 .table-reasons li + li {
@@ -1458,56 +1402,6 @@
 .f3d-explain {
   cursor: help;
   outline: none;
-}
-
-.f3d-table.is-free .f3d-table-top {
-  background: color-mix(in srgb, var(--muted) 45%, #fdfaf6);
-  border-color: var(--muted);
-}
-
-.f3d-table.is-selected .f3d-table-top {
-  background: var(--success);
-  border: 2px solid color-mix(in srgb, var(--success) 70%, var(--ink));
-}
-
-.f3d-table.is-booked .f3d-table-top {
-  background: color-mix(in srgb, var(--danger) 30%, #fdfaf6);
-  border-color: var(--danger);
-}
-
-.f3d-table.is-blocked .f3d-table-top {
-  background: color-mix(in srgb, var(--danger) 14%, #fdfaf6);
-  border: 1px dashed var(--danger);
-}
-
-.f3d-table.is-unfit .f3d-table-top {
-  background: #fdfaf6;
-  border: 1px dashed color-mix(in srgb, var(--muted) 55%, transparent);
-}
-
-/* Ej ledigt utan känd anledning räknas som bokat (rött). */
-.f3d-table.is-taken .f3d-table-top {
-  background: color-mix(in srgb, var(--danger) 30%, #fdfaf6);
-  border-color: var(--danger);
-}
-
-.f3d-table.is-free .f3d-table-face:not(.ring) {
-  background: color-mix(in srgb, var(--muted) 45%, #d8d8dc);
-}
-
-.f3d-table.is-selected .f3d-table-face:not(.ring) {
-  background: color-mix(in srgb, var(--success) 75%, var(--ink));
-}
-
-.f3d-table.is-booked .f3d-table-face:not(.ring),
-.f3d-table.is-taken .f3d-table-face:not(.ring) {
-  background: color-mix(in srgb, var(--danger) 45%, #d8d8dc);
-}
-
-/* Vit text på det gröna, valda bordet - mörk text på grönt läses dåligt. */
-.f3d-table.is-selected .f3d-table-label,
-.f3d-table.is-selected .f3d-table-seats {
-  color: #fdfaf6;
 }
 
 .f3d-pick:focus-visible .f3d-table-top,
@@ -1538,7 +1432,7 @@
 }
 
 .page-prose ul {
-  padding-left: 20px;
+  padding-inline-start: 20px;
 }
 
 .page-prose li + li {
@@ -1551,7 +1445,7 @@
   margin: 4px 0 12px;
   padding: 12px 14px;
   border: 1px solid var(--line, rgba(253, 250, 246, 0.14));
-  border-left: 3px solid var(--gold);
+  border-inline-start: 3px solid var(--gold);
   border-radius: var(--r-md);
   line-height: 1.5;
   font-size: 0.95rem;
@@ -1559,7 +1453,7 @@
 
 .guarantee-terms {
   margin: 12px 0 20px;
-  padding-left: 1.2em;
+  padding-inline-start: 1.2em;
   line-height: 1.6;
 }
 
@@ -1706,8 +1600,8 @@
 
   .order-mobile-bar {
     position: fixed;
-    left: 16px;
-    right: 16px;
+    inset-inline-start: 16px;
+    inset-inline-end: 16px;
     bottom: calc(16px + env(safe-area-inset-bottom));
     z-index: 30;
     display: flex;
@@ -1764,7 +1658,7 @@
   background: var(--surface-soft);
   color: var(--ink);
   font: inherit;
-  text-align: right;
+  text-align: end;
 }
 
 /* Steg 2 och 3 som kort - fälten (grå) syns tydligt mot den vita ytan. */
@@ -2000,14 +1894,16 @@
 }
 
 .storage-table th {
-  text-align: left;
+  text-align: start;
   font-weight: 700;
-  padding: 0 12px 8px 0;
+  padding-block: 0 8px;
+  padding-inline: 0 12px;
   border-bottom: 2px solid var(--line, #d9d4c8);
 }
 
 .storage-table td {
-  padding: 10px 12px 10px 0;
+  padding-block: 10px 10px;
+  padding-inline: 0 12px;
   border-bottom: 1px solid var(--line, #d9d4c8);
   vertical-align: top;
 }
@@ -2109,20 +2005,12 @@
   transform: rotateX(90deg);
 }
 
-.f3d-table.is-selected .f3d-chair-seat {
-  background: color-mix(in srgb, var(--success) 35%, #fdfaf6);
-}
-
-.f3d-table.is-selected .f3d-chair-back {
-  background: color-mix(in srgb, var(--success) 70%, #fdfaf6);
-}
-
 /* Väntan på signeringstjänsten: tre punkter som fylls på. */
 .checking-dots::after {
   content: '…';
   display: inline-block;
   width: 1.2em;
-  text-align: left;
+  text-align: start;
   animation: checking-dots 1.2s steps(4, end) infinite;
   overflow: hidden;
   vertical-align: bottom;
@@ -2320,4 +2208,52 @@
 .option-picker-add {
   width: 100%;
   justify-content: center;
+}
+
+/* Tillbaka-knappen (shared/BackButton.tsx): sekundär pille med pil, aldrig bara text. */
+.btn-secondary.back-btn {
+  align-self: flex-start;
+  gap: 8px;
+  width: fit-content;
+  max-width: 100%;
+  min-height: 48px;
+  padding-block: 0 0;
+  padding-inline: 14px 20px;
+  font-size: 1rem;
+}
+
+.back-btn svg {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: translate 160ms var(--ease);
+}
+
+.back-btn:hover:not(:disabled) svg {
+  translate: -3px 0;
+}
+
+.btn-secondary.back-btn:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 1.5px var(--ink), 0 0 0 3px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.btn-secondary.back-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .back-btn svg {
+    transition: none;
+  }
+  .back-btn:hover:not(:disabled) svg {
+    translate: none;
+  }
 }

@@ -1,5 +1,6 @@
 import { siteKitConfig } from '../../config'
 import { apiGet, ApiError } from '../../shared/api'
+import { prefetchTexts } from '../../shared/lang/loads'
 
 /**
  * Klient mot backendens PUBLIKA meny-endpoint (openapi.yaml, Menu-taggen):
@@ -164,10 +165,19 @@ export async function getPublicMenuWithCategories(
     const res = await apiGet<{ items?: PublicMenuItem[]; categories?: MenuCategoryEntry[] }>(
       `/locations/${encodeURIComponent(locationId)}/menu`,
     )
-    return {
-      items: (res.items ?? []).filter((item) => item.active !== false),
-      categories: res.categories?.length ? res.categories : DEFAULT_CATEGORIES,
-    }
+    const items = (res.items ?? []).filter((item) => item.active !== false)
+    const categories = res.categories?.length ? res.categories : DEFAULT_CATEGORIES
+    // På ett annat språk än svenska: översätt innan menyn ritas (inget textbyte efteråt).
+    // Beskrivningar med flera rader också rad för rad (sajter som visar raderna var för sig).
+    await prefetchTexts([
+      ...categories.map((c) => c.name),
+      ...items.flatMap((it) => [
+        it.description,
+        ...(it.description?.includes('\n') ? it.description.split(/\n+/) : []),
+        ...(it.options ?? []).flatMap((g) => [g.name, ...g.choices.map((c) => c.name)]),
+      ]),
+    ])
+    return { items, categories }
   } catch (err) {
     throw toFriendlyMenuError(err)
   }

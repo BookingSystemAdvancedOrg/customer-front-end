@@ -21,8 +21,8 @@
 .pay-ticket::after {
   content: '';
   position: absolute;
-  left: 0;
-  right: 0;
+  inset-inline-start: 0;
+  inset-inline-end: 0;
   bottom: 0;
   height: var(--tooth-h);
   background: conic-gradient(from -45deg at 50% 100%, var(--table) 0deg, transparent 1deg 89deg, var(--table) 90deg) 0 100% / var(--tooth) var(--tooth-h) repeat-x;
@@ -117,15 +117,6 @@
 
 .pay-submit:not(:disabled) {
   font-variant-numeric: tabular-nums;
-}
-
-.pay-back {
-  font-size: 0.95rem;
-}
-
-.pay-back:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
 }
 
 .pay-secure {

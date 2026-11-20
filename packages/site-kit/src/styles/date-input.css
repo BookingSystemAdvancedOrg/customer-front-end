@@ -11,13 +11,13 @@
 
 .date-input > input {
   width: 100%;
-  padding-right: 40px !important;
+  padding-inline-end: 40px !important;
   font-variant-numeric: tabular-nums;
 }
 
 .date-input-btn {
   position: absolute;
-  right: 6px;
+  inset-inline-end: 6px;
   display: grid;
   place-items: center;
   width: 32px;
@@ -190,7 +190,7 @@ input:is([type='date'], [type='time'], [type='datetime-local'], [type='month'], 
   max-width: 100%;
   -webkit-appearance: none;
   appearance: none;
-  text-align: left;
+  text-align: start;
 }
 
 :is(.booking-field, .offer-field) > input:is([type='date'], [type='time'], [type='datetime-local'], [type='month'], [type='week']) {
@@ -200,7 +200,7 @@ input:is([type='date'], [type='time'], [type='datetime-local'], [type='month'], 
 input:is([type='date'], [type='time'], [type='datetime-local'], [type='month'], [type='week'])::-webkit-date-and-time-value {
   min-width: 0;
   margin: 0;
-  text-align: left;
+  text-align: start;
 }
 
 input:is([type='date'], [type='time'], [type='datetime-local'], [type='month'], [type='week'])::-webkit-datetime-edit {

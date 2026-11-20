@@ -233,8 +233,8 @@ export function OfferCard() {
                 <label className="offer-consent">
                   <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
                   <span>
-                    Ja, skicka mig erbjudanden och nyheter från {config.tenant.name} via e-post. Jag kan avsluta
-                    när jag vill. <Link to="/integritetspolicy">Integritetspolicy</Link>
+                    {`Ja, skicka mig erbjudanden och nyheter från ${config.tenant.name} via e-post. Jag kan avsluta när jag vill.`}{' '}
+                    <Link to="/integritetspolicy">Integritetspolicy</Link>
                   </span>
                 </label>
                 {error && <p className="offer-error" role="alert">{error}</p>}

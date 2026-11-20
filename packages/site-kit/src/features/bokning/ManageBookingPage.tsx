@@ -9,9 +9,10 @@ import {
   formatFee,
   getGuestReservation,
   lengthText,
+  manageLink,
 } from '../boka/bookingApi'
 import type { GuestReservation } from '../boka/bookingApi'
-import { GuaranteeTermsText } from '../boka/GuaranteeStep'
+import { GuaranteeConfirmation, GuaranteeStep, GuaranteeTermsText } from '../boka/GuaranteeStep'
 import AddToCalendar from '../../shared/AddToCalendar'
 import { bookingEvent, restaurantName } from '../../shared/calendar'
 import { SiteContext } from '../../shared/SiteContext'
@@ -42,10 +43,62 @@ function tokenFromHash(): string {
   }
 }
 
+/** Felet när banken nekade eller gästen avbröt 3-D Secure (Stripe skickar tillbaka hit). */
+export const CARD_REDIRECT_FAILED = 'Kortet kunde inte verifieras av banken. Försök igen eller använd ett annat kort.'
+
 /**
- * Gästens egen bokning via länken från bekräftelsen:
- * /bokning/<plats>/<boknings-id>#<token>. Visar bokningen och låter gästen
- * avboka fram till starttiden.
+ * Tillbaka från Stripe efter 3-D Secure: läser `redirect_status` och tar bort
+ * Stripes parametrar ur adressen (klienthemligheten ska inte ligga kvar där).
+ * Ger felet att visa vid kortformuläret, eller null.
+ */
+function stripeRedirectError(): string | null {
+  const params = new URLSearchParams(window.location.search)
+  const status = params.get('redirect_status')
+  if (!status && !params.has('setup_intent')) return null
+  for (const key of ['setup_intent', 'setup_intent_client_secret', 'redirect_status']) params.delete(key)
+  const query = params.toString()
+  try {
+    window.history.replaceState(window.history.state, '',
+      `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`)
+  } catch {
+    // Adressen behålls; felet visas ändå.
+  }
+  return status && status !== 'succeeded' ? CARD_REDIRECT_FAILED : null
+}
+
+/** "kl 18:32" i restaurangens tidszon. */
+function clockTime(iso: string, timeZone?: string | null): string {
+  const format = (tz: string) =>
+    new Intl.DateTimeFormat('sv-SE', { timeZone: tz, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+      .format(new Date(iso))
+  try {
+    return format(timeZone || 'Europe/Stockholm')
+  } catch {
+    return format('Europe/Stockholm')
+  }
+}
+
+/** Bokningens uppgifter (datum, tid, antal, adress). */
+function BookingSummary({ booking }: { booking: GuestReservation }) {
+  return (
+    <dl className="booking-summary">
+      {booking.location?.name && <div><dt>Restaurang</dt><dd translate="no">{booking.location.name}</dd></div>}
+      <div><dt>Namn</dt><dd translate="no">{booking.customerName}</dd></div>
+      <div><dt>Datum</dt><dd>{formatDate(booking.date)}</dd></div>
+      <div><dt>Tid</dt><dd>{booking.startTime}-{booking.endTime}</dd></div>
+      {lengthText(booking) && <div><dt>Bokningstid</dt><dd>{lengthText(booking)}</dd></div>}
+      <div><dt>Antal</dt><dd>{booking.partySize} personer</dd></div>
+      {booking.location?.address && <div><dt>Adress</dt><dd translate="no">{booking.location.address}</dd></div>}
+    </dl>
+  )
+}
+
+/**
+ * Gästens egen bokning via länken från bekräftelsen (eller sms:et efter en
+ * telefonbokning): /bokning/<plats>/<boknings-id>#<token>. Visar bokningen
+ * och låter gästen avboka fram till starttiden. Kräver bokningen kort och
+ * är den inte klar (pending med setup) visas samma kortsteg som i
+ * bokningsflödet; Stripe skickar tillbaka hit och sidan slutför bokningen.
  */
 export default function ManageBookingPage() {
   const { locationId = '', reservationId = '' } = useParams()
@@ -57,6 +110,14 @@ export default function ManageBookingPage() {
   const [confirming, setConfirming] = useState(false)
   const [acceptFee, setAcceptFee] = useState(false)
   const [busy, setBusy] = useState(false)
+  /** Kortet sparades just här: visa bekräftelsen av kortgarantin. */
+  const [cardSaved, setCardSaved] = useState(false)
+  /** Nekad eller avbruten 3-D Secure: visas vid kortformuläret. */
+  const [cardError] = useState(stripeRedirectError)
+  /** Ökas av "Försök igen" när kortformuläret inte kunde hämtas. */
+  const [attempt, setAttempt] = useState(0)
+  /** När bokningen senast hämtades (ms): räcker bordets hålltid fortfarande? */
+  const [loadedAt, setLoadedAt] = useState(0)
   const feeRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -65,17 +126,26 @@ export default function ManageBookingPage() {
     getGuestReservation(locationId, reservationId, token)
       // Tillbaka från Stripe (3-D Secure med omdirigering) eller fliken
       // stängdes före bekräftelsen: slutför bokningen om kortet är klart.
+      // Annars (kortet inte inlagt än) visas kortsteget om bokningen har ett.
       .then((b) =>
         b.status === 'pending'
-          ? confirmGuestReservation(locationId, reservationId, token).catch(() => b)
-          : b,
+          ? confirmGuestReservation(locationId, reservationId, token).then(
+              (done) => ({ b: done, saved: done.status !== 'pending' && !!done.guarantee?.cardOnFile }),
+              () => ({ b, saved: false }),
+            )
+          : { b, saved: false },
       )
-      .then((b) => !cancelled && setBooking(b))
+      .then(({ b, saved }) => {
+        if (cancelled) return
+        setBooking(b)
+        setCardSaved(saved)
+        setLoadedAt(Date.now())
+      })
       .catch((err: unknown) => !cancelled && setError(bookingErrorMessage(err)))
     return () => {
       cancelled = true
     }
-  }, [locationId, reservationId, token])
+  }, [locationId, reservationId, token, attempt])
 
   async function cancel() {
     setBusy(true)
@@ -101,7 +171,33 @@ export default function ManageBookingPage() {
   }
 
   const fee = booking?.guarantee?.cancellationFee ?? 0
-  const tenantName = useContext(SiteContext)?.config.tenant.name
+  const site = useContext(SiteContext)
+  const tenantName = site?.config.tenant.name
+
+  if (booking?.status === 'pending' && booking.setup) {
+    const setup = { ...booking.setup, expiresAt: booking.setup.expiresAt || booking.pendingExpiresAt || '' }
+    return (
+      <GuaranteeStep
+        booking={{ ...booking, setup, manageToken: token }}
+        locationId={locationId}
+        publishableKey={site?.config.stripe.publishableKey ?? null}
+        returnUrl={manageLink(window.location.origin, booking, locationId, token)}
+        initialError={cardError}
+        onConfirmed={(b) => {
+          setBooking(b)
+          setCardSaved(true)
+          window.scrollTo?.({ top: 0, behavior: 'smooth' })
+        }}
+      >
+        <BookingSummary booking={booking} />
+      </GuaranteeStep>
+    )
+  }
+
+  // Väntar på kortet men formuläret kunde inte hämtas från Stripe just nu:
+  // bordet hålls fortfarande, så gästen ska försöka igen, inte boka om.
+  const held = booking?.status === 'pending' && !!booking.setupUnavailable && !!booking.pendingExpiresAt
+    && Date.parse(booking.pendingExpiresAt) > loadedAt
 
   return (
     <section className="booking-confirmation">
@@ -114,16 +210,10 @@ export default function ManageBookingPage() {
       {error && <p id="manage-booking-error" className="notice error" role="alert">{error}</p>}
       {booking && (
         <>
-          <p className="booking-status" aria-live="polite">{STATUS_TEXT[booking.status] ?? booking.status}</p>
-          <dl className="booking-summary">
-            {booking.location?.name && <div><dt>Restaurang</dt><dd>{booking.location.name}</dd></div>}
-            <div><dt>Namn</dt><dd>{booking.customerName}</dd></div>
-            <div><dt>Datum</dt><dd>{formatDate(booking.date)}</dd></div>
-            <div><dt>Tid</dt><dd>{booking.startTime}-{booking.endTime}</dd></div>
-            {lengthText(booking) && <div><dt>Bokningstid</dt><dd>{lengthText(booking)}</dd></div>}
-            <div><dt>Antal</dt><dd>{booking.partySize} personer</dd></div>
-            {booking.location?.address && <div><dt>Adress</dt><dd>{booking.location.address}</dd></div>}
-          </dl>
+          <p className="booking-status" aria-live="polite">
+            {held ? 'Väntar på kortet' : STATUS_TEXT[booking.status] ?? booking.status}
+          </p>
+          <BookingSummary booking={booking} />
           {booking.status === 'reserved' && booking.cancellable && (
             <AddToCalendar
               event={bookingEvent(booking, {
@@ -133,12 +223,29 @@ export default function ManageBookingPage() {
               })}
             />
           )}
-          {booking.status === 'pending' && (
+          {held && (
+            <div className="notice" role="status">
+              <p>
+                {`Kortformuläret kunde inte hämtas just nu. Bordet hålls åt dig till kl ${clockTime(booking.pendingExpiresAt!, booking.timezone)}.`}
+              </p>
+              <button type="button" className="btn-primary" onClick={() => {
+                setBooking(null)
+                setAttempt((n) => n + 1)
+              }}>
+                Försök igen
+              </button>
+            </div>
+          )}
+          {booking.status === 'pending' && !held && (
             <p className="notice" role="status">
               Bokningen blev inte klar. <Link to="/boka-bord">Gör en ny bokning</Link>.
             </p>
           )}
-          {booking.guarantee?.cardOnFile && booking.cancellable && <GuaranteeTermsText booking={booking} />}
+          {cardSaved ? (
+            <GuaranteeConfirmation booking={booking} />
+          ) : (
+            booking.guarantee?.cardOnFile && booking.cancellable && <GuaranteeTermsText booking={booking} />
+          )}
           {booking.fee && booking.fee.status === 'succeeded' && (
             <p className="cell-muted">
               Debiterad avgift: {formatFee(booking.fee.amount)}
@@ -152,7 +259,7 @@ export default function ManageBookingPage() {
           )}
           {booking.cancellable && confirming && (
             <div className="booking-confirm-cancel" role="group" aria-label="Bekräfta avbokning">
-              <p>Vill du avboka bordet {formatDate(booking.date)} kl {booking.startTime}?</p>
+              <p>{`Vill du avboka bordet ${formatDate(booking.date)} kl ${booking.startTime}?`}</p>
               {fee > 0 && (
                 <label className="booking-check fee-accept">
                   <input ref={feeRef} type="checkbox" checked={acceptFee} onChange={(e) => setAcceptFee(e.target.checked)}

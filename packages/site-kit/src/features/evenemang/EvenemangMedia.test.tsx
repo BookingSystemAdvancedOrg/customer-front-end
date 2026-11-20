@@ -1,3 +1,4 @@
+import { leaked, translatableStrings } from '../../test/translatable'
 import { render, screen, within } from '@testing-library/react'
 import { Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -112,7 +113,21 @@ describe('Wallet buttons', () => {
   it('shows no Wallet buttons while the API says Wallet is off', async () => {
     vi.mocked(api.getTickets).mockResolvedValue({ ...TICKETS, wallet: { apple: false, google: false } })
     site('/biljett#abc.def', '/biljett', <BiljettPage />)
-    expect(await screen.findAllByText('Namn: Sara Ek')).toHaveLength(2)
+    // Namnet är gästdata: eget element med translate="no" (översätts aldrig).
+    const names = await screen.findAllByText('Sara Ek')
+    expect(names).toHaveLength(2)
+    for (const n of names) expect(n).toHaveAttribute('translate', 'no')
     expect(screen.queryByText(/Wallet/)).toBeNull()
+  })
+})
+
+describe('tickets and the page translator', () => {
+  it('never sends the ticket holder\'s name', async () => {
+    vi.mocked(api.getTickets).mockResolvedValue(TICKETS)
+    site('/biljett#abc.def', '/biljett', <BiljettPage />)
+    await screen.findAllByText('Sara Ek')
+    const sent = await translatableStrings()
+    expect(sent).toContain('Namn:')
+    expect(leaked(sent, ['Sara Ek'])).toEqual([])
   })
 })

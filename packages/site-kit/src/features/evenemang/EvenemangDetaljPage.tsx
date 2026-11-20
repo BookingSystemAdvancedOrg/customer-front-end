@@ -357,7 +357,7 @@ function Purchase({ event, onPaid, onStale }: { event: PublicEvent; onPaid: (p: 
       <p className="guest-notice">
         Vi använder ditt namn och din e-post för att skicka biljetterna och kvittot och för att släppa in dig. Namn och
         kontaktuppgifter tas bort 24 månader efter evenemanget; beloppen sparas i 7 år enligt bokföringslagen.{' '}
-        {config.tenant.name} är personuppgiftsansvarig.{' '}
+        {`${config.tenant.name} är personuppgiftsansvarig.`}{' '}
         <Link to="/integritetspolicy" target="_blank" rel="noopener">Läs integritetspolicyn</Link>
       </p>
       <div ref={errorRef} tabIndex={-1} className="evenemang-error">

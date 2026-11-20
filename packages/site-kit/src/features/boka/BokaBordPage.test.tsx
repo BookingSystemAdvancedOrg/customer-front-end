@@ -205,6 +205,11 @@ describe('BokaBordPage', () => {
     )
     const note = await screen.findByText(/Fler än \d+ personer\? Ring/)
     expect(within(note).getByRole('link', { name: '08-123 456 78' })).toHaveAttribute('href', 'tel:+46812345678')
+    // One text node for the sentence before the number, so it is translated
+    // as a whole ("Fler än {0} personer? Ring" in the glossary).
+    expect([...note.childNodes].map((n) => n.nodeType === Node.TEXT_NODE ? n.textContent : '#')).toEqual([
+      'Fler än 8 personer? Ring ', '#', '.',
+    ])
   })
 
   it('shows phone booking only when the plan has no reservations', () => {
@@ -423,6 +428,23 @@ describe('BokaBordPage', () => {
     expect(days[1]).not.toHaveTextContent('Stängt')
   })
 
+  it('lists today through today + 21 days and books on the last one', async () => {
+    const user = userEvent.setup()
+    const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Stockholm' }).format(new Date())
+    const [y, m, d] = today.split('-').map(Number)
+    const last = new Date(Date.UTC(y, m - 1, d + 21)).toISOString().slice(0, 10)
+    render(<WithSite><BokaBordPage /></WithSite>)
+    const days = within(screen.getByRole('group', { name: 'Välj datum' })).getAllByRole('button')
+    expect(days).toHaveLength(22)
+    expect(days[0]).toHaveTextContent('Idag')
+    expect(days[21]).toHaveTextContent(String(Number(last.slice(8, 10))))
+    await user.click(days[21])
+    expect(days[21]).toHaveAttribute('aria-pressed', 'true')
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/availability') && String(url).includes(`date=${last}`)))
+        .toBe(true))
+  })
+
   it('holds the table without any bot check field (the check runs in the background)', async () => {
     const user = userEvent.setup()
     render(<WithSite config={siteConfig()}><BokaBordPage /></WithSite>)
@@ -448,7 +470,7 @@ describe('BokaBordPage', () => {
       render(<WithSite><BokaBordPage /></WithSite>)
       await chooseAndFill(user)
 
-      expect(screen.getByRole('timer')).toHaveTextContent('Bord 2 hålls åt dig i 15:00')
+      expect(screen.getByRole('timer')).toHaveTextContent('Bord 2 hålls åt dig: 15:00')
       expect(screen.queryByRole('button', { name: '18:00' })).toBeNull()
       expect(screen.queryByLabelText('Antal personer')).toBeNull()
       await act(async () => {
@@ -524,11 +546,11 @@ describe('BokaBordPage - why a table cannot be chosen', () => {
     await user.click(await screen.findByRole('button', { name: '18:00' }))
 
     // The 2-seat table is shown, marked and tappable - but not selectable.
-    const small = screen.getByRole('button', { name: /^Bord 1, 2 platser, går inte att välja: 1-2 pers$/ })
+    const small = screen.getByRole('button', { name: /^Bord 1, 2 platser, går inte att välja: för litet bord för 3$/ })
     expect(small).not.toHaveAttribute('aria-pressed')
     await user.click(small)
     expect(screen.getByRole('status')).toHaveTextContent(
-      'Bord 1 tar 1-2 personer - ni är 3 personer. Välj ett större bord.')
+      'För litet bord för 3. Bord 1 tar 1-2 personer - ni är 3 personer. Välj ett större bord.')
     expect(screen.queryByRole('button', { name: 'Bekräfta bord' })).toBeNull()
 
     // The legend and the full list of reasons are there too.
@@ -538,6 +560,52 @@ describe('BokaBordPage - why a table cannot be chosen', () => {
     // Choosing a table that fits clears the explanation.
     await user.click(screen.getByRole('button', { name: /Bord 2 · 4 platser/ }))
     expect(screen.queryByRole('status')).toBeNull()
+  })
+
+  it('plays the pick effect on the table and its button, then moves on to Bekräfta bord', async () => {
+    const targets: Element[] = []
+    const animate = vi.fn(function (this: Element) {
+      targets.push(this)
+      return { cancel() {}, finished: Promise.resolve() } as unknown as Animation
+    })
+    Object.defineProperty(Element.prototype, 'animate', { value: animate, configurable: true, writable: true })
+    try {
+      const user = userEvent.setup()
+      render(<WithSite><BokaBordPage /></WithSite>)
+      await pickOption(user, screen.getByLabelText('Antal personer'), '3 personer')
+      await user.click(await screen.findByRole('button', { name: '18:00' }))
+      const chip = screen.getByRole('button', { name: /Bord 2 · 4 platser/ })
+      await user.click(chip)
+      // The chip lights up; the table (and its ring) pop where the plan is drawn.
+      expect(targets).toContain(chip)
+      // Focus waits for the effect (half a second), then lands on the next step.
+      const confirm = screen.getByRole('button', { name: 'Bekräfta bord' })
+      expect(confirm).not.toHaveFocus()
+      await waitFor(() => expect(confirm).toHaveFocus(), { timeout: 2000 })
+    } finally {
+      // @ts-expect-error the stub is removed again
+      delete Element.prototype.animate
+    }
+  })
+
+  it('skips the effect and the wait with reduced motion', async () => {
+    const animate = vi.fn()
+    Object.defineProperty(Element.prototype, 'animate', { value: animate, configurable: true, writable: true })
+    const matchMedia = window.matchMedia
+    window.matchMedia = ((q: string) => ({ matches: q.includes('reduce'), media: q, addEventListener() {}, removeEventListener() {} })) as unknown as typeof window.matchMedia
+    try {
+      const user = userEvent.setup()
+      render(<WithSite><BokaBordPage /></WithSite>)
+      await pickOption(user, screen.getByLabelText('Antal personer'), '3 personer')
+      await user.click(await screen.findByRole('button', { name: '18:00' }))
+      await user.click(screen.getByRole('button', { name: /Bord 2 · 4 platser/ }))
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Bekräfta bord' })).toHaveFocus(), { timeout: 300 })
+      expect(animate).not.toHaveBeenCalled()
+    } finally {
+      window.matchMedia = matchMedia
+      // @ts-expect-error the stub is removed again
+      delete Element.prototype.animate
+    }
   })
 
   it('tells a table blocked by the restaurant from one that is booked', async () => {

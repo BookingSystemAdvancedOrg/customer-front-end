@@ -1,7 +1,9 @@
 import { labelTables, layoutViewBox } from '../../shared/layoutApi'
 import type { FloorGroup, LayoutElement, LayoutTableElement } from '../../shared/layoutApi'
 import type { TableUnavailable } from './bookingApi'
+import { useLayoutEffect, useRef } from 'react'
 import { tableChoice } from './tableState'
+import { syncBreathing } from './pickEffect'
 import { CHAIR_D, CHAIR_W, chairs } from './chairs'
 
 /**
@@ -22,8 +24,11 @@ export function FloorPlanSvg({
   onToggle,
   unavailable,
   onExplain,
+  partySize,
 }: {
   group: FloorGroup
+  /** Sällskapets storlek, för "för litet/stort bord för 6". */
+  partySize?: number
   /** Restaurangens andra våningar: ritas svagt under den valda, som om man
    * tittar ner genom huset, så att man ser var man är. */
   ghosts?: FloorGroup[]
@@ -49,6 +54,9 @@ export function FloorPlanSvg({
     height: base.height + pad * 2 + extra,
   }
   const labels = labelTables(tables)
+  const wrapRef = useRef<HTMLDivElement>(null)
+  // Lediga bord andas i takt, även efter ett nytt val.
+  useLayoutEffect(() => syncBreathing(wrapRef.current))
   const aspectRatio = box.width / box.height
 
   if (elements.length === 0) {
@@ -77,17 +85,17 @@ export function FloorPlanSvg({
   function table(el: LayoutTableElement) {
     const label = labels.get(el.elementId) ?? '?'
     const { selectable, explainable, interactive, isSelected, state, badge, title } = tableChoice({
-      tableId: el.elementId, label, seats: el.seats, free, selected, unavailable,
+      tableId: el.elementId, label, seats: el.seats, free, selected, unavailable, partySize,
       canToggle: Boolean(onToggle), canExplain: Boolean(onExplain),
     })
     const act = () => (selectable ? onToggle?.(el.elementId) : onExplain?.(el.elementId))
     const transform = el.rotationY ? `rotate(${el.rotationY} ${el.x} ${el.z})` : undefined
-    const shape =
+    const outline = (className: string) =>
       el.shape === 'round' ? (
-        <circle className={`floor-svg-table${state}`} cx={el.x} cy={el.z} r={Math.max(el.width, el.depth) / 2} />
+        <circle className={className} cx={el.x} cy={el.z} r={Math.max(el.width, el.depth) / 2} />
       ) : (
         <rect
-          className={`floor-svg-table${state}`}
+          className={className}
           x={el.x - el.width / 2}
           y={el.z - el.depth / 2}
           width={el.width}
@@ -96,10 +104,12 @@ export function FloorPlanSvg({
           transform={transform}
         />
       )
+    const shape = outline(`floor-svg-table${state}`)
     const seatsAround = chairs(el)
     return (
       <g
         key={el.elementId}
+        data-table-id={el.elementId}
         className={selectable ? 'floor-svg-pick' : explainable ? 'floor-svg-explain' : undefined}
         role={interactive ? 'button' : undefined}
         tabIndex={interactive ? 0 : undefined}
@@ -128,6 +138,8 @@ export function FloorPlanSvg({
           ))}
         </g>
         {shape}
+        {/* Ringen som sprider sig ut när bordet väljs (pickEffect.ts); osynlig annars. */}
+        {selectable && <g className="plan-ripple" aria-hidden="true">{outline('floor-svg-ripple')}</g>}
         <text className="floor-svg-table-label" x={el.x} y={el.z - 0.12} textAnchor="middle">
           {label}
         </text>
@@ -139,7 +151,7 @@ export function FloorPlanSvg({
   }
 
   return (
-    <div className="floor-wrap">
+    <div className="floor-wrap" dir="ltr" ref={wrapRef}>
       <div className="floor-svg-frame" style={{ aspectRatio: aspectRatio || undefined }}>
         <svg
           className="floor-svg"

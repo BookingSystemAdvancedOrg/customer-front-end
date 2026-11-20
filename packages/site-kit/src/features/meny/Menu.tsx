@@ -94,7 +94,7 @@ export function Menu({ hideHeading = false }: {
               <li className="dish" key={dish.menuItemId}>
                 <Plate src={menuImageUrl(dish.imageKey)} position={menuImagePosition(dish.imageFocus)} name={dish.name} />
                 <div className="dish-text">
-                  <h4 className="dish-name">{dish.name}</h4>
+                  <h4 className="dish-name" translate="no">{dish.name}</h4>
                   {dish.description && <p className="dish-desc">{dish.description}</p>}
                   {allergenText(dish.allergens) && <p className="dish-allergens">{allergenText(dish.allergens)}</p>}
                 </div>

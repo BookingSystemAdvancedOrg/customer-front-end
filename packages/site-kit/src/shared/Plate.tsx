@@ -20,7 +20,7 @@ export function Plate({
   const [failed, setFailed] = useState(false)
   const showImage = Boolean(src) && !failed
   return (
-    <span className={`plate plate--${size}${showImage ? '' : ' plate--empty'}`} aria-hidden={showImage ? undefined : true}>
+    <span translate="no" className={`plate plate--${size}${showImage ? '' : ' plate--empty'}`} aria-hidden={showImage ? undefined : true}>
       {showImage ? (
         <img
           src={src!}
