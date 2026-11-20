@@ -108,4 +108,12 @@ describe('CateringRequestPage and the page translator', () => {
     expect(sent.length).toBeGreaterThan(0)
     expect(leaked(sent, ['Anna Gästsson', 'Gästbolaget AB', 'Välkommen!', 'Lasagne'])).toEqual([])
   })
+  it('never sends the first name while the request waits for an offer', async () => {
+    api.getRequest.mockResolvedValue(guest({ status: 'requested', customerName: 'Örjan Gästsson' } as Partial<GuestRequest>))
+    renderGuest()
+    expect(await screen.findByText(/skickar en offert till/)).toBeInTheDocument()
+    const sent = await translatableStrings()
+    expect(sent.length).toBeGreaterThan(0)
+    expect(leaked(sent, ['Örjan'])).toEqual([])
+  })
 })

@@ -41,7 +41,7 @@ export default function EvenemangPage() {
       ) : null}
       {state.kind === 'ready' && state.events.length > 0 ? (
         <>
-          <p>Quiz, vinmiddagar och andra kvällar hos {config.tenant.name}. Välj ett evenemang för att köpa biljetter.</p>
+          <p>{`Quiz, vinmiddagar och andra kvällar hos ${config.tenant.name}. Välj ett evenemang för att köpa biljetter.`}</p>
           <ul className="evenemang-list">
             {state.events.map((ev) => {
               const image = eventImage(ev)

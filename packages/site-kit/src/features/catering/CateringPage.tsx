@@ -456,8 +456,8 @@ export default function CateringPage() {
               </label>
             </div>
             {quote && (
-              <p className="order-hint">Tidigast {new Date(`${quote.earliestDate}T12:00:00Z`).toLocaleDateString('sv-SE',
-                { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/Stockholm' })} för {guests} gäster.</p>
+              <p className="order-hint">{`Tidigast ${new Date(`${quote.earliestDate}T12:00:00Z`).toLocaleDateString('sv-SE',
+                { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/Stockholm' })} för ${guests} gäster.`}</p>
             )}
             {form.fulfilment === 'delivery' && (
               <>
@@ -610,7 +610,7 @@ export default function CateringPage() {
           )}
           {upcoming && guests >= minGuests && (
             <p className="cart-note">
-              {upcoming.fromPortions - guests} gäster till ger {upcoming.discountPercent} % rabatt.
+              {`${upcoming.fromPortions - guests} gäster till ger ${upcoming.discountPercent} % rabatt.`}
             </p>
           )}
           <p className="cart-note catering-estimate">Uppskattat pris, bindande först när offerten signerats.</p>

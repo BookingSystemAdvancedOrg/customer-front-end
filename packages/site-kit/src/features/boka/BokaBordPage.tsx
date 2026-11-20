@@ -671,7 +671,7 @@ export default function BokaBordPage() {
         <p className="booking-status stamp-ok">Bokat</p>
         <p className="hero-kicker">Tack, <span translate="no">{booked.customerName}</span>!</p>
         <h1>Ditt bord är bokat</h1>
-        <p className="confirmation-lede">Vi ses {formatDate(booked.date)} kl {booked.startTime}. Välkommen!</p>
+        <p className="confirmation-lede">{`Vi ses ${formatDate(booked.date)} kl ${booked.startTime}. Välkommen!`}</p>
         <dl className="booking-summary">
           <div><dt>Restaurang</dt><dd translate="no">{booked.location?.name ?? info.name}</dd></div>
           <div><dt>Datum</dt><dd>{formatDate(booked.date)}</dd></div>
@@ -697,7 +697,7 @@ export default function BokaBordPage() {
           <ol>
             <li>Vi mejlar en bekräftelse till <strong>{guest.email.trim()}</strong> inom några minuter.</li>
             <li>I mejlet finns en länk där du kan se eller avboka bokningen.</li>
-            <li>Kom {formatDate(booked.date)} kl {booked.startTime}, så står bordet klart.</li>
+            <li>{`Kom ${formatDate(booked.date)} kl ${booked.startTime}, så står bordet klart.`}</li>
           </ol>
         </div>
         {link && (
@@ -805,7 +805,7 @@ export default function BokaBordPage() {
           {!loadingSlots && dayText && <p className="notice" role="status">{dayText}</p>}
           {!loadingSlots && !slotsError && slots.length === 0 && (!day || day.kind === 'hours') && (
             <div className="notice notice--stack" role="status">
-              <p>Inga lediga tider för {partySize} personer {formatDate(date)}.</p>
+              <p>{`Inga lediga tider för ${partySize} personer ${formatDate(date)}.`}</p>
               <p className="cell-muted">Prova en annan dag, eller ändra antalet personer.</p>
               {nextDate && (
                 <button type="button" className="btn-secondary btn-small" onClick={() => chooseDate(nextDate)}>
@@ -931,7 +931,7 @@ export default function BokaBordPage() {
                 {lengthText(slot) && <p className="cell-muted booking-length">Bokningstid: {lengthText(slot)}.</p>}
                 {option.tableIds.length > 1 && (
                   <p className="cell-muted">
-                    Borden {option.tableIds.map((id) => labels.get(id) ?? id).join(' och ')} ställs ihop för ert sällskap.
+                    {`Borden ${option.tableIds.map((id) => labels.get(id) ?? id).join(' och ')} ställs ihop för ert sällskap.`}
                   </p>
                 )}
                 <p className="cell-muted">

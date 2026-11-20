@@ -298,7 +298,7 @@ export default function CateringRequestPage() {
           <p className="booking-status" aria-live="polite">{HEADLINE[request.status]}</p>
           {request.status === 'requested' && (
             <p className="order-hint">
-              Restaurangen går igenom förfrågan och skickar en offert till {request.customerName.split(' ')[0]} via
+              Restaurangen går igenom förfrågan och skickar en offert till <span translate="no">{request.customerName.split(' ')[0]}</span> via
               mejl och sms. Spara länken i mejlet - där kan du följa förfrågan.
             </p>
           )}

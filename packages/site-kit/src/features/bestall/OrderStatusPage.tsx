@@ -164,7 +164,7 @@ export default function OrderStatusPage() {
             </p>
           )}
           {order.status === 'ready' && order.mode === 'pickup' && order.location?.address && (
-            <p className="order-hint">Hämta hos {order.location.name} - {order.location.address}.</p>
+            <p className="order-hint">{`Hämta hos ${order.location.name} - ${order.location.address}.`}</p>
           )}
           {order.status === 'pending_payment' && gaveUp && (
             <p className="notice" role="status">
@@ -180,7 +180,7 @@ export default function OrderStatusPage() {
           )}
           {order.status === 'cancelled' && (
             <p className="notice" role="status">
-              Hela beloppet, {kronor(order.totalAmount)}, betalas tillbaka till ditt kort inom några bankdagar.
+              {`Hela beloppet, ${kronor(order.totalAmount)}, betalas tillbaka till ditt kort inom några bankdagar.`}
             </p>
           )}
           <ul className="cart-list order-status-lines">

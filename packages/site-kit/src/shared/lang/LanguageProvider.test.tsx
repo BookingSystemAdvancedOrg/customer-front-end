@@ -93,6 +93,19 @@ describe('LanguageProvider', () => {
     expect(document.documentElement).not.toHaveAttribute(PENDING_ATTR)
     expect(screen.getByRole('heading').textContent).toBe('Boka bord')
   })
+
+  it('keeps the loading screen visible while the restaurant is fetched, then hides for the first pass', async () => {
+    const fetchMock = translateFetch()
+    vi.stubGlobal('fetch', fetchMock)
+    localStorage.setItem('booqy-lang', 'en')
+    const { rerender } = render(<LanguageProvider config={null}><p>Laddar</p></LanguageProvider>)
+    expect(document.documentElement).toHaveAttribute('lang', 'en')
+    expect(document.documentElement).not.toHaveAttribute(PENDING_ATTR)
+    rerender(<LanguageProvider><h1>Boka bord</h1></LanguageProvider>)
+    expect(document.documentElement).toHaveAttribute(PENDING_ATTR)
+    await waitFor(() => expect(screen.getByRole('heading').textContent).toBe('[en] Boka bord'))
+    await waitFor(() => expect(document.documentElement).not.toHaveAttribute(PENDING_ATTR))
+  })
 })
 
 describe('LanguagePicker', () => {

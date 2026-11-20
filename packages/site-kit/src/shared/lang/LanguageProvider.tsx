@@ -45,7 +45,8 @@ export function LanguageProvider({
     const first = initialLang()
     if (typeof document !== 'undefined') {
       applyDocument(first)
-      if (first !== DEFAULT_LANG) document.documentElement.setAttribute(PENDING_ATTR, '')
+      // Medan restaurangen hämtas syns kitets laddning (Printing), inte en tom sida.
+      if (first !== DEFAULT_LANG && config !== null) document.documentElement.setAttribute(PENDING_ATTR, '')
     }
     return first
   })
@@ -89,7 +90,7 @@ export function LanguageProvider({
     t.setLang(lang)
     applyDocument(lang)
     const html = document.documentElement
-    if (lang === DEFAULT_LANG) {
+    if (lang === DEFAULT_LANG || !ready) {
       html.removeAttribute(PENDING_ATTR)
       return
     }

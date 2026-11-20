@@ -103,8 +103,7 @@ export default function PresentkortPage() {
       {returned.failed && !checkout ? (
         <Bar variant="banner" tone="danger">Betalningen gick inte igenom och inget har dragits. Försök igen, gärna med ett annat kort.</Bar>
       ) : null}
-      <p>Ge bort en middag hos {config.tenant.name}. Presentkortet gäller i {offer.validityMonths} månader och kan
-        användas både i restaurangen och när man beställer här på hemsidan.</p>
+      <p>{`Ge bort en middag hos ${config.tenant.name}. Presentkortet gäller i ${offer.validityMonths} månader och kan användas både i restaurangen och när man beställer här på hemsidan.`}</p>
       {checkout ? (
         <PayStep checkout={checkout} onPaid={setPaid} />
       ) : (

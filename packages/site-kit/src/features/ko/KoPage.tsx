@@ -174,7 +174,7 @@ function JoinForm({ onJoined }: { onJoined: (token: string) => void }) {
   return (
     <section className="page-hero page-prose ko-page" data-bq-theme="restaurant">
       <h1>Kö</h1>
-      <p>Alla bord hos {location.name} är upptagna just nu. Ställ dig i kö så sms:ar vi när ett bord blir ledigt i dag.</p>
+      <p>{`Alla bord hos ${location.name} är upptagna just nu. Ställ dig i kö så sms:ar vi när ett bord blir ledigt i dag.`}</p>
       <form onSubmit={submit} noValidate>
         <div className="booking-grid">
           <label className="booking-field">

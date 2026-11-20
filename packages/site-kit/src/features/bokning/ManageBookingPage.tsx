@@ -260,7 +260,7 @@ export default function ManageBookingPage() {
           )}
           {booking.cancellable && confirming && (
             <div className="booking-confirm-cancel" role="group" aria-label="Bekräfta avbokning">
-              <p>Vill du avboka bordet {formatDate(booking.date)} kl {booking.startTime}?</p>
+              <p>{`Vill du avboka bordet ${formatDate(booking.date)} kl ${booking.startTime}?`}</p>
               {fee > 0 && (
                 <label className="booking-check fee-accept">
                   <input ref={feeRef} type="checkbox" checked={acceptFee} onChange={(e) => setAcceptFee(e.target.checked)}
