@@ -123,8 +123,8 @@
   content: '';
   position: absolute;
   top: 0;
-  left: 0;
-  right: 0;
+  inset-inline-start: 0;
+  inset-inline-end: 0;
   height: 8px;
   background: linear-gradient(var(--bq-tan) 0 5px, var(--bq-bronze) 5px 6px, var(--bq-tan) 6px);
 }
@@ -358,7 +358,7 @@
 }
 .bq-select {
   appearance: none;
-  padding-right: 40px;
+  padding-inline-end: 40px;
   border-radius: var(--bq-radius-pill);
   /* the chevron, drawn with currentColor so it follows the mode */
   background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
@@ -374,7 +374,7 @@
   .bq-select {
     align-items: center;
     background-image: none;
-    padding-right: var(--bq-space-4);
+    padding-inline-end: var(--bq-space-4);
   }
   .bq-select::picker(select) {
     border: 0;
@@ -389,7 +389,7 @@
 .bq-toaster {
   position: fixed;
   z-index: var(--bq-z-toast);
-  right: var(--bq-space-4);
+  inset-inline-end: var(--bq-space-4);
   bottom: var(--bq-space-4);
   width: min(380px, calc(100% - 2 * var(--bq-space-4)));
   pointer-events: none;

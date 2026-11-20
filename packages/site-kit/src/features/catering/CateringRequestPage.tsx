@@ -52,7 +52,7 @@ function LinesTable({ lines, totals }: { lines: Line[]; totals: Totals }) {
       <ul className="cart-list">
         {lines.map((l, i) => (
           <li key={i}>
-            <span className="cart-item-name">{l.quantity} × {l.name}</span>
+            <span className="cart-item-name" translate="no">{`${l.quantity} × ${l.name}`}</span>
             <span className="cell-muted">{kronor(l.unitPrice)}</span>
             <span className="cart-item-price">{kronor(l.unitPrice * l.quantity)}</span>
           </li>
@@ -303,7 +303,7 @@ export default function CateringRequestPage() {
             </p>
           )}
           <dl className="booking-summary">
-            {request.location?.name && <div><dt>Restaurang</dt><dd>{request.location.name}</dd></div>}
+            {request.location?.name && <div><dt>Restaurang</dt><dd translate="no">{request.location.name}</dd></div>}
             <div><dt>Datum</dt><dd>{request.deliveryDate} kl {request.deliveryTime}</dd></div>
             <div>
               <dt>{request.fulfilment === 'delivery' ? 'Leverans' : 'Avhämtning'}</dt>
@@ -313,13 +313,13 @@ export default function CateringRequestPage() {
                   : request.location?.address ?? ''}
               </dd>
             </div>
-            <div><dt>Beställare</dt><dd>{request.companyName ? `${request.companyName}, ` : ''}{request.customerName}</dd></div>
+            <div><dt>Beställare</dt><dd translate="no">{`${request.companyName ? `${request.companyName}, ` : ''}${request.customerName}`}</dd></div>
           </dl>
 
           {request.offer && !['declined', 'expired'].includes(request.status) ? (
             <div className="catering-offer">
               <h2>Offert{request.offer.version > 1 ? ` (version ${request.offer.version})` : ''}</h2>
-              {request.offer.message && <p className="catering-message">”{request.offer.message}”</p>}
+              {request.offer.message && <p className="catering-message" translate="no">”{request.offer.message}”</p>}
               <LinesTable lines={request.offer.lines} totals={request.offer.totals} />
               <p className="cart-note">
                 Gäller till och med {request.offer.validUntil}.
@@ -424,7 +424,7 @@ export default function CateringRequestPage() {
                   <label className="booking-check">
                     <input type="checkbox" checked={acceptForm.authority}
                       onChange={(e) => setAcceptForm({ ...acceptForm, authority: e.target.checked })} />
-                    <span>Jag har rätt att teckna avtal för {request.companyName ?? 'företaget'}.</span>
+                    <span>Jag har rätt att teckna avtal för {request.companyName ? <span translate="no">{request.companyName}</span> : 'företaget'}.</span>
                   </label>
                 </>
               )}

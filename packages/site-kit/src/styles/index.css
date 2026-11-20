@@ -1,4 +1,4 @@
-/* @booqy/site-kit/styles.css: komponenternas standardlook, i samma ordning
+/* @bookingsystemadvancedorg/site-kit/styles.css: komponenternas standardlook, i samma ordning
    som kundsajten alltid laddat dem (ordningen avgör vilken regel som
    vinner). theme.css sist: tokens och grund. */
 @import './offer.css';
@@ -12,4 +12,5 @@
 @import './date-input.css';
 @import './select.css';
 @import './order-table.css';
+@import './lang.css';
 @import './theme.css';

@@ -1,3 +1,4 @@
+import { leaked, translatableStrings } from '../../test/translatable'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
@@ -315,4 +316,13 @@ describe('ManageBookingPage card step (booked by phone)', () => {
     expect(await screen.findByText(/Bokningen blev inte klar/)).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Kortgaranti' })).not.toBeInTheDocument()
   })
+})
+
+it('never sends the guest\'s name or the address to the page translator', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => json({ ...BOOKING, customerName: 'Anna Gästsson', durationMinutes: 120, extendable: false, ruleName: null })))
+  renderAt('#tok')
+  expect(await screen.findByText('Anna Gästsson')).toBeInTheDocument()
+  const sent = await translatableStrings()
+  expect(sent.length).toBeGreaterThan(0)
+  expect(leaked(sent, ['Anna Gästsson', 'Gatan 1'])).toEqual([])
 })

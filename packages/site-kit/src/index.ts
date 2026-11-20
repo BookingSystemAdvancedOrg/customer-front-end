@@ -1,5 +1,5 @@
 /**
- * @booqy/site-kit: allt på en restaurangs webbplats som inte är look.
+ * @bookingsystemadvancedorg/site-kit: allt på en restaurangs webbplats som inte är look.
  * API-klienten och vilken restaurang domänen tillhör, flödena (meny, boka
  * bord, beställ och betala, catering, öppettider, juridik), GDPR-rutorna,
  * besöksstatistiken och krokar för egna designer. Sajten (site-template /
@@ -7,7 +7,7 @@
  * färger, typsnitt, hörn och avstånd ur CSS-variabler (styles.css).
  *
  * Kom igång: configureSiteKit({...}) i main.tsx, <SiteProvider> runt appen
- * (inuti en router), importera '@booqy/site-kit/styles.css' före sajtens CSS.
+ * (inuti en router), importera '@bookingsystemadvancedorg/site-kit/styles.css' före sajtens CSS.
  */
 
 /* --- Inställningar ------------------------------------------------------- */
@@ -146,8 +146,19 @@ export {
   lateCancelApplies,
 } from './shared/bookingTerms'
 export type { TermsContext, TermsSection } from './shared/bookingTerms'
-export { GIFT_CARD_PURCHASE_KEY, SOUND_KEY, STORAGE_REGISTRY, THEME_KEY, TICKET_PURCHASE_KEY, WAITLIST_TOKEN_PREFIX } from './shared/storageRegistry'
+export { GIFT_CARD_PURCHASE_KEY, LANG_KEY, SOUND_KEY, STORAGE_REGISTRY, THEME_KEY, TICKET_PURCHASE_KEY, WAITLIST_TOKEN_PREFIX } from './shared/storageRegistry'
 export type { StorageCategory, StorageEntry, StorageKind } from './shared/storageRegistry'
+
+/* --- Språk (sv standard; en, es, ar, fa via Amazon Translate) ------------- */
+export { LanguagePicker } from './shared/lang/LanguagePicker'
+export { LanguageProvider } from './shared/lang/LanguageProvider'
+export { useKeepTerms, useLanguage } from './shared/lang/LanguageContext'
+export type { LanguageContextValue } from './shared/lang/LanguageContext'
+export { DEFAULT_LANG, LANGUAGES, PICKER_LABEL, currentLang, isLang } from './shared/lang/languages'
+export type { Lang, Language } from './shared/lang/languages'
+export { Flag } from './shared/lang/flags'
+export { MachineTranslationNote } from './shared/lang/MachineTranslationNote'
+export { formatDate, formatNumber, formatTime, formatWeekday } from './shared/lang/format'
 
 /* --- Besöksstatistik ------------------------------------------------------ */
 export { captureAttribution, currentAttribution, trackOfferView, trackPage, withAttribution } from './shared/visits'

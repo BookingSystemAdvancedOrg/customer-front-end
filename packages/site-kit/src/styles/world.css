@@ -80,7 +80,7 @@ svg {
 
 /* Äldre sidor (catering, kontakt, om oss, bokningsbekräftelse). */
 .page-hero {
-  text-align: left;
+  text-align: start;
   padding: clamp(28px, 5vw, 52px) 0 clamp(16px, 3vw, 24px);
   margin: 0;
 }
@@ -473,7 +473,7 @@ svg {
 }
 
 .tray-plates .plate + .plate {
-  margin-left: -10px;
+  margin-inline-start: -10px;
 }
 
 .cart-empty {
@@ -585,8 +585,8 @@ svg {
 
   .order-mobile-bar {
     position: fixed;
-    left: 12px;
-    right: 12px;
+    inset-inline-start: 12px;
+    inset-inline-end: 12px;
     bottom: max(12px, env(safe-area-inset-bottom));
     z-index: 30;
     display: grid;
@@ -594,7 +594,8 @@ svg {
     align-items: center;
     gap: 12px;
     min-height: 60px;
-    padding: 0 18px 0 10px;
+    padding-block: 0 0;
+    padding-inline: 10px 18px;
     border-radius: var(--r-pill);
     background: var(--accent);
     color: var(--on-accent);
@@ -1140,7 +1141,7 @@ svg {
 .booking-summary dd {
   margin: 0;
   font-weight: 700;
-  text-align: right;
+  text-align: end;
 }
 
 /* =========================================================================
@@ -1263,8 +1264,8 @@ h1, h2, h3, h4 {
 .printing::after {
   content: '';
   position: absolute;
-  left: 0;
-  right: 0;
+  inset-inline-start: 0;
+  inset-inline-end: 0;
   bottom: 0;
   height: var(--tooth-h);
   background: conic-gradient(from -45deg at 50% 100%, var(--table) 0deg, transparent 1deg 89deg, var(--table) 90deg) 0 100% / var(--tooth) var(--tooth-h) repeat-x;
@@ -1808,7 +1809,7 @@ h1, h2, h3, h4 {
   border: 1.5px dashed var(--paper-line);
   background: var(--surface);
   box-shadow: none;
-  text-align: left;
+  text-align: start;
 }
 
 .order-menu {
@@ -1889,7 +1890,7 @@ h1, h2, h3, h4 {
 }
 
 .tray-plates .plate + .plate {
-  margin-left: -8px;
+  margin-inline-start: -8px;
 }
 
 .cart-empty {
@@ -1911,7 +1912,7 @@ h1, h2, h3, h4 {
   font-size: 0.9rem;
   /* Samma bredd på varje rad, så att knapparna står i en kolumn. */
   min-width: 7ch;
-  text-align: right;
+  text-align: end;
 }
 
 .cart-list .cart-qty button,
@@ -2073,8 +2074,8 @@ h1, h2, h3, h4 {
 .checkout::after {
   content: '';
   position: absolute;
-  left: 0;
-  right: 0;
+  inset-inline-start: 0;
+  inset-inline-end: 0;
   bottom: 0;
   height: var(--tooth-h);
   background: conic-gradient(from -45deg at 50% 100%, var(--table) 0deg, transparent 1deg 89deg, var(--table) 90deg) 0 100% / var(--tooth) var(--tooth-h) repeat-x;
@@ -2120,7 +2121,7 @@ h1, h2, h3, h4 {
   flex-direction: column;
   gap: 18px;
   min-width: 0;
-  padding-right: clamp(24px, 4vw, 48px);
+  padding-inline-end: clamp(24px, 4vw, 48px);
 }
 
 .checkout-side {
@@ -2130,8 +2131,8 @@ h1, h2, h3, h4 {
   flex-direction: column;
   gap: 20px;
   min-width: 0;
-  padding-left: clamp(24px, 4vw, 48px);
-  border-left: 1px solid var(--paper-line);
+  padding-inline-start: clamp(24px, 4vw, 48px);
+  border-inline-start: 1px solid var(--paper-line);
 }
 
 .checkout .checkout-title {
@@ -2338,13 +2339,13 @@ h1, h2, h3, h4 {
   }
 
   .checkout-main {
-    padding-right: 0;
+    padding-inline-end: 0;
   }
 
   .checkout-side {
     position: static;
-    padding-left: 0;
-    border-left: 0;
+    padding-inline-start: 0;
+    border-inline-start: 0;
   }
 
   .checkout-side-sum {
@@ -2400,8 +2401,8 @@ h1, h2, h3, h4 {
   /* samma kanter som kassakortet (.checkout ligger i sidans --gutter) */
   .checkout-cta {
     position: fixed;
-    left: var(--gutter);
-    right: var(--gutter);
+    inset-inline-start: var(--gutter);
+    inset-inline-end: var(--gutter);
     bottom: max(12px, env(safe-area-inset-bottom));
     z-index: 30;
   }
@@ -2671,7 +2672,7 @@ h1, h2, h3, h4 {
 .catering-dishes input {
   min-height: 42px;
   padding: 6px 10px;
-  text-align: right;
+  text-align: end;
   font-family: var(--mono);
   font-stretch: 87.5%;
   font-variant-numeric: tabular-nums;
@@ -2792,7 +2793,7 @@ h1, h2, h3, h4 {
 }
 
 .page-hero.page-prose {
-  text-align: left;
+  text-align: start;
 }
 
 .storage-table th {
@@ -2864,7 +2865,7 @@ h1, h2, h3, h4 {
 }
 
 .opening-hours-table td {
-  text-align: right;
+  text-align: end;
   color: var(--ink);
 }
 
@@ -2891,7 +2892,7 @@ h1, h2, h3, h4 {
 }
 
 .offer-stub::after {
-  border-right-color: color-mix(in srgb, var(--print) 25%, transparent);
+  border-inline-end-color: color-mix(in srgb, var(--print) 25%, transparent);
 }
 
 .offer-stub-percent {
@@ -2920,8 +2921,8 @@ h1, h2, h3, h4 {
 
 @media (max-width: 760px) {
   .menu {
-    padding-left: 18px;
-    padding-right: 18px;
+    padding-inline-start: 18px;
+    padding-inline-end: 18px;
   }
 
   .chip-rail {
@@ -3374,11 +3375,11 @@ a,
   display: inline-block;
   width: 14px;
   height: 14px;
-  margin-right: 9px;
+  margin-inline-end: 9px;
   vertical-align: -2px;
   border-radius: 50%;
   border: 2px solid currentColor;
-  border-right-color: transparent;
+  border-inline-end-color: transparent;
   animation: spin 720ms linear infinite;
 }
 
@@ -3589,7 +3590,7 @@ a,
 
 .cart-item-name {
   padding: 2px 4px;
-  margin-left: -4px;
+  margin-inline-start: -4px;
   border-radius: var(--r-md);
   animation: line-flash 700ms var(--ease) both;
 }
@@ -3658,7 +3659,7 @@ a,
   display: grid;
   gap: 6px;
   margin: 0;
-  padding-left: 20px;
+  padding-inline-start: 20px;
   font-size: 0.95rem;
 }
 
@@ -3814,7 +3815,7 @@ a,
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-  margin-left: auto;
+  margin-inline-start: auto;
 }
 @media (max-width: 420px) {
   .order-status h1.order-head { flex-wrap: nowrap; font-size: 1.5rem; }
@@ -3941,6 +3942,6 @@ a,
     display: block;
     white-space: nowrap;
     letter-spacing: 0.02em;
-    text-align: right;
+    text-align: end;
   }
 }

@@ -82,13 +82,13 @@ function clockTime(iso: string, timeZone?: string | null): string {
 function BookingSummary({ booking }: { booking: GuestReservation }) {
   return (
     <dl className="booking-summary">
-      {booking.location?.name && <div><dt>Restaurang</dt><dd>{booking.location.name}</dd></div>}
-      <div><dt>Namn</dt><dd>{booking.customerName}</dd></div>
+      {booking.location?.name && <div><dt>Restaurang</dt><dd translate="no">{booking.location.name}</dd></div>}
+      <div><dt>Namn</dt><dd translate="no">{booking.customerName}</dd></div>
       <div><dt>Datum</dt><dd>{formatDate(booking.date)}</dd></div>
       <div><dt>Tid</dt><dd>{booking.startTime}-{booking.endTime}</dd></div>
       {lengthText(booking) && <div><dt>Bokningstid</dt><dd>{lengthText(booking)}</dd></div>}
       <div><dt>Antal</dt><dd>{booking.partySize} personer</dd></div>
-      {booking.location?.address && <div><dt>Adress</dt><dd>{booking.location.address}</dd></div>}
+      {booking.location?.address && <div><dt>Adress</dt><dd translate="no">{booking.location.address}</dd></div>}
     </dl>
   )
 }

@@ -40,6 +40,10 @@ export const CATERING_TOKEN_PREFIX = 'catering-token:'
 export const OFFER_CARD_KEY = 'offer-card'
 export const THEME_KEY = 'booqy-theme'
 export const SOUND_KEY = 'booqy-sound'
+export const LANG_KEY = 'booqy-lang'
+export const LANG_CACHE_PREFIX = 'booqy-lang-cache:'
+/** Anars egen språknyckel före kitets språkväljare (kopieras en gång till LANG_KEY). */
+export const ANAR_LANG_KEY = 'anar-lang'
 // Presentkort, kö och biljetter: nyckelnamnen kommer från kontraktet (application/contracts/booqy.yaml).
 export { GIFT_CARD_PURCHASE_KEY, TICKET_PURCHASE_KEY, WAITLIST_TOKEN_PREFIX }
 
@@ -67,6 +71,23 @@ export const STORAGE_REGISTRY: readonly StorageEntry[] = [
     purpose: 'Ditt val att stänga av eller slå på klickljudet (knappen Klickljud i sidfoten). Sätts bara om du trycker på den; annars är ljudet på.',
     lifetime: 'Tills du rensar webbläsaren',
     category: 'nödvändig',
+  },
+  {
+    name: LANG_KEY,
+    kind: 'localStorage',
+    setBy: 'Webbplatsen',
+    purpose: 'Ditt val av språk (språkväljaren i sidhuvudet). Sätts bara om du väljer ett språk.',
+    lifetime: 'Tills du rensar webbläsaren',
+    category: 'nödvändig',
+  },
+  {
+    name: `${LANG_CACHE_PREFIX}{språk}`,
+    kind: 'sessionStorage',
+    setBy: 'Webbplatsen',
+    purpose: 'Översättningar av sidans texter, så att de inte hämtas igen.',
+    lifetime: 'Tills fliken stängs',
+    category: 'nödvändig',
+    where: 'När du valt ett annat språk än svenska',
   },
   {
     name: `${CART_KEY_PREFIX}{plats}`,

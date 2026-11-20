@@ -308,7 +308,8 @@ body::before {
   max-width: 1180px;
   margin: 0 auto;
   min-height: 64px;
-  padding: 8px 10px 8px 22px;
+  padding-block: 8px 8px;
+  padding-inline: 22px 10px;
   border-radius: var(--r-pill);
 }
 .site .site-header-wordmark {
@@ -901,7 +902,7 @@ body::before {
 
 /* namnet till vänster, knapparna till höger, även när menyn är dold */
 .site .site-header-brand {
-  margin-right: auto;
+  margin-inline-end: auto;
 }
 
 /* kategoriraden stannar under sidhuvudet även som glidskena */
@@ -1196,7 +1197,7 @@ body::before {
   border-color: var(--danger);
 }
 :root .combo {
-  padding-right: 36px;
+  padding-inline-end: 36px;
   cursor: pointer;
 }
 :root :is(input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='hidden']):not([type='file']):not([type='submit']):not([type='button']):not([type='color']), .combo, textarea):is(:disabled, [readonly]) {

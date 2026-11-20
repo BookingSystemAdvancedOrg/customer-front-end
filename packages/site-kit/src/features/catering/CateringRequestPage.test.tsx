@@ -1,3 +1,4 @@
+import { leaked, translatableStrings } from '../../test/translatable'
 import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
@@ -95,5 +96,16 @@ describe('CateringRequestPage retries in place', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+})
+
+describe('CateringRequestPage and the page translator', () => {
+  it('never sends the customer, the company or the offer message', async () => {
+    api.getRequest.mockResolvedValue(guest({ customerType: 'company', companyName: 'Gästbolaget AB', customerName: 'Anna Gästsson' } as Partial<GuestRequest>))
+    renderGuest()
+    expect(await screen.findByText('Din offert är klar')).toBeInTheDocument()
+    const sent = await translatableStrings()
+    expect(sent.length).toBeGreaterThan(0)
+    expect(leaked(sent, ['Anna Gästsson', 'Gästbolaget AB', 'Välkommen!', 'Lasagne'])).toEqual([])
   })
 })

@@ -187,8 +187,9 @@ export function FloorPlan3D({
     }
   }
 
+  // Rummet är en karta: alltid vänster till höger, även på arabiska och persiska.
   return (
-    <div className="floor-wrap">
+    <div className="floor-wrap" dir="ltr">
       <div
         ref={sceneRef}
         className={`f3d-scene${dragging ? ' f3d-scene--dragging' : ''}`}

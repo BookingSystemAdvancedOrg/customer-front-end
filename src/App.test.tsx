@@ -41,6 +41,21 @@ describe('App on SiteProvider', () => {
     expect(document.title).toBe('Testkrogen')
   })
 
+  it('has the language picker in the top bar, right before the theme toggle', async () => {
+    window.history.replaceState(null, '', '/?restaurang=testkrogen')
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => (url.includes('/site-config') ? json(siteConfig()) : json({ items: [] }))))
+
+    renderSite()
+
+    const picker = await screen.findByRole('combobox', { name: 'Språk: Svenska' })
+    const header = picker.closest('.site-header-inner') as HTMLElement
+    expect(header).not.toBeNull()
+    const order = [...header.querySelectorAll('.open-chip, .site-header-lang, .site-header-theme')].map((el) =>
+      ['open-chip', 'site-header-lang', 'site-header-theme'].find((c) => el.classList.contains(c)))
+    expect(order).toEqual(['open-chip', 'site-header-lang', 'site-header-theme'])
+    expect(within(header).getByText('Testkrogen')).toHaveAttribute('translate', 'no')
+  })
+
   it('hides booking when the plan has no reservations', async () => {
     window.history.replaceState(null, '', '/?restaurang=testkrogen')
     vi.stubGlobal('fetch', vi.fn(async (url: string) =>

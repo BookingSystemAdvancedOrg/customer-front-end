@@ -10,6 +10,7 @@ import {
 } from './site'
 import type { SiteConfig } from './site'
 import { SiteContext } from './SiteContext'
+import { LanguageProvider } from './lang/LanguageProvider'
 
 type State =
   | { status: 'loading' }
@@ -207,8 +208,14 @@ export function SiteProvider({ children }: { children: ReactNode }) {
     }
   }, [query, attempt])
 
+  // Språket (shared/lang) ligger runt allt, även laddningen, så att det
+  // aldrig byts ut när restaurangen väl hämtats.
+  const wrap = (node: ReactNode) => (
+    <LanguageProvider config={state.status === 'ready' ? state.config : null}>{node}</LanguageProvider>
+  )
+
   if (state.status === 'loading') {
-    return (
+    return wrap(
       <div className="site-boot">
         <div className="printing" role="status" aria-live="polite" aria-label="Laddar">
           <span className="printing__label">Laddar</span>
@@ -218,7 +225,7 @@ export function SiteProvider({ children }: { children: ReactNode }) {
     )
   }
   if (state.status === 'error') {
-    return (
+    return wrap(
       <div className="site-boot">
         <h1>Sidan kunde inte laddas</h1>
         <p>Kontrollera din anslutning och försök igen.</p>
@@ -236,7 +243,7 @@ export function SiteProvider({ children }: { children: ReactNode }) {
     )
   }
   if (state.status === 'unavailable') {
-    return (
+    return wrap(
       <div className="site-boot">
         <h1>Sidan är inte tillgänglig</h1>
         <p>Den här restaurangens webbplats är inte aktiv just nu.</p>
@@ -247,15 +254,15 @@ export function SiteProvider({ children }: { children: ReactNode }) {
   const { config } = state
   const location = pickLocation(config, locationId)
   if (!location) {
-    return (
+    return wrap(
       <div className="site-boot">
-        <h1>{config.tenant.name}</h1>
+        <h1 translate="no">{config.tenant.name}</h1>
         <p>Webbplatsen är inte klar ännu - välkommen tillbaka snart.</p>
       </div>
     )
   }
 
-  return (
+  return wrap(
     <SiteContext.Provider
       value={{
         config,

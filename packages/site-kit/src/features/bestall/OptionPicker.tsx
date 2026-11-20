@@ -61,7 +61,7 @@ export function OptionPicker({
       <button type="button" className="opening-hours-modal-backdrop" aria-label="Stäng" onClick={onClose} />
       <div className="opening-hours-modal-panel option-picker" role="dialog" aria-modal="true" aria-labelledby={titleId}>
         <div className="opening-hours-modal-header">
-          <h2 id={titleId} className="opening-hours-modal-heading">{dish.name}</h2>
+          <h2 id={titleId} className="opening-hours-modal-heading" translate="no">{dish.name}</h2>
           <button type="button" className="opening-hours-modal-close" onClick={onClose} aria-label="Stäng">
             <span aria-hidden="true">×</span>
           </button>

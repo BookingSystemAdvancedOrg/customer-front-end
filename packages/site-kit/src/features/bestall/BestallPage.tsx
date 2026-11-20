@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { Button } from '@booqy/brand'
 import { isApiConfigured } from '../../shared/api'
 import { useSite } from '../../shared/SiteContext'
+import { useKeepTerms } from '../../shared/lang/LanguageContext'
 import { Slot } from '../../shared/slots'
 import { useLocationInfo } from '../../shared/useLocationInfo'
 import { PhoneInput } from '../../shared/PhoneInput'
@@ -148,6 +149,7 @@ function PickupOrder() {
   const [ordering, setOrdering] = useState<OrderingState | null>(null)
   const [stateError, setStateError] = useState<string | null>(null)
   const [menu, setMenu] = useState<PublicMenuItem[] | null>(null)
+  useKeepTerms((menu ?? []).map((d) => d.name))
   const [categories, setCategories] = useState<MenuCategoryEntry[]>(DEFAULT_CATEGORIES)
   /** Rätten vars tillval gästen väljer just nu, och knappen som öppnade valet. */
   const [picking, setPicking] = useState<{ dish: PublicMenuItem; from: HTMLElement } | null>(null)
@@ -530,7 +532,7 @@ function PickupOrder() {
           <li key={key}>
             <Plate src={menuImageUrl(dish.imageKey)} position={menuImagePosition(dish.imageFocus)} name={dish.name} size="sm" />
             <span className="sum-line-text">
-              <span className="sum-line-name">{dish.name}</span>
+              <span className="sum-line-name" translate="no">{dish.name}</span>
               {picks.length > 0 && <span className="sum-line-options">{picks.map((p) => p.choice).join(', ')}</span>}
               <span className="sum-line-qty">{kronor(unit)} × {quantity}</span>
             </span>
@@ -568,7 +570,7 @@ function PickupOrder() {
         <header className="checkout-bar">
           <span className="checkout-brand">
             {config.tenant.branding.logoUrl && <img src={config.tenant.branding.logoUrl} alt="" width={32} height={32} />}
-            <span>{config.tenant.name}</span>
+            <span translate="no">{config.tenant.name}</span>
           </span>
           {crumbs}
         </header>
@@ -594,8 +596,8 @@ function PickupOrder() {
                 <section className="checkout-block" aria-labelledby="checkout-who">
                   <h2 id="checkout-who" className="checkout-sub">Dina uppgifter</h2>
                   <div className="checkout-card checkout-card--facts">
-                    <p className="checkout-fact-strong">{guest.name}</p>
-                    <p>{formatPhoneNational(guest.phone)} · {guest.email}</p>
+                    <p className="checkout-fact-strong" translate="no">{guest.name}</p>
+                    <p translate="no" dir="ltr">{formatPhoneNational(guest.phone)} · {guest.email}</p>
                     <p>{place}</p>
                   </div>
                 </section>
@@ -791,7 +793,7 @@ function PickupOrder() {
                     <li className={`dish dish--order${quantity ? ' is-in-cart' : ''}`} key={dish.menuItemId} data-dish={dish.menuItemId}>
                       <Plate src={menuImageUrl(dish.imageKey)} position={menuImagePosition(dish.imageFocus)} name={dish.name} />
                       <div className="dish-text">
-                        <h3 className="dish-name">{dish.name}</h3>
+                        <h3 className="dish-name" translate="no">{dish.name}</h3>
                         {dish.description && <p className="dish-desc">{dish.description}</p>}
                         {allergens && <p className="dish-allergens">{allergens}</p>}
                         <span className="dish-price">{hasOptions ? `från ${kronor(ore(dish.price))}` : kronor(ore(dish.price))}</span>
@@ -854,7 +856,7 @@ function PickupOrder() {
                   {lines.map(({ key, dish, picks, quantity, unit }, i) => (
                     <li key={key}>
                       <span className="cart-item-name" key={quantity}>
-                        {quantity}&nbsp;×&nbsp;{dish.name}
+                        <span translate="no">{`${quantity}\u00a0×\u00a0${dish.name}`}</span>
                         {picks.length > 0 && <span className="cart-item-options">{picks.map((p) => p.choice).join(', ')}</span>}
                       </span>
                       <span className="cart-qty">

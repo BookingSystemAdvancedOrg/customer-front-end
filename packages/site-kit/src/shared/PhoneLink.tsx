@@ -9,7 +9,7 @@ type Props = Omit<AnchorHTMLAttributes<HTMLAnchorElement>, 'href' | 'children'> 
 /** Ett klickbart nummer: visas "070-174 06 05", ringer "tel:+46701740605". */
 export function PhoneLink({ phone, ...rest }: Props) {
   return (
-    <a href={phoneHref(phone)} {...rest}>
+    <a href={phoneHref(phone)} translate="no" dir="ltr" {...rest}>
       {formatPhoneNational(phone)}
     </a>
   )

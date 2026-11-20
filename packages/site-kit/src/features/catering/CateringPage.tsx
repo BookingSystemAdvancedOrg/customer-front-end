@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { Button } from '@booqy/brand'
 import { isApiConfigured } from '../../shared/api'
 import { useSite } from '../../shared/SiteContext'
+import { useKeepTerms } from '../../shared/lang/LanguageContext'
 import { useLocationInfo } from '../../shared/useLocationInfo'
 import { PhoneLink } from '../../shared/PhoneLink'
 import { PhoneInput } from '../../shared/PhoneInput'
@@ -133,6 +134,11 @@ export default function CateringPage() {
   const [tiers, setTiers] = useState<Tier[]>([])
   const [cateringMenu, setCateringMenu] = useState<CateringMenu>({ dishes: [], packages: [] })
   const [legacyMenu, setLegacyMenu] = useState<PublicMenuItem[]>([])
+  useKeepTerms([
+    ...cateringMenu.dishes.map((d) => d.name),
+    ...cateringMenu.packages.map((p) => p.name),
+    ...legacyMenu.map((d) => d.name),
+  ])
   const [legacyCategories, setLegacyCategories] = useState<MenuCategoryEntry[]>(DEFAULT_CATEGORIES)
   const info = useLocationInfo()
   const [loadError, setLoadError] = useState(false)
@@ -359,7 +365,7 @@ export default function CateringPage() {
                   return (
                     <li key={p.packageId}>
                       <div>
-                        <strong>{p.name}</strong>
+                        <strong translate="no">{p.name}</strong>
                         {p.description && <p className="dish-desc">{p.description}</p>}
                         {inside.length > 0 && <p className="dish-desc">{inside.map((d) => d.name).join(' · ')}</p>}
                         <Tags allergens={[...new Set(inside.flatMap((d) => d.allergens ?? []))]} />
@@ -388,7 +394,7 @@ export default function CateringPage() {
                 {cateringMenu.dishes.map((d) => (
                   <li key={d.dishId}>
                     <div>
-                      <strong>{d.name}</strong>
+                      <strong translate="no">{d.name}</strong>
                       {d.description && <p className="dish-desc">{d.description}</p>}
                       <Tags allergens={d.allergens} dietary={d.dietary} />
                     </div>
@@ -407,7 +413,7 @@ export default function CateringPage() {
                 {group.items.map((dish) => (
                   <li key={dish.menuItemId}>
                     <div>
-                      <strong>{dish.name}</strong>
+                      <strong translate="no">{dish.name}</strong>
                       {dish.description && <p className="dish-desc">{dish.description}</p>}
                     </div>
                     <span className="dish-price">{kronor(Math.round(dish.price * 100))}/port</span>
@@ -576,7 +582,7 @@ export default function CateringPage() {
               <ul className={`cart-list${quoting ? ' is-stale' : ''}`}>
                 {quote.lines.map((l) => (
                   <li key={`${l.kind}:${l.packageId ?? l.dishId ?? l.menuItemId}`}>
-                    <span className="cart-item-name">{l.quantity} × {l.name}</span>
+                    <span className="cart-item-name" translate="no">{`${l.quantity} × ${l.name}`}</span>
                     <span />
                     <span className="cart-item-price">{kronor(l.unitPrice * l.quantity)}</span>
                   </li>

@@ -7,6 +7,7 @@ import { PaymentPrinting, SecureNote } from '../../shared/payment/PaymentTicket'
 import { stripeFor } from '../../shared/payment/stripe'
 import { feeLines, formatDeadline, fromSnapshot, NOTHING_CHARGED, persons, WAIVER } from '../../shared/bookingTerms'
 import type { GuaranteeTerms } from '../../shared/site'
+import { MachineTranslationNote } from '../../shared/lang/MachineTranslationNote'
 import { bookingErrorMessage, confirmGuestReservation } from './bookingApi'
 import type { GuestReservation } from './bookingApi'
 
@@ -46,11 +47,14 @@ export function GuaranteeTermsText({ booking }: { booking: GuestReservation }) {
   if (!g) return null
   const until = g.freeCancelUntil ? formatDeadline(g.freeCancelUntil, booking.timezone) : null
   return (
-    <ul className="guarantee-terms">
-      {booking.status === 'pending' && <li>{NOTHING_CHARGED}</li>}
-      {feeLines(fromSnapshot(g, booking.partySize), booking.partySize, until).map((line) => <li key={line}>{line}</li>)}
-      <li>{WAIVER}</li>
-    </ul>
+    <>
+      <MachineTranslationNote />
+      <ul className="guarantee-terms">
+        {booking.status === 'pending' && <li>{NOTHING_CHARGED}</li>}
+        {feeLines(fromSnapshot(g, booking.partySize), booking.partySize, until).map((line) => <li key={line}>{line}</li>)}
+        <li>{WAIVER}</li>
+      </ul>
+    </>
   )
 }
 
@@ -59,7 +63,7 @@ export function GuaranteeNotice({ terms, partySize }: { terms: GuaranteeTerms; p
   return (
     <div className="guarantee-notice" role="note">
       <strong>Kortgaranti krävs</strong>
-      {terms.minPartySize > 1 ? ` för sällskap om ${persons(terms.minPartySize)} eller fler` : ''}. {NOTHING_CHARGED}
+      {`${terms.minPartySize > 1 ? ` för sällskap om ${persons(terms.minPartySize)} eller fler` : ''}. ${NOTHING_CHARGED}`}
       <ul className="guarantee-terms">
         {feeLines(terms, partySize).map((line) => <li key={line}>{line}</li>)}
         <li>{WAIVER}</li>

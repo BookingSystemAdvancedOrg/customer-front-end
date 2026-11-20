@@ -151,7 +151,7 @@
 }
 
 .site-header-nav {
-  margin-left: auto;
+  margin-inline-start: auto;
 }
 
 .site-header-nav ul {
@@ -232,7 +232,8 @@
 
 .location-picker .combo {
   min-height: 36px;
-  padding: 0 34px 0 14px;
+  padding-block: 0 0;
+  padding-inline: 14px 34px;
   font: 600 0.92rem var(--font);
 }
 
@@ -243,7 +244,7 @@
   gap: 5px;
   width: 44px;
   height: 44px;
-  margin-right: -8px;
+  margin-inline-end: -8px;
   padding: 0 11px;
   border: 0;
   border-radius: var(--r-pill);
@@ -277,7 +278,7 @@
   }
 
   .open-chip {
-    margin-left: auto;
+    margin-inline-start: auto;
   }
 
   .site-header-burger {
@@ -321,7 +322,7 @@
 .mobile-drawer {
   position: fixed;
   top: calc(var(--header-h, 76px) + 8px);
-  right: 0;
+  inset-inline-end: 0;
   bottom: 0;
   z-index: 50;
   width: min(86vw, 340px);
@@ -331,6 +332,10 @@
   transform: translateX(100%);
   visibility: hidden;
   transition: transform 320ms var(--spring), visibility 0s linear 320ms;
+}
+
+html[dir='rtl'] .mobile-drawer:not(.mobile-drawer--open) {
+  transform: translateX(-100%);
 }
 
 .mobile-drawer--open {
@@ -359,7 +364,7 @@
   background: transparent;
   color: var(--ink);
   font: 700 1.15rem/1 var(--font);
-  text-align: left;
+  text-align: start;
   text-decoration: none;
   cursor: pointer;
 }
@@ -617,7 +622,7 @@
 }
 
 .site-footer-credit {
-  margin-left: auto;
+  margin-inline-start: auto;
   color: rgb(var(--bq-snow-rgb) / 0.5);
   display: inline-flex;
   align-items: center;
@@ -635,7 +640,8 @@
   align-items: center;
   gap: 6px;
   min-height: 32px;
-  padding: 0 12px 0 10px;
+  padding-block: 0 0;
+  padding-inline: 10px 12px;
   border: 1px solid rgb(var(--bq-snow-rgb) / 0.18);
   border-radius: var(--r-pill);
   background: transparent;
@@ -663,7 +669,7 @@
   }
 
   .site-footer-credit {
-    margin-left: 0;
+    margin-inline-start: 0;
   }
 }
 
@@ -863,7 +869,7 @@
 
 .page > .order-hint {
   border-radius: var(--r-lg);
-  text-align: left;
+  text-align: start;
 }
 
 /* --- Boka bord: fyra kvitton, ett per steg ------------------------------ */
@@ -989,11 +995,11 @@
 
 @media (max-width: 1000px) {
   .open-chip {
-    margin-left: auto;
+    margin-inline-start: auto;
   }
 
   .site-header-theme {
-    margin-right: -4px;
+    margin-inline-end: -4px;
   }
 }
 
@@ -1015,4 +1021,43 @@
 }
 .contact-form-status a {
   overflow-wrap: anywhere;
+}
+
+/* Språkväljaren (site-kit LanguagePicker) i toppraden, före temaknappen. */
+.site-header-lang {
+  flex: none;
+}
+
+/* En pille som öppet-just-nu-chipet, inte ett formulärfält: !important mot
+   fältregeln i booqy-look.css (:root :is(input..., .combo, textarea)). */
+.site .site-header-lang .lang-picker-button {
+  min-height: 44px;
+  border-color: transparent !important;
+  border-radius: var(--r-pill);
+  background: var(--wall-tint) !important;
+  box-shadow: none !important;
+  color: var(--ink);
+}
+
+.site .site-header-lang .lang-picker-button:hover:not(:disabled),
+.site .site-header-lang .lang-picker-button[aria-expanded='true'] {
+  background: var(--wall-tint-2) !important;
+}
+
+.site .site-header-lang .lang-picker-button:focus-visible {
+  box-shadow: 0 0 0 3px var(--focus) !important;
+}
+
+/* Telefon: bara flaggan, 44 px, bredvid hamburgaren. */
+@media (max-width: 480px) {
+  .site-header-lang .lang-picker-code,
+  .site-header-lang .combo-chevron {
+    display: none;
+  }
+
+  .site .site-header-lang .lang-picker-button {
+    justify-content: center;
+    padding-inline: 0;
+    width: 44px;
+  }
 }

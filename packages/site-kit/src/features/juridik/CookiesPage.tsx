@@ -1,3 +1,4 @@
+import { MachineTranslationNote } from '../../shared/lang/MachineTranslationNote'
 import { Link } from 'react-router-dom'
 import { useSite } from '../../shared/SiteContext'
 import { STORAGE_REGISTRY } from '../../shared/storageRegistry'
@@ -30,6 +31,7 @@ export default function CookiesPage() {
   return (
     <article className="page-prose">
       <h1>Cookies och lagring</h1>
+      <MachineTranslationNote />
       <p className="cell-muted">Gäller {config.tenant.name}s webbplats.</p>
       <p>
         Webbplatsen använder inga cookies för statistik, spårning eller reklam, och inga sådana

@@ -49,8 +49,10 @@ let installed = false
 export function installGlide(): void {
   if (installed || typeof document === 'undefined' || typeof MutationObserver === 'undefined' || typeof requestAnimationFrame !== 'function') return
   installed = true
+  // characterData: a text change (e.g. the site translated in place) changes the widths.
   new MutationObserver(placeAll).observe(document.body, {
     childList: true,
+    characterData: true,
     subtree: true,
     attributes: true,
     attributeFilter: ['aria-selected', 'aria-current', 'aria-pressed', 'aria-checked'],

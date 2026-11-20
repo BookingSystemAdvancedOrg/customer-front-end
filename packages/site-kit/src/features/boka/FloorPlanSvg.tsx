@@ -151,7 +151,7 @@ export function FloorPlanSvg({
   }
 
   return (
-    <div className="floor-wrap" ref={wrapRef}>
+    <div className="floor-wrap" dir="ltr" ref={wrapRef}>
       <div className="floor-svg-frame" style={{ aspectRatio: aspectRatio || undefined }}>
         <svg
           className="floor-svg"

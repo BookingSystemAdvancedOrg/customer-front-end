@@ -92,7 +92,7 @@ export function OpeningHoursModal({
             <span aria-hidden="true">×</span>
           </button>
         </div>
-        <table className="opening-hours-table">
+        <table className="opening-hours-table" dir="ltr">
           <tbody>
             {openingHours.map((row) => (
               <tr key={row.days}>
@@ -105,7 +105,7 @@ export function OpeningHoursModal({
         {specialDays.length > 0 && (
           <>
             <h3 className="opening-hours-special-heading">Avvikande öppettider</h3>
-            <table className="opening-hours-table">
+            <table className="opening-hours-table" dir="ltr">
               <tbody>
                 {specialDays.map((row) => (
                   <tr key={row.date}>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { isApiConfigured } from '../../shared/api'
 import { useSite } from '../../shared/SiteContext'
+import { useKeepTerms } from '../../shared/lang/LanguageContext'
 import { DEFAULT_CATEGORIES, getPublicMenuWithCategories } from './menuApi'
 import type { MenuCategory, MenuCategoryEntry, PublicMenuItem } from './menuApi'
 
@@ -57,6 +58,9 @@ export function useMenuList() {
 
   /** Försök igen efter ett fel: visar laddningen och hämtar på nytt. */
   const retry = () => setAttempt((a) => a + 1)
+
+  // Rätternas namn översätts aldrig (de är namn), inte heller i meningar som "Lägg till Kebab".
+  useKeepTerms(items.map((it) => it.name))
 
   const visible = items
     .filter((it) => it.category === filter)

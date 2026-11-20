@@ -99,7 +99,7 @@ function Tickets({ token, data, onChanged }: { token: string; data: TicketPageDa
         <strong>{event.title}</strong>
         <span>{when(occurrence.startAt, tz)}</span>
         {occurrence.doorsAt ? <span>{`Insläpp från kl. ${time(occurrence.doorsAt, tz)}`}</span> : null}
-        {data.location?.name ? <span>{data.location.name}</span> : null}
+        {data.location?.name ? <span translate="no">{data.location.name}</span> : null}
       </p>
       {cancelled ? (
         <Bar variant="banner" tone="warning">Tillfället är inställt. Restaurangen återbetalar biljetterna och skickar besked via e-post.</Bar>
@@ -149,7 +149,7 @@ function TicketCard({ token, ticket, n, count, data, onChanged }: {
     <Card surface="ticket" level={2} title={title} actions={<Chip tone={status.tone}>{status.label}</Chip>}
       qr={showQr && qrSrc ? <img src={qrSrc} alt={`QR-kod för ${title}`} width={196} height={196} /> : undefined}
       code={showQr ? ticket.qr : undefined}>
-      {ticket.holderName ? <p className="evenemang-ticket-line">{`Namn: ${ticket.holderName}`}</p> : null}
+      {ticket.holderName ? <p className="evenemang-ticket-line">Namn: <span translate="no">{ticket.holderName}</span></p> : null}
       {ticket.status === 'checked_in' ? <p className="evenemang-ticket-line">Biljetten har redan använts i dörren.</p> : null}
       {ticket.status === 'transferred' ? <p className="evenemang-ticket-line">Biljetten har getts bort och gäller inte längre här.</p> : null}
       {ticket.status === 'refunded' ? <p className="evenemang-ticket-line">Biljetten är återbetald och gäller inte längre.</p> : null}

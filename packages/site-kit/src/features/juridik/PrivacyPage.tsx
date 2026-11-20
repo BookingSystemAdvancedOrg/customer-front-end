@@ -1,3 +1,4 @@
+import { MachineTranslationNote } from '../../shared/lang/MachineTranslationNote'
 import { useSite } from '../../shared/SiteContext'
 import { NoticeText } from './NoticeText'
 import { PhoneLink } from '../../shared/PhoneLink'
@@ -32,6 +33,7 @@ export default function PrivacyPage() {
   return (
     <article className="page-prose">
       <h1>Integritetspolicy</h1>
+      <MachineTranslationNote />
       <p className="cell-muted">Gäller för bokningar och besök på {tenant.name}s webbplats.</p>
 
       {/* Restaurangens egen text (redigeras i admin) från en nyare backend;

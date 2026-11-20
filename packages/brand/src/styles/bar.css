@@ -50,14 +50,14 @@
 }
 .bq-bar--progress .bq-bar__value {
   min-width: 3.2em;
-  text-align: right;
+  text-align: end;
 }
 
 /* ---- busy: the strip at the top while work runs ------------------------- */
 .bq-bar--busy {
   top: 0;
-  left: 0;
-  right: 0;
+  inset-inline-start: 0;
+  inset-inline-end: 0;
   z-index: var(--bq-z-bar);
   height: 0;
   pointer-events: none;
@@ -72,7 +72,7 @@
 .bq-bar--busy .bq-bar__fill {
   position: absolute;
   top: 0;
-  left: 0;
+  inset-inline-start: 0;
   width: 0;
   height: var(--bq-bar-thin);
   overflow: hidden;
@@ -321,7 +321,7 @@
   z-index: var(--bq-z-bar);
 }
 .bq-bar__status {
-  margin-right: auto;
+  margin-inline-end: auto;
   font-size: var(--bq-text-sm);
   color: var(--bq-muted);
 }
