@@ -166,7 +166,7 @@ export const STORAGE_REGISTRY: readonly StorageEntry[] = [
     kind: 'localStorage',
     setBy: 'Webbplatsen',
     purpose: 'Sparar din plats i kön så att du ser när ditt bord är klart.',
-    lifetime: 'Till slutet av dagen du ställde dig i kö',
+    lifetime: 'Sparas till slutet av dagen då du ställde dig i kö',
     category: 'nödvändig',
     where: 'Kö',
   },

@@ -5,7 +5,8 @@ import { MAX_TEXT_CHARS, chunkTexts } from './translateApi'
 /**
  * Översätter hela sidan på plats: varje textnod och attributen placeholder,
  * aria-label, aria-description, alt och title (och value på knapp-inputs),
- * i <body> och i <title>. Kitets flöden, sajtens egna texter, portaler
+ * i <body>, i <title> och i sidans beskrivning (<meta name="description">,
+ * og:title, og:description). Kitets flöden, sajtens egna texter, portaler
  * (rullistor, modaler) och restaurangens data (meny, om oss) får samma väg.
  *
  * Regler (spec: application docs, site languages 3.3):
@@ -15,8 +16,13 @@ import { MAX_TEXT_CHARS, chunkTexts } from './translateApi'
  *   ny svenska blir den nya källan; den egna skrivningen ignoreras.
  *   Tillbaka till svenska: källan skrivs tillbaka, inget nätverk.
  * - Hoppar över translate="no", data-lang-own, script/style, kod,
- *   textarea, contenteditable och iframes, och strängar som bara är pris,
- *   tid, tal, datum, telefon, e-post eller adress, eller ett skyddat namn.
+ *   contenteditable, Stripes och säkerhetskontrollens iframes, och strängar
+ *   som bara är pris, tid, tal, datum, telefon, e-post eller adress, eller
+ *   ett skyddat namn. textarea och iframe: bara attributen (placeholder,
+ *   title), aldrig innehållet.
+ * - Klockslag i en mening ("Bordet hålls i 14:59") skickas som mall med fasta
+ *   tider i stället, så att en nedräkning är en enda översättning; "kl"
+ *   framför en tid tas bort på andra språk (blev annars "KL").
  * - Träffar i cachen skrivs direkt i observerns callback (före nästa
  *   ritning, så de aldrig blinkar); resten samlas i 30 ms och skickas i
  *   anrop om högst 100 strängar, högst två samtidigt.
@@ -33,6 +39,8 @@ export interface TranslatorOptions {
   keep?: () => readonly string[]
   /** Anrop pågår eller väntar (väljarens laddring). */
   onBusy?: (busy: boolean) => void
+  /** Någon text på sidan kunde inte översättas (efter omförsöket). */
+  onIncomplete?: (incomplete: boolean) => void
   debounceMs?: number
   retryMs?: number
   maxInFlight?: number
@@ -51,12 +59,26 @@ export const SKIP_SELECTOR = [
   'kbd',
   'samp',
   'var',
-  'textarea',
   '[contenteditable]:not([contenteditable="false"])',
-  'iframe',
+  // Kortformuläret och säkerhetskontrollen har egna texter (Stripe översätter själv).
+  'iframe[name^="__privateStripe"]',
+  'iframe[src*="stripe.com"]',
+  'iframe[src*="awswaf"]',
 ].join(',')
 
-export const TRANSLATED_ATTRS = ['placeholder', 'aria-label', 'aria-description', 'alt', 'title', 'value'] as const
+/** Element vars attribut översätts men aldrig innehållet (gästens text, en annan sida). */
+export const ATTRS_ONLY_SELECTOR = 'textarea,iframe'
+
+/** Sidans beskrivning i <head> (attributet content). */
+export const HEAD_META_SELECTOR = [
+  'meta[name="description"]',
+  'meta[property="og:title"]',
+  'meta[property="og:description"]',
+  'meta[name="twitter:title"]',
+  'meta[name="twitter:description"]',
+].join(',')
+
+export const TRANSLATED_ATTRS = ['placeholder', 'aria-label', 'aria-description', 'alt', 'title', 'value', 'content'] as const
 type Attr = (typeof TRANSLATED_ATTRS)[number]
 
 const LETTER = /\p{L}/u
@@ -70,6 +92,46 @@ export function worthTranslating(core: string, keep: readonly string[] = []): bo
   if (!core || !LETTER.test(core)) return false
   if (AMOUNT.test(core) || EMAIL.test(core) || URL_LIKE.test(core)) return false
   return !keep.includes(core)
+}
+
+// "kl 18:00", "kl. 19:00", "till kl" i slutet av en textnod (tiden står i nästa nod).
+const KL = /(^|[\s(])kl\.?(?:\s+(?=\d)|\s*$)/giu
+// Klockslag och nedräkningar: 18:00, 18.30, 14:59 (inte 1.245 eller 2026-11-20).
+const CLOCK = /(?<![\d.,:])\d{1,2}[:.]\d{2}(?!\d|[.,:]\d)/gu
+const MAX_SLOTS = 9
+
+export interface Prepared {
+  /** Det som översätts och cachas (tider utbytta mot fasta platshållare). */
+  text: string
+  /** Platshållare -> den riktiga tiden. */
+  slots: [string, string][]
+}
+
+/**
+ * Gör om en svensk sträng innan den översätts: "kl" framför en tid tas bort
+ * (tiden räcker på alla språk) och varje klockslag byts mot en fast tid
+ * (10:10, 11:11 ...), så att "Bordet hålls i 14:59" och "... 14:58" är samma
+ * översättning. Servern skyddar siffrorna, så platshållarna kommer tillbaka
+ * orörda och byts tillbaka i `fill`.
+ */
+export function prepare(core: string): Prepared {
+  let text = core.replace(KL, '$1').replace(/\s{2,}/gu, ' ').trim()
+  const slots: [string, string][] = []
+  text = text.replace(CLOCK, (m) => {
+    if (slots.length >= MAX_SLOTS) return m
+    const v = 10 + slots.length
+    const slot = `${v}:${v}`
+    slots.push([slot, m])
+    return slot
+  })
+  return { text, slots }
+}
+
+/** Sätter tillbaka de riktiga tiderna i översättningen. */
+export function fill(translated: string, slots: readonly [string, string][]): string {
+  let out = translated
+  for (const [slot, real] of slots) out = out.split(slot).join(real)
+  return out
 }
 
 /** Text över 3 000 tecken delas vid meningsslut (och hårt om en mening är för lång). */
@@ -114,7 +176,11 @@ interface Job {
   src: string
   lead: string
   trail: string
+  /** Det som översätts (efter `prepare`); tomt när inget behöver översättas. */
   parts: string[]
+  /** Resultatet när `parts` är tomt (t.ex. "kl 18:00" blir "18:00"). */
+  bare: string
+  slots: [string, string][]
   lang: Lang
 }
 
@@ -149,7 +215,8 @@ function writeCache(lang: Lang, cache: Map<string, string>): void {
 
 export class Translator {
   private lang: Lang = 'sv'
-  private readonly opts: Required<Omit<TranslatorOptions, 'keep' | 'onBusy'>> & Pick<TranslatorOptions, 'keep' | 'onBusy'>
+  private readonly opts: Required<Omit<TranslatorOptions, 'keep' | 'onBusy' | 'onIncomplete'>> &
+    Pick<TranslatorOptions, 'keep' | 'onBusy' | 'onIncomplete'>
   private observer: MutationObserver | null = null
   private readonly textRecs = new WeakMap<Text, Rec>()
   private readonly attrRecs = new WeakMap<Element, Map<Attr, Rec>>()
@@ -167,6 +234,7 @@ export class Translator {
   private retryTimer: ReturnType<typeof setTimeout> | null = null
   private saveTimer: ReturnType<typeof setTimeout> | null = null
   private busy = false
+  private incomplete = false
   private idleWaiters: (() => void)[] = []
 
   constructor(options: TranslatorOptions) {
@@ -211,6 +279,34 @@ export class Translator {
     this.updateBusy()
   }
 
+  /**
+   * Översätter texter innan de sätts in i sidan (meny, catering): när noderna
+   * sedan kommer är det cacheträffar som skrivs före nästa ritning. Löser när
+   * inga anrop pågår.
+   */
+  prefetch(texts: readonly string[]): Promise<void> {
+    if (this.lang === 'sv') return Promise.resolve()
+    const cache = this.cache()
+    const keep = this.opts.keep?.() ?? []
+    for (const t of texts) {
+      const core = t.trim()
+      if (!worthTranslating(core, keep)) continue
+      const { text } = prepare(core)
+      if (!worthTranslating(text, keep)) continue
+      for (const p of splitLong(text)) {
+        if (!cache.has(p) && !this.failed.has(p) && !this.inFlightParts.has(p)) this.queue.add(p)
+      }
+    }
+    this.scheduleFlush()
+    this.updateBusy()
+    return this.whenIdle()
+  }
+
+  /** Anrop pågår eller väntar just nu. */
+  busyNow(): boolean {
+    return this.isBusy()
+  }
+
   /** Löser när inga anrop pågår eller väntar. */
   whenIdle(): Promise<void> {
     if (!this.isBusy()) return Promise.resolve()
@@ -227,6 +323,7 @@ export class Translator {
     this.inFlightParts.clear()
     this.failed = new Set()
     this.retried = new Set()
+    this.setIncomplete(false)
     if (this.flushTimer) clearTimeout(this.flushTimer)
     if (this.retryTimer) clearTimeout(this.retryTimer)
     this.flushTimer = this.retryTimer = null
@@ -260,13 +357,14 @@ export class Translator {
 
   private skipped(el: Element): boolean {
     if (el.closest(SKIP_SELECTOR)) return true
-    // I <head> bara <title>.
-    return !!el.closest('head') && el.tagName !== 'TITLE'
+    // I <head> bara <title> och sidans beskrivning.
+    return !!el.closest('head') && el.tagName !== 'TITLE' && !el.matches(HEAD_META_SELECTOR)
   }
 
   private attrAllowed(el: Element, attr: string | null): attr is Attr {
     if (!attr || !(TRANSLATED_ATTRS as readonly string[]).includes(attr)) return false
     if (attr === 'value') return el instanceof HTMLInputElement && /^(button|submit|reset)$/.test(el.type)
+    if (attr === 'content') return el.matches(HEAD_META_SELECTOR)
     return true
   }
 
@@ -277,17 +375,25 @@ export class Translator {
 
   private visitText(t: Text): void {
     const parent = t.parentElement
-    if (!parent || this.skipped(parent)) return
+    if (!parent || this.skipped(parent) || parent.closest(ATTRS_ONLY_SELECTOR)) return
     this.process(t, null)
   }
 
   private walk(root: Element): void {
     this.processAttrs(root)
+    if (root.matches(ATTRS_ONLY_SELECTOR)) return
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, {
-      acceptNode: (n) =>
-        n.nodeType === Node.ELEMENT_NODE && (n as Element).matches(SKIP_SELECTOR)
-          ? NodeFilter.FILTER_REJECT
-          : NodeFilter.FILTER_ACCEPT,
+      acceptNode: (n) => {
+        if (n.nodeType !== Node.ELEMENT_NODE) return NodeFilter.FILTER_ACCEPT
+        const el = n as Element
+        if (el.matches(SKIP_SELECTOR)) return NodeFilter.FILTER_REJECT
+        if (el.matches(ATTRS_ONLY_SELECTOR)) {
+          // Platshållaren och titeln översätts, gästens text och iframens sida aldrig.
+          this.processAttrs(el)
+          return NodeFilter.FILTER_REJECT
+        }
+        return NodeFilter.FILTER_ACCEPT
+      },
     })
     for (let n = walker.nextNode(); n; n = walker.nextNode()) {
       if (n.nodeType === Node.TEXT_NODE) this.process(n as Text, null)
@@ -298,6 +404,7 @@ export class Translator {
   private walkAll(): void {
     const title = document.querySelector('head > title')
     if (title) title.childNodes.forEach((n) => n.nodeType === Node.TEXT_NODE && this.process(n as Text, null))
+    document.querySelectorAll(HEAD_META_SELECTOR).forEach((m) => this.process(m, 'content'))
     if (document.body) this.walk(document.body)
   }
 
@@ -344,8 +451,11 @@ export class Translator {
     this.setRec(node, attr, { src: value, wrote: null, lang: this.lang })
     if (this.lang === 'sv') return
     const [, lead, core, trail] = /^(\s*)([\s\S]*?)(\s*)$/u.exec(value) ?? ['', '', value, '']
-    if (!worthTranslating(core, this.opts.keep?.() ?? [])) return
-    const job: Job = { node, attr, src: value, lead, trail, parts: splitLong(core), lang: this.lang }
+    const keep = this.opts.keep?.() ?? []
+    if (!worthTranslating(core, keep)) return
+    const prep = prepare(core)
+    const parts = worthTranslating(prep.text, keep) ? splitLong(prep.text) : []
+    const job: Job = { node, attr, src: value, lead, trail, parts, bare: prep.text, slots: prep.slots, lang: this.lang }
     if (this.apply(job)) return
     this.waiting.add(job)
     const cache = this.cache()
@@ -367,7 +477,9 @@ export class Translator {
     const rec = this.rec(job.node, job.attr)
     if (!rec || rec.src !== job.src || rec.lang !== job.lang || rec.wrote !== null) return true
     if (this.read(job.node, job.attr) !== job.src) return true
-    const text = job.lead + out.join(' ') + job.trail
+    const core = fill(job.parts.length ? out.join(' ') : job.bare, job.slots)
+    // "kl" ensam i en nod blir ingenting: ett mellanslag mellan datum och tid räcker.
+    const text = core ? job.lead + core + job.trail : job.lead || job.trail ? ' ' : ''
     if (text === job.src) return true
     rec.wrote = text
     this.write(job.node, job.attr, text)
@@ -452,6 +564,7 @@ export class Translator {
   private retryLater(part: string): void {
     if (this.retried.has(part)) {
       this.failed.add(part)
+      this.setIncomplete(true)
       return
     }
     this.retried.add(part)
@@ -480,6 +593,12 @@ export class Translator {
 
   private isBusy(): boolean {
     return this.inFlight > 0 || this.chunks.length > 0 || this.queue.size > 0
+  }
+
+  private setIncomplete(incomplete: boolean): void {
+    if (incomplete === this.incomplete) return
+    this.incomplete = incomplete
+    this.opts.onIncomplete?.(incomplete)
   }
 
   private updateBusy(): void {

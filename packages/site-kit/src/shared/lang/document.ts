@@ -6,7 +6,10 @@ import type { Lang } from './languages'
 
 export const LANG_PARAM = 'lang'
 export const PENDING_ATTR = 'data-lang-pending'
-export const PENDING_MAX_MS = 1_200
+/** Längst tid sidan döljs medan första omgången översätts (sedan visas svenskan). */
+export const PENDING_MAX_MS = 2_500
+/** Så länge allt ska ha varit tyst (inga anrop, inget att översätta) innan sidan visas. */
+export const PENDING_QUIET_MS = 60
 
 function readStored(): Lang | null {
   try {

@@ -34,7 +34,7 @@ export default function PrivacyPage() {
     <article className="page-prose">
       <h1>Integritetspolicy</h1>
       <MachineTranslationNote />
-      <p className="cell-muted">Gäller för bokningar och besök på {tenant.name}s webbplats.</p>
+      <p className="cell-muted">{`Gäller för bokningar och besök på webbplatsen för ${tenant.name}.`}</p>
 
       {/* Restaurangens egen text (redigeras i admin) från en nyare backend;
           annars standardtexten nedan. Cookietabellen kommer alltid efter. */}

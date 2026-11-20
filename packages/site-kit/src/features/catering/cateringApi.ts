@@ -1,5 +1,6 @@
 import { apiGet, apiPost, ApiError } from '../../shared/api'
 import { botCheckMessage } from '../../shared/botCheckMessage'
+import { prefetchTexts } from '../../shared/lang/loads'
 import { withAttribution } from '../../shared/visits'
 import { CATERING_TOKEN_PREFIX } from '../../shared/storageRegistry'
 
@@ -227,8 +228,14 @@ export function getSettings(locationId: string): Promise<CateringSettings> {
 }
 
 /** Restaurangens egen cateringmeny (paket och rätter); tom innan den är upplagd. */
-export function getCateringMenu(locationId: string): Promise<CateringMenu> {
-  return apiGet(`${loc(locationId)}/menu`)
+export async function getCateringMenu(locationId: string): Promise<CateringMenu> {
+  const menu = await apiGet<CateringMenu>(`${loc(locationId)}/menu`)
+  // På ett annat språk än svenska: översätt innan menyn ritas (inget textbyte efteråt).
+  await prefetchTexts([
+    ...(menu?.dishes ?? []).map((d) => d.description),
+    ...(menu?.packages ?? []).map((p) => p.description),
+  ])
+  return menu
 }
 
 /** Priset för valet, räknat av servern (den enda källan till priser). */

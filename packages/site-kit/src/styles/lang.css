@@ -97,6 +97,18 @@
   to { --lang-ring-a: 360deg; }
 }
 
+/* Delar av sidan kunde inte översättas: en liten punkt i flaggans hörn. */
+.lang-picker-partial {
+  position: absolute;
+  inset-block-start: -3px;
+  inset-inline-end: -4px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--warn, #b7791f);
+  box-shadow: 0 0 0 2px var(--bg, #fff);
+}
+
 /* Raderna i listan: flagga, språkets eget namn, kod. */
 .combo-option:has(.lang-option) {
   min-height: 44px;
@@ -163,10 +175,42 @@
   box-shadow: 0 0 0 3px var(--focus);
 }
 
-/* --- Första omgången: sidan döljs högst 1,2 s (LanguageProvider) ------------ */
+/* --- Första omgången: sidan döljs högst 2,5 s (LanguageProvider) ------------
+   tills översättningen och sidans första data är klara; en tunn remsa högst
+   upp visar att något laddas. */
 
 html[data-lang-pending] #root {
   visibility: hidden;
+}
+
+.lang-veil-bar {
+  position: fixed;
+  inset-block-start: 0;
+  inset-inline: 0;
+  z-index: 2147483000;
+  height: 3px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.lang-veil-bar::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 40%;
+  border-radius: 0 2px 2px 0;
+  background: var(--accent-ink, var(--ink));
+  animation: lang-veil 1100ms cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+@keyframes lang-veil {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(250%); }
+}
+
+html[dir='rtl'] .lang-veil-bar::before {
+  animation-direction: reverse;
 }
 
 /* --- Höger till vänster --------------------------------------------------- */
@@ -198,6 +242,11 @@ html[dir='rtl'] a[href^='mailto:'] {
 @media (prefers-reduced-motion: reduce) {
   .lang-picker .lang-picker-button {
     transition: none;
+  }
+  .lang-veil-bar::before {
+    animation: none;
+    width: 100%;
+    opacity: 0.5;
   }
   .lang-picker.is-busy .lang-picker-ring {
     animation: none;

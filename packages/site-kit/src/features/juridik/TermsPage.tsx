@@ -39,7 +39,7 @@ export default function TermsPage() {
       <h1>Bokningsvillkor</h1>
       <MachineTranslationNote />
       <p className="cell-muted">
-        {config.legal.legalName} · {info.name}
+        <span translate="no">{`${config.legal.legalName} · ${info.name}`}</span>
         {config.legal.orgNumber ? ` · Org.nr ${config.legal.orgNumber}` : ''}
       </p>
       {sections.map((s) => (

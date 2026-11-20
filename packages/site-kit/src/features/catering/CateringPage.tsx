@@ -302,7 +302,7 @@ export default function CateringPage() {
       <section className="page-hero page-prose catering-load-error" data-bq-theme="restaurant">
         <h1>Catering</h1>
         <p role="alert">
-          Cateringformuläret kunde inte laddas. Försök igen, eller ring {info.name}
+          {`Cateringformuläret kunde inte laddas. Försök igen, eller ring ${info.name}`}
           {info.phone ? <> på <PhoneLink phone={info.phone} /></> : null}.
         </p>
         <Button variant="primary" onClick={() => { setLoadError(false); setAttempt((n) => n + 1) }}>Försök igen</Button>
@@ -311,7 +311,7 @@ export default function CateringPage() {
   }
   if (!settings) return <SkelCard label="Hämtar cateringmenyn" lines={6} />
   if (!settings.enabled) {
-    return <p className="notice" role="status">{config.tenant.name} tar inte emot cateringförfrågningar just nu.</p>
+    return <p className="notice" role="status">{`${config.tenant.name} tar inte emot cateringförfrågningar just nu.`}</p>
   }
 
   const qtyInput = (id: string, label: string) => (
@@ -367,11 +367,11 @@ export default function CateringPage() {
                       <div>
                         <strong translate="no">{p.name}</strong>
                         {p.description && <p className="dish-desc">{p.description}</p>}
-                        {inside.length > 0 && <p className="dish-desc">{inside.map((d) => d.name).join(' · ')}</p>}
+                        {inside.length > 0 && <p className="dish-desc" translate="no">{inside.map((d) => d.name).join(' · ')}</p>}
                         <Tags allergens={[...new Set(inside.flatMap((d) => d.allergens ?? []))]} />
                         {p.minGuests ? <p className="dish-desc">Från {p.minGuests} gäster</p> : null}
                       </div>
-                      <span className="dish-price">{kronor(Math.round(p.pricePerGuest * 100))}/gäst</span>
+                      <span className="dish-price">{`${kronor(Math.round(p.pricePerGuest * 100))} per gäst`}</span>
                       <span className="catering-qty">
                         {qtyInput(id, `Gäster ${p.name}`)}
                         {guests > 0 && quantities[id] !== guests && (
@@ -398,7 +398,7 @@ export default function CateringPage() {
                       {d.description && <p className="dish-desc">{d.description}</p>}
                       <Tags allergens={d.allergens} dietary={d.dietary} />
                     </div>
-                    <span className="dish-price">{kronor(Math.round(d.pricePerPortion * 100))}/port</span>
+                    <span className="dish-price">{`${kronor(Math.round(d.pricePerPortion * 100))} per portion`}</span>
                     {qtyInput(`d:${d.dishId}`, `Portioner ${d.name}`)}
                   </li>
                 ))}
@@ -416,7 +416,7 @@ export default function CateringPage() {
                       <strong translate="no">{dish.name}</strong>
                       {dish.description && <p className="dish-desc">{dish.description}</p>}
                     </div>
-                    <span className="dish-price">{kronor(Math.round(dish.price * 100))}/port</span>
+                    <span className="dish-price">{`${kronor(Math.round(dish.price * 100))} per portion`}</span>
                     {qtyInput(`m:${dish.menuItemId}`, `Portioner ${dish.name}`)}
                   </li>
                 ))}

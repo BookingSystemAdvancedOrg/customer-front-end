@@ -448,7 +448,7 @@ describe('BokaBordPage', () => {
       render(<WithSite><BokaBordPage /></WithSite>)
       await chooseAndFill(user)
 
-      expect(screen.getByRole('timer')).toHaveTextContent('Bord 2 hålls åt dig i 15:00')
+      expect(screen.getByRole('timer')).toHaveTextContent('Bord 2 hålls åt dig: 15:00')
       expect(screen.queryByRole('button', { name: '18:00' })).toBeNull()
       expect(screen.queryByLabelText('Antal personer')).toBeNull()
       await act(async () => {

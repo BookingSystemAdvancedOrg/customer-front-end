@@ -74,7 +74,7 @@ export default function KoPage() {
     return (
       <section className="page-hero page-prose ko-page" data-bq-theme="restaurant">
         <h1>Kö</h1>
-        <p>{location.name} har ingen kö via hemsidan just nu. <Link to="/boka-bord">Boka bord</Link> eller ring oss.</p>
+        <p>{`${location.name} har ingen kö via hemsidan just nu.`} <Link to="/boka-bord">Boka bord</Link> eller ring oss.</p>
       </section>
     )
   }
@@ -97,10 +97,10 @@ export default function KoPage() {
       <section className="page-hero page-prose ko-page" data-bq-theme="restaurant" aria-live="polite">
         <h1>Din plats i kön</h1>
         {status.status === 'waiting' ? (
-          <p>Du är nummer <strong>{status.position}</strong> i kön hos {status.locationName}. Vi sms:ar när ditt bord är klart.</p>
+          <p>Du är nummer <strong>{status.position}</strong> i kön hos <span translate="no">{status.locationName}</span>. Vi sms:ar när ditt bord är klart.</p>
         ) : null}
         {offered ? (
-          <Bar variant="banner" tone="success">Ditt bord är klart kl. {status.offer!.startTime}! Bekräfta senast {clock(status.offer!.expiresAt)}.</Bar>
+          <Bar variant="banner" tone="success">{`Ditt bord är klart kl. ${status.offer!.startTime}! Bekräfta senast ${clock(status.offer!.expiresAt)}.`}</Bar>
         ) : null}
         {status.status === 'booked' || booked ? <Bar variant="banner" tone="success">Bordet är ditt. Välkommen in!</Bar> : null}
         {status.status === 'seated' ? <p>Du har fått ett bord. Välkommen!</p> : null}
@@ -197,7 +197,7 @@ function JoinForm({ onJoined }: { onJoined: (token: string) => void }) {
         </div>
         <p className="guest-notice">
           Vi använder ditt namn och mobilnummer för att hålla din plats i kön och sms:a när bordet är klart.
-          Uppgifterna raderas 30 dagar efter dagen. {config.tenant.name} är personuppgiftsansvarig.{' '}
+          {`Uppgifterna raderas 30 dagar efter dagen. ${config.tenant.name} är personuppgiftsansvarig.`}{' '}
           <Link to="/integritetspolicy" target="_blank" rel="noopener">Läs integritetspolicyn</Link>
         </p>
         {error ? <Bar variant="banner" tone="danger">{error}</Bar> : null}

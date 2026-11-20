@@ -72,7 +72,7 @@ export default function PresentkortPage() {
     return (
       <section className="page-hero page-prose presentkort-page" data-bq-theme="restaurant">
         <h1>Presentkort</h1>
-        <p>{config.tenant.name} säljer inga presentkort på hemsidan just nu.</p>
+        <p>{`${config.tenant.name} säljer inga presentkort på hemsidan just nu.`}</p>
       </section>
     )
   }
@@ -81,7 +81,7 @@ export default function PresentkortPage() {
       <section className="page-hero page-prose presentkort-page" data-bq-theme="restaurant">
         <h1>Presentkort</h1>
         <p role="alert">
-          Vi kunde inte hämta presentkorten just nu. Försök igen, eller ring {info.name}
+          {`Vi kunde inte hämta presentkorten just nu. Försök igen, eller ring ${info.name}`}
           {info.phone ? <> på <PhoneLink phone={info.phone} /></> : null}.
         </p>
         <Button variant="primary" onClick={() => { setLoadFailed(false); setAttempt((n) => n + 1) }}>Försök igen</Button>
@@ -216,7 +216,7 @@ function Details({ offer, onCheckout }: { offer: Offer; onCheckout: (c: Checkout
       <p className="guest-notice">
         Vi använder e-postadresserna för att skicka presentkortet och kvittot. Kontaktuppgifterna tas bort 24 månader
         efter att kortet har använts eller gått ut; beloppen sparas i 7 år enligt bokföringslagen.{' '}
-        {config.tenant.name} är personuppgiftsansvarig.{' '}
+        {`${config.tenant.name} är personuppgiftsansvarig.`}{' '}
         <Link to="/integritetspolicy" target="_blank" rel="noopener">Läs integritetspolicyn</Link>
       </p>
       {error ? <Bar variant="banner" tone="danger">{error}</Bar> : null}

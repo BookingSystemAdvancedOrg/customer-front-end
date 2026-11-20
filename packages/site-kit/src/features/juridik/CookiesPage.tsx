@@ -32,7 +32,7 @@ export default function CookiesPage() {
     <article className="page-prose">
       <h1>Cookies och lagring</h1>
       <MachineTranslationNote />
-      <p className="cell-muted">Gäller {config.tenant.name}s webbplats.</p>
+      <p className="cell-muted">{`Gäller webbplatsen för ${config.tenant.name}.`}</p>
       <p>
         Webbplatsen använder inga cookies för statistik, spårning eller reklam, och inga sådana
         tjänster från tredje part. Det som sparas i din webbläsare behövs för det du själv gör här

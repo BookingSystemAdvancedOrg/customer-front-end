@@ -759,8 +759,7 @@ function PickupOrder() {
       )}
       {ordering?.open && ordering.lastOrderAt && (
         <p className="order-hint">
-          Sista beställning kl. {ordering.lastOrderAt}
-          {ordering.prepMinutes ? ` · klar ca ${ordering.prepMinutes} min efter betalning` : ''}
+          {`Sista beställning kl. ${ordering.lastOrderAt}${ordering.prepMinutes ? ` · klar ca ${ordering.prepMinutes} min efter betalning` : ''}`}
         </p>
       )}
 

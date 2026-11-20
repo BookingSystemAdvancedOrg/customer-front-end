@@ -57,6 +57,15 @@ export const PICKER_LABEL: Record<Lang, string> = {
   fa: 'زبان',
 }
 
+/** Diskret rad i väljaren när en del av sidan inte kunde översättas (handskriven). */
+export const PARTIAL_NOTE: Record<Lang, string> = {
+  sv: 'Delar av sidan kunde inte översättas',
+  en: 'Parts of this page could not be translated',
+  es: 'Algunas partes de esta página no se han podido traducir',
+  ar: 'تعذّرت ترجمة بعض أجزاء هذه الصفحة',
+  fa: 'بخش‌هایی از این صفحه ترجمه نشد',
+}
+
 // Språket just nu, för kod utanför React (Stripe, bokningens språk).
 let active: Lang = DEFAULT_LANG
 

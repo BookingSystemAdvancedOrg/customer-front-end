@@ -1,12 +1,15 @@
 import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { useEffect, useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { getPublicMenuWithCategories } from '../../features/meny/menuApi'
 import { json } from '../../test/siteData'
+import { LanguageContext, useLanguage } from './LanguageContext'
 import { LanguagePicker } from './LanguagePicker'
 import { LanguageProvider } from './LanguageProvider'
 import { PENDING_ATTR, PENDING_MAX_MS } from './document'
 import { MachineTranslationNote } from './MachineTranslationNote'
-import { currentLang } from './languages'
+import { PARTIAL_NOTE, currentLang } from './languages'
 
 function translateFetch() {
   return vi.fn(async (_url: string, init?: RequestInit) => {
@@ -81,7 +84,7 @@ describe('LanguageProvider', () => {
     expect(localStorage.getItem('booqy-lang')).toBe('fa')
   })
 
-  it('never hides the page longer than 1.2 s, even when the API hangs', async () => {
+  it('never hides the page longer than 2.5 s, even when the API hangs', async () => {
     vi.useFakeTimers()
     vi.stubGlobal('fetch', vi.fn(() => new Promise(() => {})))
     localStorage.setItem('booqy-lang', 'es')
@@ -108,7 +111,88 @@ describe('LanguageProvider', () => {
   })
 })
 
+describe('LanguageProvider: no text swapped in front of the guest', () => {
+  function MenuPage() {
+    const [desc, setDesc] = useState<string | null>(null)
+    useEffect(() => {
+      void getPublicMenuWithCategories('loc-1').then((m) => setDesc(m.items[0]?.description ?? null))
+    }, [])
+    return <main>{desc ? <p data-testid="desc">{desc}</p> : <p>Laddar</p>}</main>
+  }
+
+  it('keeps the page hidden until the first menu is fetched and translated, then shows it translated', async () => {
+    const seen: string[] = []
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      if (String(url).endsWith('/translate')) {
+        const body = JSON.parse(String(init?.body)) as { lang: string; texts: string[] }
+        seen.push(...body.texts)
+        await new Promise((r) => setTimeout(r, 30))
+        return json({ lang: body.lang, texts: body.texts.map((t) => `[${body.lang}] ${t}`), partial: false })
+      }
+      await new Promise((r) => setTimeout(r, 400))
+      return json({
+        items: [{ menuItemId: 'm1', name: 'Kebab Shiraz', description: 'Grillad lax med citron', price: 245, category: 'varmratter' }],
+        categories: [{ categoryId: 'varmratter', name: 'Varmrätter' }],
+      })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    localStorage.setItem('booqy-lang', 'en')
+    render(
+      <LanguageProvider>
+        <MenuPage />
+      </LanguageProvider>,
+    )
+    expect(document.documentElement).toHaveAttribute(PENDING_ATTR)
+    expect(document.querySelector('.lang-veil-bar')).not.toBeNull()
+    // Det gästen ser i samma stund som sidan visas.
+    let atReveal: string | null | undefined
+    const observer = new MutationObserver(() => {
+      if (atReveal === undefined && !document.documentElement.hasAttribute(PENDING_ATTR)) {
+        atReveal = screen.queryByTestId('desc')?.textContent ?? null
+      }
+    })
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: [PENDING_ATTR] })
+    await waitFor(() => expect(document.documentElement).not.toHaveAttribute(PENDING_ATTR), { timeout: 2_000 })
+    observer.disconnect()
+    expect(atReveal).toBe('[en] Grillad lax med citron')
+    expect(document.querySelector('.lang-veil-bar')).toBeNull()
+    expect(seen).toContain('Grillad lax med citron')
+    expect(seen).not.toContain('Kebab Shiraz')
+  })
+
+  it('shows a Swedish page normally without waiting for data', () => {
+    vi.stubGlobal('fetch', vi.fn(() => new Promise(() => {})))
+    render(
+      <LanguageProvider>
+        <MenuPage />
+      </LanguageProvider>,
+    )
+    expect(document.documentElement).not.toHaveAttribute(PENDING_ATTR)
+    expect(document.querySelector('.lang-veil-bar')).toBeNull()
+  })
+})
+
 describe('LanguagePicker', () => {
+  function Partial({ lang }: { lang: 'en' | 'sv' }) {
+    const base = useLanguage()
+    return (
+      <LanguageContext.Provider value={{ ...base, lang, incomplete: true }}>
+        <LanguagePicker />
+      </LanguageContext.Provider>
+    )
+  }
+
+  it('shows a small notice when part of the page could not be translated', () => {
+    const { unmount } = render(<Partial lang="en" />)
+    const button = screen.getByRole('combobox', { name: `Language: English. ${PARTIAL_NOTE.en}` })
+    expect(button.querySelector('.lang-picker-partial')).not.toBeNull()
+    expect(button.closest('.lang-picker')).toHaveAttribute('title', PARTIAL_NOTE.en)
+    unmount()
+    // På svenska finns inget att säga.
+    render(<Partial lang="sv" />)
+    expect(screen.getByRole('combobox', { name: 'Språk: Svenska' }).querySelector('.lang-picker-partial')).toBeNull()
+  })
+
   it('shows flag and code, lists every language by its own name and is never translated', async () => {
     vi.stubGlobal('fetch', translateFetch())
     const user = userEvent.setup()

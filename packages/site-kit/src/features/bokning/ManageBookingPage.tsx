@@ -226,8 +226,7 @@ export default function ManageBookingPage() {
           {held && (
             <div className="notice" role="status">
               <p>
-                Kortformuläret kunde inte hämtas just nu. Bordet hålls åt dig till kl{' '}
-                {clockTime(booking.pendingExpiresAt!, booking.timezone)}.
+                {`Kortformuläret kunde inte hämtas just nu. Bordet hålls åt dig till kl ${clockTime(booking.pendingExpiresAt!, booking.timezone)}.`}
               </p>
               <button type="button" className="btn-primary" onClick={() => {
                 setBooking(null)

@@ -16,6 +16,7 @@
 
 import { siteKitConfig } from '../config'
 import { ensureBotCheckToken, isBotChallenge, isBotChecked, SAME_ORIGIN_API } from './botCheck'
+import { trackLoad } from './lang/loads'
 
 /** API:ts bas-URL från sajtens configureSiteKit (läses vid varje anrop). */
 export function apiBaseUrl(): string | undefined {
@@ -157,7 +158,8 @@ async function request<T>(
  * alltid ovanpå apiBaseUrl() - anroparen kan inte peka om mot en annan host.
  */
 export function apiGet<T>(path: string, headers?: Record<string, string>): Promise<T> {
-  return request<T>('GET', path, { headers })
+  // Räknas medan den pågår: sidan hålls dold i första översättningen tills datan finns.
+  return trackLoad(request<T>('GET', path, { headers }))
 }
 
 /** POST mot en publik rutt (bokning / avbokning). */

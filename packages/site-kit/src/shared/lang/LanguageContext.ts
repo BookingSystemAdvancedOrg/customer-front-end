@@ -10,6 +10,8 @@ export interface LanguageContextValue {
   intlLocale: string
   /** Översättningar hämtas just nu. */
   pending: boolean
+  /** Någon text på sidan kunde inte översättas (visas diskret i väljaren). */
+  incomplete: boolean
   /** Lägger till namn som aldrig översätts; returnerar en funktion som tar bort dem. */
   keep: (terms: Iterable<string | null | undefined>) => () => void
 }
@@ -23,6 +25,7 @@ const FALLBACK: LanguageContextValue = {
   dir: sv.dir,
   intlLocale: sv.intlLocale,
   pending: false,
+  incomplete: false,
   keep: () => () => {},
 }
 

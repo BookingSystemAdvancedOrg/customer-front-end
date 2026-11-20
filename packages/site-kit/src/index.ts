@@ -1,5 +1,5 @@
 /**
- * @bookingsystemadvancedorg/site-kit: allt på en restaurangs webbplats som inte är look.
+ * @booqy/site-kit: allt på en restaurangs webbplats som inte är look.
  * API-klienten och vilken restaurang domänen tillhör, flödena (meny, boka
  * bord, beställ och betala, catering, öppettider, juridik), GDPR-rutorna,
  * besöksstatistiken och krokar för egna designer. Sajten (site-template /
@@ -7,7 +7,7 @@
  * färger, typsnitt, hörn och avstånd ur CSS-variabler (styles.css).
  *
  * Kom igång: configureSiteKit({...}) i main.tsx, <SiteProvider> runt appen
- * (inuti en router), importera '@bookingsystemadvancedorg/site-kit/styles.css' före sajtens CSS.
+ * (inuti en router), importera '@booqy/site-kit/styles.css' före sajtens CSS.
  */
 
 /* --- Inställningar ------------------------------------------------------- */
@@ -154,7 +154,8 @@ export { LanguagePicker } from './shared/lang/LanguagePicker'
 export { LanguageProvider } from './shared/lang/LanguageProvider'
 export { useKeepTerms, useLanguage } from './shared/lang/LanguageContext'
 export type { LanguageContextValue } from './shared/lang/LanguageContext'
-export { DEFAULT_LANG, LANGUAGES, PICKER_LABEL, currentLang, isLang } from './shared/lang/languages'
+export { DEFAULT_LANG, LANGUAGES, PARTIAL_NOTE, PICKER_LABEL, currentLang, isLang } from './shared/lang/languages'
+export { prefetchTexts } from './shared/lang/loads'
 export type { Lang, Language } from './shared/lang/languages'
 export { Flag } from './shared/lang/flags'
 export { MachineTranslationNote } from './shared/lang/MachineTranslationNote'

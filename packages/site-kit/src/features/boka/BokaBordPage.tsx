@@ -21,7 +21,6 @@ import {
   createReservation,
   dayMessage,
   formatDate,
-  formatShortDate,
   getAvailability,
   holdTables,
   lengthText,
@@ -43,6 +42,7 @@ import { PICK_EFFECT_MS, playPickEffect } from './pickEffect'
 import { glideTo, prefersReducedMotion } from '../../shared/glide'
 import { FlowSteps } from '../../shared/FlowSteps'
 import { currentLang, language } from '../../shared/lang/languages'
+import { useLanguage } from '../../shared/lang/LanguageContext'
 import { Celebrate } from '../../shared/Celebrate'
 import { GuestDataNotice } from '../../shared/GuestDataNotice'
 import { MarketingConsent, NO_CONSENT, consentFields } from '../../shared/MarketingConsent'
@@ -81,6 +81,14 @@ function guestError(g: Guest): { field: GuestField; message: string } | null {
 
 const FORM_ERROR_ID = 'booking-form-error'
 
+/** Veckodag och månad på datumknapparna i gästens språk ("sön", "nov" / "Sun", "Nov"). */
+function tileParts(date: string, locale: string): { weekday: string; month: string } {
+  const [y, m, d] = date.split('-').map(Number)
+  const at = new Date(Date.UTC(y, m - 1, d))
+  const fmt = (o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(locale, { ...o, timeZone: 'UTC' }).format(at).replace('.', '')
+  return { weekday: fmt({ weekday: 'short' }), month: fmt({ month: 'short' }) }
+}
+
 /** Kvittot som hänger kvar högst upp medan bordet hålls: vilket bord, hur
  * länge till (klockan och en remsa som töms) och Byt bord. Under två
  * minuter blir det rött. */
@@ -93,12 +101,13 @@ function HoldBanner({ secondsLeft, totalSeconds, tables, onChange }: {
   const urgent = secondsLeft <= 120
   const left = totalSeconds > 0 ? Math.min(1, Math.max(0, secondsLeft / totalSeconds)) : 0
   return (
-    <div className={`hold-banner${urgent ? ' urgent' : ''}`} role="timer" aria-label={`Bordet hålls i ${clockText(secondsLeft)}`}>
+    <div className={`hold-banner${urgent ? ' urgent' : ''}`} role="timer" aria-label={`Tid kvar att slutföra bokningen: ${clockText(secondsLeft)}`}>
       <div className="hold-text">
         <span className="hold-kicker">{urgent ? 'Snart släpps bordet' : 'Bordet är ditt'}</span>
+        {/* Hela meningar per textnod (översätts som meningar); klockan för sig. */}
         <span>
-          Bord {tables} hålls åt dig i <strong className="hold-clock">{clockText(secondsLeft)}</strong>
-          {urgent ? ' - slutför bokningen nu.' : '.'}
+          {`Bord ${tables} hålls åt dig:`} <strong className="hold-clock" translate="no">{clockText(secondsLeft)}</strong>
+          {urgent ? ' Slutför bokningen nu.' : null}
         </span>
       </div>
       {onChange && (
@@ -153,6 +162,7 @@ function sameTables(a: TableOption | null, b: TableOption | null): boolean {
  */
 export default function BokaBordPage() {
   const { config, location } = useSite()
+  const { intlLocale } = useLanguage()
   const info = useLocationInfo()
   const enabled = config.tenant.features.reservations
   const maxParty = location.maxPartySizeOnline || DEFAULT_MAX_PARTY
@@ -677,7 +687,7 @@ export default function BokaBordPage() {
           <div><dt>Datum</dt><dd>{formatDate(booked.date)}</dd></div>
           <div><dt>Tid</dt><dd>{booked.startTime}-{booked.endTime}</dd></div>
           {lengthText(booked) && <div><dt>Bokningstid</dt><dd>{lengthText(booked)}</dd></div>}
-          <div><dt>Antal</dt><dd>{booked.partySize} personer</dd></div>
+          <div><dt>Antal</dt><dd>{`${booked.partySize} personer`}</dd></div>
           <div>
             <dt>Bord</dt>
             <dd>{booked.tableIds.map((id) => labels.get(id) ?? id).join(', ')}</dd>
@@ -775,9 +785,14 @@ export default function BokaBordPage() {
                   aria-pressed={d === date}
                   onClick={() => chooseDate(d)}
                 >
-                  <span className="date-tile-wd">{d === today ? 'Idag' : formatShortDate(d).split(' ')[0]}</span>
+                  {/* Förkortningar översätts inte ("sön" blev "så långt som"): Intl i gästens språk. */}
+                  {d === today ? (
+                    <span className="date-tile-wd">Idag</span>
+                  ) : (
+                    <span className="date-tile-wd" translate="no">{tileParts(d, intlLocale).weekday}</span>
+                  )}
                   <span className="date-tile-day">{Number(d.slice(8, 10))}</span>
-                  {mark ? <span className="pill-note">{mark}</span> : <span className="date-tile-mon">{formatShortDate(d).split(' ').slice(2).join(' ') || ''}</span>}
+                  {mark ? <span className="pill-note">{mark}</span> : <span className="date-tile-mon" translate="no">{tileParts(d, intlLocale).month}</span>}
                 </button>
               )
             })}
@@ -924,11 +939,10 @@ export default function BokaBordPage() {
                 <p className="booking-summary-line" aria-live="polite">
                   <span className="summary-kicker">Ditt val</span>
                   <span>
-                    {formatDate(date)} kl {slot.startTime}-{slot.endTime} · {partySize} personer · bord{' '}
-                    {option.tableIds.map((id) => labels.get(id) ?? id).join(' + ')}
+                    {`${formatDate(date)} kl ${slot.startTime}-${slot.endTime} · ${partySize} personer · bord ${option.tableIds.map((id) => labels.get(id) ?? id).join(' + ')}`}
                   </span>
                 </p>
-                {lengthText(slot) && <p className="cell-muted booking-length">Bokningstid: {lengthText(slot)}.</p>}
+                {lengthText(slot) && <p className="cell-muted booking-length">{`Bokningstid: ${lengthText(slot)}.`}</p>}
                 {option.tableIds.length > 1 && (
                   <p className="cell-muted">
                     {`Borden ${option.tableIds.map((id) => labels.get(id) ?? id).join(' och ')} ställs ihop för ert sällskap.`}
@@ -963,11 +977,10 @@ export default function BokaBordPage() {
             <div className="booking-summary-line" aria-live="polite">
               <span className="summary-kicker">Ditt bord</span>
               <span>
-                {formatDate(hold.date)} kl {hold.startTime}-{hold.endTime} · {hold.partySize} personer · bord{' '}
-                {heldTables}
+                {`${formatDate(hold.date)} kl ${hold.startTime}-${hold.endTime} · ${hold.partySize} personer · bord ${heldTables}`}
               </span>
             </div>
-            {lengthText(hold) && <p className="cell-muted booking-length">Bokningstid: {lengthText(hold)}.</p>}
+            {lengthText(hold) && <p className="cell-muted booking-length">{`Bokningstid: ${lengthText(hold)}.`}</p>}
             <div className="booking-grid">
               <label className="booking-field">
                 <span>Namn</span>

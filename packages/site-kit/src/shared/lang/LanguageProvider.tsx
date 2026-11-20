@@ -4,7 +4,8 @@ import type { SiteConfig } from '../site'
 import { LanguageContext } from './LanguageContext'
 import type { LanguageContextValue } from './LanguageContext'
 import { DEFAULT_LANG, isLang, language } from './languages'
-import { PENDING_ATTR, PENDING_MAX_MS, applyDocument, initialLang, setUrl, store } from './document'
+import { PENDING_ATTR, PENDING_MAX_MS, PENDING_QUIET_MS, applyDocument, initialLang, setUrl, store } from './document'
+import { loadsInFlight, setPrefetcher, whenLoadsSettled } from './loads'
 import type { Lang } from './languages'
 import { normaliseKeep, translateTexts } from './translateApi'
 import { Translator } from './translator'
@@ -17,8 +18,11 @@ import { Translator } from './translator'
  * Sätter <html lang> och <html dir> (rtl för arabiska och persiska) redan i
  * första renderingen och startar sidöversättaren (translator.ts) för alla
  * språk utom svenska. Medan första omgången hämtas döljs sidan
- * (html[data-lang-pending]), högst 1,2 s; därefter står svenskan kvar för det
- * som inte hunnit översättas.
+ * (html[data-lang-pending], en tunn laddningsremsa högst upp): tills sidans
+ * första data (meny, catering) är hämtad och översatt, högst 2,5 s; därefter
+ * står svenskan kvar för det som inte hunnit översättas. Data som kommer
+ * senare översätts innan den visas (loads.ts prefetchTexts), så texten byts
+ * inte framför gästen (inget layoutskift).
  *
  * SiteProvider har den inbyggd, så sajterna behöver bara LanguagePicker.
  */
@@ -51,6 +55,7 @@ export function LanguageProvider({
     return first
   })
   const [pending, setPending] = useState(false)
+  const [incomplete, setIncomplete] = useState(false)
 
   // Det översättaren läser vid varje anrop (restaurangen och extra namn).
   const configRef = useRef(config)
@@ -83,38 +88,59 @@ export function LanguageProvider({
         },
         keep: keepList,
         onBusy: setPending,
+        onIncomplete: setIncomplete,
       })
     }
     const t = translatorRef.current
     t.start(lang)
     t.setLang(lang)
     applyDocument(lang)
+    setPrefetcher(lang === DEFAULT_LANG ? null : (texts) => t.prefetch(texts))
     const html = document.documentElement
     if (lang === DEFAULT_LANG || !ready) {
       html.removeAttribute(PENDING_ATTR)
       return
     }
     html.setAttribute(PENDING_ATTR, '')
+    // Laddningsremsan ligger utanför #root (som är dold) och utanför React.
+    const bar = document.createElement('div')
+    bar.className = 'lang-veil-bar'
+    bar.setAttribute('aria-hidden', 'true')
+    document.body.append(bar)
     let done = false
     const reveal = () => {
       if (done) return
       done = true
       html.removeAttribute(PENDING_ATTR)
+      bar.remove()
     }
     const timer = window.setTimeout(reveal, PENDING_MAX_MS)
-    // Microtask: låt React-uppdateringar i samma omgång komma in i kön först.
-    void Promise.resolve()
-      .then(() => t.whenIdle())
-      .then(reveal)
+    const pause = (ms: number) => new Promise<void>((r) => window.setTimeout(r, ms))
+    // Sidan visas när översättaren och sidans hämtningar (meny, catering och
+    // deras översättning) varit tysta en stund, så att första datan inte byter
+    // språk framför gästen. Högst PENDING_MAX_MS.
+    void (async () => {
+      await Promise.resolve()
+      while (!done) {
+        await t.whenIdle()
+        await whenLoadsSettled()
+        await pause(PENDING_QUIET_MS)
+        if (done) return
+        if (!t.busyNow() && loadsInFlight() === 0) break
+      }
+      reveal()
+    })()
     return () => {
       window.clearTimeout(timer)
       done = true
+      bar.remove()
     }
   }, [lang, ready])
 
   useEffect(
     () => () => {
       translatorRef.current?.stop()
+      setPrefetcher(null)
       document.documentElement.removeAttribute(PENDING_ATTR)
     },
     [],
@@ -137,8 +163,8 @@ export function LanguageProvider({
 
   const value = useMemo<LanguageContextValue>(() => {
     const l = language(lang)
-    return { lang, setLang, dir: l.dir, intlLocale: l.intlLocale, pending, keep }
-  }, [lang, setLang, pending, keep])
+    return { lang, setLang, dir: l.dir, intlLocale: l.intlLocale, pending, incomplete, keep }
+  }, [lang, setLang, pending, incomplete, keep])
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>
 }

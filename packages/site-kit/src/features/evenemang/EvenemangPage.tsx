@@ -37,7 +37,7 @@ export default function EvenemangPage() {
         </>
       ) : null}
       {state.kind === 'ready' && state.events.length === 0 ? (
-        <p>{config.tenant.name} har inga evenemang till salu just nu. Titta in igen snart.</p>
+        <p>{`${config.tenant.name} har inga evenemang till salu just nu. Titta in igen snart.`}</p>
       ) : null}
       {state.kind === 'ready' && state.events.length > 0 ? (
         <>

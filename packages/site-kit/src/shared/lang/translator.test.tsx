@@ -2,7 +2,7 @@ import { act, cleanup, render, screen } from '@testing-library/react'
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { Translator, splitLong, worthTranslating } from './translator'
+import { Translator, fill, prepare, splitLong, worthTranslating } from './translator'
 import type { TranslateFn } from './translator'
 
 const fake = (): TranslateFn & { mock: { calls: unknown[][] } } =>
@@ -168,5 +168,134 @@ describe('Translator', () => {
     start(translate)
     await settle()
     expect(translate.mock.calls.map((c) => (c[1] as string[]).length)).toEqual([100, 50])
+  })
+})
+
+describe('prepare and fill', () => {
+  it('turns clock times into fixed slots and puts them back', () => {
+    const a = prepare('Bordet hålls i 14:59')
+    const b = prepare('Bordet hålls i 03:12')
+    expect(a.text).toBe(b.text)
+    expect(a.text).toBe('Bordet hålls i 10:10')
+    expect(fill('The table is held for 10:10', a.slots)).toBe('The table is held for 14:59')
+    expect(prepare('Öppet 18:00-22:00').slots.map((s) => s[1])).toEqual(['18:00', '22:00'])
+  })
+
+  it('drops "kl" before a time and at the end of a text piece', () => {
+    expect(prepare('Vi ses torsdag kl 18:00. Välkommen!').text).toBe('Vi ses torsdag 10:10. Välkommen!')
+    expect(prepare('Ditt bord är klart kl. 19:30!').text).toBe('Ditt bord är klart 10:10!')
+    expect(prepare('Bordet hålls åt dig till kl').text).toBe('Bordet hålls åt dig till')
+    expect(prepare('kl').text).toBe('')
+    expect(prepare('Klart').text).toBe('Klart')
+    expect(prepare('Fyll i alla fält').text).toBe('Fyll i alla fält')
+  })
+
+  it('leaves amounts, years and dates alone', () => {
+    expect(prepare('Totalt 1.245 kr').slots).toEqual([])
+    expect(prepare('Bokad 2026-11-20').slots).toEqual([])
+  })
+})
+
+describe('Translator: sentences, attributes and the head', () => {
+  it('translates a countdown as one string and keeps the live number', async () => {
+    document.body.innerHTML = '<div role="timer" aria-label="Bordet hålls i 14:59"></div>'
+    const translate = fake()
+    start(translate)
+    await settle()
+    const timer = document.querySelector('[role=timer]')!
+    expect(timer.getAttribute('aria-label')).toBe('[en] Bordet hålls i 14:59')
+    act(() => timer.setAttribute('aria-label', 'Bordet hålls i 14:58'))
+    await settle()
+    expect(timer.getAttribute('aria-label')).toBe('[en] Bordet hålls i 14:58')
+    expect(translate.mock.calls.flatMap((c) => c[1] as string[])).toEqual(['Bordet hålls i 10:10'])
+  })
+
+  it('removes a lone "kl" between a date and a time instead of sending it', async () => {
+    document.body.innerHTML = '<p><span translate="no">20 nov</span> kl <span translate="no">18:00</span></p>'
+    const translate = fake()
+    start(translate)
+    await settle()
+    expect(document.querySelector('p')!.textContent).toBe('20 nov 18:00')
+    expect(translate).not.toHaveBeenCalled()
+  })
+
+  it('translates a textarea placeholder and an iframe title but never their content or payment frames', async () => {
+    document.body.innerHTML = `
+      <textarea placeholder="Allergier, barnstol, firande">Gästens egen text</textarea>
+      <iframe title="Karta: Anar"></iframe>
+      <iframe title="Säker betalning" name="__privateStripeFrame1"></iframe>`
+    const translate = fake()
+    start(translate)
+    await settle()
+    expect(document.querySelector('textarea')!.getAttribute('placeholder')).toBe('[en] Allergier, barnstol, firande')
+    expect(document.querySelector('textarea')!.textContent).toBe('Gästens egen text')
+    const [map, stripe] = document.querySelectorAll('iframe')
+    expect(map.getAttribute('title')).toBe('[en] Karta: Anar')
+    expect(stripe.getAttribute('title')).toBe('Säker betalning')
+    // Ett textfält som kommer senare (nästa steg i bokningen) får också sin platshållare.
+    const later = document.createElement('textarea')
+    later.setAttribute('placeholder', 'Meddelande')
+    act(() => document.body.append(later))
+    await settle()
+    expect(later.getAttribute('placeholder')).toBe('[en] Meddelande')
+  })
+
+  it("translates the page description in <head> and restores it in Swedish", async () => {
+    const meta = document.createElement('meta')
+    meta.setAttribute('name', 'description')
+    meta.setAttribute('content', 'Persisk mat i Stockholm')
+    const og = document.createElement('meta')
+    og.setAttribute('property', 'og:image')
+    og.setAttribute('content', 'https://example.se/bild.jpg')
+    document.head.append(meta, og)
+    try {
+      const translate = fake()
+      const t = start(translate)
+      await settle()
+      expect(meta.getAttribute('content')).toBe('[en] Persisk mat i Stockholm')
+      expect(og.getAttribute('content')).toBe('https://example.se/bild.jpg')
+      act(() => t.setLang('sv'))
+      expect(meta.getAttribute('content')).toBe('Persisk mat i Stockholm')
+    } finally {
+      meta.remove()
+      og.remove()
+    }
+  })
+
+  it('reports when part of the page could not be translated', async () => {
+    document.body.innerHTML = '<p>Kontakt</p><p>Meny</p>'
+    const translate = vi.fn<TranslateFn>(async (_l, texts) => ({
+      texts: texts.map((t) => (t === 'Meny' ? 'Menu' : t)),
+      partial: true,
+    }))
+    const onIncomplete = vi.fn()
+    current = new Translator({ translate, debounceMs: 0, retryMs: 10, onIncomplete })
+    current.start('en')
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 60))
+      await current?.whenIdle()
+    })
+    expect(document.body.textContent).toBe('KontaktMenu')
+    expect(onIncomplete).toHaveBeenLastCalledWith(true)
+    act(() => current!.setLang('sv'))
+    expect(onIncomplete).toHaveBeenLastCalledWith(false)
+  })
+
+  it('translates data before it is inserted, so new nodes are written before paint', async () => {
+    const translate = fake()
+    const t = start(translate)
+    await act(async () => {
+      await t.prefetch(['  Grillad lax med citron ', 'Varmrätter', '245 kr'])
+    })
+    expect(translate.mock.calls.flatMap((c) => c[1] as string[])).toEqual(['Grillad lax med citron', 'Varmrätter'])
+    const p = document.createElement('p')
+    p.textContent = 'Grillad lax med citron'
+    document.body.append(p)
+    // Observerns callback (en mikrouppgift) skriver träffen; inget nytt anrop.
+    await act(async () => {
+      await Promise.resolve()
+    })
+    expect(p.textContent).toBe('[en] Grillad lax med citron')
+    expect(translate).toHaveBeenCalledTimes(1)
   })
 })
