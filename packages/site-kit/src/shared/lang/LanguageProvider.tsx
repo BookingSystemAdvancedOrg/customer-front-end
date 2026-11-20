@@ -5,7 +5,7 @@ import { LanguageContext } from './LanguageContext'
 import type { LanguageContextValue } from './LanguageContext'
 import { DEFAULT_LANG, isLang, language } from './languages'
 import { PENDING_ATTR, PENDING_MAX_MS, PENDING_QUIET_MS, applyDocument, initialLang, setUrl, store } from './document'
-import { loadsInFlight, setPrefetcher, whenLoadsSettled } from './loads'
+import { loadsInFlight, pageStillLoading, setPrefetcher, whenLoadsSettled } from './loads'
 import type { Lang } from './languages'
 import { normaliseKeep, translateTexts } from './translateApi'
 import { Translator } from './translator'
@@ -118,7 +118,8 @@ export function LanguageProvider({
     const pause = (ms: number) => new Promise<void>((r) => window.setTimeout(r, ms))
     // Sidan visas när översättaren och sidans hämtningar (meny, catering och
     // deras översättning) varit tysta en stund, så att första datan inte byter
-    // språk framför gästen. Högst PENDING_MAX_MS.
+    // språk framför gästen, och inte medan ett skelett visas (sidans kod eller
+    // data hämtas ännu). Högst PENDING_MAX_MS.
     void (async () => {
       await Promise.resolve()
       while (!done) {
@@ -126,7 +127,7 @@ export function LanguageProvider({
         await whenLoadsSettled()
         await pause(PENDING_QUIET_MS)
         if (done) return
-        if (!t.busyNow() && loadsInFlight() === 0) break
+        if (!t.busyNow() && loadsInFlight() === 0 && !pageStillLoading()) break
       }
       reveal()
     })()

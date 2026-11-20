@@ -160,6 +160,52 @@ describe('LanguageProvider: no text swapped in front of the guest', () => {
     expect(seen).not.toContain('Kebab Shiraz')
   })
 
+  it('keeps the page hidden while a skeleton shows (slow lazy chunk, cold cache), not only while a call is in flight', async () => {
+    // Skelettet är redan översatt och inget anrop pågår: förr visades sidan
+    // här, och sidans första text kom sedan på svenska och byttes framför gästen.
+    const fetchMock = translateFetch()
+    vi.stubGlobal('fetch', fetchMock)
+    localStorage.setItem('booqy-lang', 'es')
+    function LazyPage() {
+      const [loaded, setLoaded] = useState(false)
+      useEffect(() => {
+        const t = setTimeout(() => setLoaded(true), 500)
+        return () => clearTimeout(t)
+      }, [])
+      return loaded ? (
+        <main>
+          <h1>Boka bord</h1>
+        </main>
+      ) : (
+        <div className="skel" role="status" aria-label="Hämtar sidan" aria-busy="true" />
+      )
+    }
+    const root = document.createElement('div')
+    root.id = 'root'
+    document.body.append(root)
+    try {
+      render(
+        <LanguageProvider>
+          <LazyPage />
+        </LanguageProvider>,
+        { container: root },
+      )
+      let skeletonAtReveal: boolean | undefined
+      const observer = new MutationObserver(() => {
+        if (skeletonAtReveal === undefined && !document.documentElement.hasAttribute(PENDING_ATTR)) {
+          skeletonAtReveal = document.querySelector('#root .skel') !== null
+        }
+      })
+      observer.observe(document.documentElement, { attributes: true, attributeFilter: [PENDING_ATTR] })
+      await waitFor(() => expect(document.documentElement).not.toHaveAttribute(PENDING_ATTR), { timeout: 2_000 })
+      observer.disconnect()
+      expect(skeletonAtReveal).toBe(false)
+    } finally {
+      cleanup()
+      root.remove()
+    }
+  })
+
   it('shows a Swedish page normally without waiting for data', () => {
     vi.stubGlobal('fetch', vi.fn(() => new Promise(() => {})))
     render(

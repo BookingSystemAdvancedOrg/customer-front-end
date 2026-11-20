@@ -37,6 +37,18 @@ export function loadsInFlight(): number {
   return inflight
 }
 
+/**
+ * Sidan visar fortfarande en laddningsskelett (kitets SkelPage, sajternas
+ * SkelCard): sidans kod (lazy-bit) eller data hämtas, och inget anrop är
+ * räknat än. Utan den här kollen kunde sidan visas i den tysta stunden
+ * mellan skelettet och första anropet (kall cache, långsam lazy-bit): sidans
+ * första text kom då på svenska och byttes framför gästen (layoutskift).
+ */
+export function pageStillLoading(): boolean {
+  if (typeof document === 'undefined') return false
+  return document.querySelector('#root .skel[aria-busy="true"]') !== null
+}
+
 /** Löser när inga anrop pågår. */
 export function whenLoadsSettled(): Promise<void> {
   if (inflight === 0) return Promise.resolve()
