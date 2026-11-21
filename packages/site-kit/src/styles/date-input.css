@@ -45,6 +45,26 @@
   opacity: 0.4;
 }
 
+/* Pekskärmar: kalenderknappen är minst 44 x 44 px (samma ikon, större
+   klickyta). Fältet är minst 44 px högt, så knappen ligger kvar inuti. */
+@media (pointer: coarse), (max-width: 1023px) {
+  .date-input > input {
+    min-height: 44px;
+    padding-inline-end: 48px !important;
+  }
+
+  .date-input-btn {
+    inset-inline-end: 0;
+    width: 44px;
+    height: 44px;
+  }
+
+  .date-cal-nav {
+    width: 44px;
+    height: 44px;
+  }
+}
+
 .time-input {
   width: 6.5em;
   font-variant-numeric: tabular-nums;
