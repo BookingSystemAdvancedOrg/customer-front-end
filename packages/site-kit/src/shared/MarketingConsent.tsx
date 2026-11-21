@@ -58,13 +58,15 @@ export function MarketingConsent({ value, onChange }: { value: ConsentChoice; on
   const current = choiceOf(value.channels)
   const offered = mc ? mc.channels.map((c) => c.value) : (['email'] as ConsentChannel[])
   const choices = CHOICES.filter((c) => c.channels.every((ch) => offered.includes(ch)))
+  // aria-controls måste peka på ett element som finns, så bara när kanalvalet visas.
+  const showChannels = Boolean(mc) && value.checked && choices.length > 1
   return (
     <div className="consent-box">
       <label className="booking-check">
         <input
           type="checkbox"
           checked={value.checked}
-          aria-controls={mc ? `${id}-channels` : undefined}
+          aria-controls={showChannels ? `${id}-channels` : undefined}
           onChange={(e) => onChange({ ...value, checked: e.target.checked })}
         />
         <span>{label}</span>
@@ -75,7 +77,7 @@ export function MarketingConsent({ value, onChange }: { value: ConsentChoice; on
           Läs mer i integritetspolicyn
         </Link>
       </p>
-      {mc && value.checked && choices.length > 1 && (
+      {mc && showChannels && (
         <fieldset className="consent-channels" id={`${id}-channels`}>
           <legend>{mc.channelQuestion}</legend>
           <div className="consent-options">

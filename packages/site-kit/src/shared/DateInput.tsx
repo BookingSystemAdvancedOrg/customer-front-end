@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
+import { currentLang, language } from './lang/languages'
 
 /**
  * Datum och tid i svenskt format oavsett webbläsarens språk: DD/MM/ÅÅÅÅ och
@@ -26,6 +27,19 @@ type Common = {
 
 const MONTHS = ['januari', 'februari', 'mars', 'april', 'maj', 'juni', 'juli', 'augusti', 'september', 'oktober', 'november', 'december']
 const WEEKDAYS = ['Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör', 'Sön']
+
+/**
+ * Veckodagarna i sajtens språk (Intl, translate="no"). Översättaren skrev
+ * annars hela namn på arabiska och persiska, som inte får plats i sju
+ * kolumner; där blir det en bokstav per dag, i övriga språk tre.
+ */
+function weekdays(): string[] {
+  const lang = language(currentLang())
+  if (lang.code === 'sv') return WEEKDAYS
+  const fmt = new Intl.DateTimeFormat(lang.intlLocale, { weekday: lang.dir === 'rtl' ? 'narrow' : 'short', timeZone: 'UTC' })
+  // 2024-01-01 är en måndag.
+  return Array.from({ length: 7 }, (_, i) => fmt.format(new Date(Date.UTC(2024, 0, 1 + i, 12))))
+}
 
 const pad = (n: number) => String(n).padStart(2, '0')
 const isoOf = (y: number, m: number, d: number) => `${y}-${pad(m)}-${pad(d)}`
@@ -386,8 +400,8 @@ function Calendar({
         </button>
       </div>
       <div className="date-cal-grid">
-        {WEEKDAYS.map((w) => (
-          <span key={w} className="date-cal-wd" aria-hidden="true">
+        {weekdays().map((w, i) => (
+          <span key={i} className="date-cal-wd" aria-hidden="true" translate="no">
             {w}
           </span>
         ))}

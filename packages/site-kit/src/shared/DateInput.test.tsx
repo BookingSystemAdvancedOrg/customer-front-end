@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { useState } from 'react'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
+import { setCurrentLang } from './lang/languages'
 import { DateInput, formatDate, parseDate } from './DateInput'
 
 function Harness() {
@@ -15,6 +16,25 @@ function Harness() {
 }
 
 describe('DateInput', () => {
+  afterEach(() => setCurrentLang('sv'))
+
+  it('writes the weekdays in the site language, short enough for seven columns, never machine-translated', () => {
+    render(<Harness />)
+    fireEvent.click(screen.getByRole('button', { name: 'Öppna kalender' }))
+    const heads = () => Array.from(document.querySelectorAll('.date-cal-wd'))
+    expect(heads().map((h) => h.textContent)).toEqual(['Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör', 'Sön'])
+    expect(heads().every((h) => h.getAttribute('translate') === 'no')).toBe(true)
+    fireEvent.keyDown(document.activeElement!, { key: 'Escape' })
+    for (const [lang, first] of [['ar', 'ن'], ['fa', 'د'], ['en', 'Mon']] as const) {
+      setCurrentLang(lang)
+      fireEvent.click(screen.getByRole('button', { name: 'Öppna kalender' }))
+      expect(heads()).toHaveLength(7)
+      expect(heads()[0].textContent).toBe(first)
+      expect(heads().every((h) => (h.textContent ?? '').length <= 3)).toBe(true)
+      fireEvent.keyDown(document.activeElement!, { key: 'Escape' })
+    }
+  })
+
   it('parses and formats Swedish dates', () => {
     expect(parseDate('22/10/2026')).toBe('2026-10-22')
     expect(parseDate('31/02/2026')).toBeNull()

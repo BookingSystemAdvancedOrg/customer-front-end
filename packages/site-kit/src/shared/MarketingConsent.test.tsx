@@ -55,6 +55,30 @@ describe('MarketingConsent', () => {
     expect(last).toEqual({ checked: true, channels: ['sms'] })
   })
 
+  it('points aria-controls only at a channel group that is on the page', async () => {
+    const user = userEvent.setup()
+    const { container } = render(<WithSite config={config(PRIVACY)}><Harness /></WithSite>)
+    const box = screen.getByRole('checkbox')
+    expect(box).not.toHaveAttribute('aria-controls')
+    await user.click(box)
+    const controls = box.getAttribute('aria-controls')
+    expect(controls).toBeTruthy()
+    expect(container.ownerDocument.getElementById(controls!)).toBe(screen.getByRole('group', { name: 'Hur vill du få dem?' }))
+    await user.click(box)
+    expect(box).not.toHaveAttribute('aria-controls')
+  })
+
+  it('has no aria-controls with a single channel or the old e-mail box', async () => {
+    const user = userEvent.setup()
+    const emailOnly = { ...PRIVACY, marketingConsent: { ...PRIVACY.marketingConsent!, channels: [{ value: 'email' as const, label: 'E-post' }] } }
+    const { unmount } = render(<WithSite config={config(emailOnly)}><Harness /></WithSite>)
+    await user.click(screen.getByRole('checkbox'))
+    expect(screen.getByRole('checkbox')).not.toHaveAttribute('aria-controls')
+    unmount()
+    render(<WithSite config={config(undefined, true)}><Harness /></WithSite>)
+    expect(screen.getByRole('checkbox')).not.toHaveAttribute('aria-controls')
+  })
+
   it('offers e-mail only without a choice when the server offers one channel, and links the policy', async () => {
     const user = userEvent.setup()
     const emailOnly = { ...PRIVACY, marketingConsent: { ...PRIVACY.marketingConsent!, channels: [{ value: 'email' as const, label: 'E-post' }] } }
