@@ -139,13 +139,15 @@
 
 .date-cal-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 2px;
 }
 
 .date-cal-wd {
+  overflow: hidden;
   padding: 4px 0;
   text-align: center;
+  white-space: nowrap;
   color: var(--muted);
   font: 600 11px/1 var(--mono, var(--font));
 }
