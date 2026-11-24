@@ -210,7 +210,7 @@ const ERRORS: Record<string, string> = {
   changed_retry: 'Biljetterna har ändrats sedan sidan laddades. Kontrollera valet och försök igen.',
   too_many_tickets: 'Det är för många biljetter i en beställning. Välj färre.',
   invalid_email: 'Kontrollera e-postadressen.',
-  stripe_unavailable: 'Kortbetalningen svarar inte just nu. Försök igen om en stund.',
+  stripe_unavailable: 'Betalningen svarar inte just nu. Försök igen om en stund.',
   no_stripe_account: 'Restaurangen kan inte ta emot kortbetalningar just nu.',
   too_many_requests: 'För många försök. Vänta en stund och försök igen.',
   transfer_closed: 'Biljetten kan inte ges bort eller säljas längre. Det går fram till två timmar före start.',

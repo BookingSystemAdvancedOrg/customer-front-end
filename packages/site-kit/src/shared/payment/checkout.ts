@@ -35,3 +35,34 @@ export function paymentElementOptions(phone = phoneLayout()): StripePaymentEleme
     wallets: { applePay: 'auto', googlePay: 'auto', link: 'never' },
   }
 }
+
+/**
+ * Betalsätten Booqy erbjuder gästen: kort (Apple Pay och Google Pay är
+ * kortplånböcker), Swish och Klarna. Allt annat ett konto slår på (Amazon
+ * Pay, Link ...) stänger servern av och sajten nämner det aldrig.
+ */
+export type OfferedMethod = 'card' | 'swish' | 'klarna'
+
+const OFFERED: readonly OfferedMethod[] = ['card', 'swish', 'klarna']
+
+/**
+ * Serverns `methods` (Stripes typer på just den här betalningen) som
+ * de betalsätt texten får nämna. null = okänt (äldre server, annan form):
+ * då nämner texten inget betalsätt.
+ */
+export function offeredMethods(raw: unknown): OfferedMethod[] | null {
+  if (!Array.isArray(raw)) return null
+  return OFFERED.filter((method) => raw.includes(method))
+}
+
+/**
+ * Meningen om att gästen kan skickas vidare för att godkänna: Swish och
+ * Klarna bara när betalningen erbjuder dem, annars en mening utan betalsätt
+ * (även kortets 3-D Secure kan skicka vidare).
+ */
+export function redirectNote(methods: readonly OfferedMethod[] | null | undefined): string {
+  const names = [methods?.includes('swish') && 'Swish', methods?.includes('klarna') && 'Klarna'].filter(Boolean)
+  return names.length
+    ? `Med ${names.join(' eller ')} kan du skickas vidare en kort stund för att godkänna.`
+    : 'Ibland skickas du vidare en kort stund för att godkänna betalningen.'
+}

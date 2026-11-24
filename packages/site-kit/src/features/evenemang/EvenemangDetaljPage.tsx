@@ -114,7 +114,7 @@ export default function EvenemangDetaljPage() {
       {image ? <img className="evenemang-hero-img" src={image.src} alt={image.alt} width={1200} height={675} /> : null}
       {ev.description ? <p className="evenemang-description">{ev.description}</p> : null}
       {returned.failed ? (
-        <Bar variant="banner" tone="danger">Betalningen gick inte igenom och inget har dragits. Försök igen, gärna med ett annat kort.</Bar>
+        <Bar variant="banner" tone="danger">Betalningen gick inte igenom och inget har dragits. Försök igen, gärna med ett annat betalsätt.</Bar>
       ) : null}
       <Purchase event={ev} onPaid={setPaid} onStale={reload} />
       {ev.refundPolicy ? (
@@ -383,14 +383,14 @@ function PayStep({ checkout: held, onPaid }: { checkout: TicketCheckout; onPaid:
   const fonts = useMemo(() => paymentFonts(), [])
   const appearance = useMemo(() => paymentAppearance(theme), [theme])
   if (!stripePromise || !held.clientSecret) {
-    return <Bar variant="banner" tone="danger">Kortbetalningen är inte tillgänglig just nu.</Bar>
+    return <Bar variant="banner" tone="danger">Betalningen är inte tillgänglig just nu.</Bar>
   }
   return (
     <>
       <Elements key={theme} stripe={stripePromise} options={{ clientSecret: held.clientSecret, appearance, fonts, loader: 'never' }}>
         <PayForm amountSek={held.amountSek} onPaid={onPaid} />
       </Elements>
-      <SecureNote>Kortuppgifterna går direkt till Stripe och sparas aldrig hos oss.</SecureNote>
+      <SecureNote />
     </>
   )
 }
@@ -418,7 +418,7 @@ function PayForm({ amountSek, onPaid }: { amountSek: number; onPaid: (status: Pa
         onPaid(status)
         return
       }
-      setError('Betalningen gick inte igenom. Försök igen, gärna med ett annat kort.')
+      setError('Betalningen gick inte igenom. Försök igen, gärna med ett annat betalsätt.')
     } catch {
       setError('Betalningen gick inte att slutföra. Kontrollera anslutningen och försök igen.')
     } finally {

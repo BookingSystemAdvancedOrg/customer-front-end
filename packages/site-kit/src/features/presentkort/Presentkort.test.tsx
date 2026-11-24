@@ -12,7 +12,14 @@ vi.mock('./giftApi', async (orig) => ({
   ...(await orig<typeof import('./giftApi')>()),
   getOffer: vi.fn(), startCheckout: vi.fn(), checkBalance: vi.fn(),
 }))
-vi.mock('../../shared/payment/stripe', () => ({ stripeFor: () => null }))
+const pay = vi.hoisted(() => ({ stripe: null as Promise<object> | null, confirmPayment: vi.fn() }))
+vi.mock('../../shared/payment/stripe', () => ({ stripeFor: () => pay.stripe }))
+vi.mock('@stripe/react-stripe-js', () => ({
+  Elements: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  PaymentElement: () => <div>Stripes betalformulär</div>,
+  useStripe: () => ({ confirmPayment: pay.confirmPayment }),
+  useElements: () => ({}),
+}))
 
 const FEATURES = { reservations: true, ordering: true, catering: false, terminal: false, giftCards: true }
 const site = (ui: React.ReactNode, features: Record<string, boolean> = FEATURES) =>
@@ -20,6 +27,7 @@ const site = (ui: React.ReactNode, features: Record<string, boolean> = FEATURES)
 
 beforeEach(() => {
   vi.clearAllMocks()
+  pay.stripe = null
   window.sessionStorage.clear()
   window.history.replaceState(null, '', '/presentkort')
   vi.mocked(api.getOffer).mockResolvedValue({ amountsSek: [250, 500], customMinSek: 100, customMaxSek: 5000, validityMonths: 24 })
@@ -38,7 +46,21 @@ describe('PresentkortPage', () => {
     const [, body] = vi.mocked(api.startCheckout).mock.calls[0]
     expect(body).toMatchObject({ amountSek: 500, buyerEmail: 'kopare@example.se', recipientEmail: 'sara@example.se' })
     expect(window.sessionStorage.getItem('booqy-giftcard-purchase')).toContain(body.purchaseId)
-    expect(await screen.findByText('Kortbetalningen är inte tillgänglig just nu.')).toBeInTheDocument()
+    expect(await screen.findByText('Betalningen är inte tillgänglig just nu.')).toBeInTheDocument()
+  })
+
+  it('names no single method on the pay step: Swish and Klarna can be offered too', async () => {
+    pay.stripe = Promise.resolve({})
+    pay.confirmPayment.mockResolvedValue({ paymentIntent: { status: 'requires_payment_method' } })
+    vi.mocked(api.startCheckout).mockResolvedValue({ clientSecret: 'pi_1_secret', amountSek: 250, expiresAt: '2028-11-04T12:00:00Z', stripeAccount: 'acct_1' })
+    render(<WithSite config={{ ...siteConfig({ features: FEATURES }), stripe: { publishableKey: 'pk_test_1', accountId: null } }}><PresentkortPage /></WithSite>)
+    fireEvent.change(await screen.findByLabelText(/Din e-post/), { target: { value: 'kopare@example.se' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Till betalning, 250 kr' }))
+    expect(await screen.findByText('Betalningen sker hos Stripe. Dina betaluppgifter går direkt dit och sparas aldrig hos oss.')).toBeInTheDocument()
+    expect(screen.queryByText(/Kortuppgifterna/)).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Betala 250 kr' }))
+    expect(await screen.findByText('Betalningen gick inte igenom. Försök igen, gärna med ett annat betalsätt.')).toBeInTheDocument()
+    expect(pay.confirmPayment).toHaveBeenCalledWith(expect.objectContaining({ redirect: 'if_required' }))
   })
 
   it('shows the custom amount field only for Eget belopp and refuses an amount outside the limits', async () => {
@@ -81,6 +103,7 @@ describe('PresentkortPage', () => {
     window.sessionStorage.setItem('booqy-giftcard-purchase', JSON.stringify({ purchaseId: 'p', amountSek: 250, expiresAt: '2028-11-04T12:00:00Z' }))
     site(<PresentkortPage />)
     expect(await screen.findByRole('alert')).toHaveTextContent('Betalningen gick inte igenom')
+    expect(screen.getByRole('alert')).toHaveTextContent('Försök igen, gärna med ett annat betalsätt.')
     expect(screen.queryByText('Tack för köpet!')).not.toBeInTheDocument()
     expect(window.location.search).toBe('')
   })

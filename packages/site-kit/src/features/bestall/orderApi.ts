@@ -68,6 +68,8 @@ export interface OrderCreated {
   clientSecret?: string
   /** Restaurangens Stripe-konto (acct_...), saknas som ovan. */
   stripeAccount?: string
+  /** Betalsätten Stripe erbjuder i sessionen ('card', 'swish', 'klarna'); saknas = okänt, texten nämner inget betalsätt. */
+  methods?: string[]
   statusToken: string
   totalAmount: number
   /** Presentkortet som drogs: sista fyra tecknen och beloppet i öre. */
