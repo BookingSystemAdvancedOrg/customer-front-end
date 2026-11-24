@@ -515,7 +515,7 @@ export default function CateringPage() {
             </div>
             <p className="cell-muted">
               {form.customerType === 'private'
-                ? 'Du betalar med kort eller Swish efter att du godkänt offerten.'
+                ? 'Du betalar online efter att du godkänt offerten.'
                 : `Ni får en faktura med ${settings.paymentTermsDays} dagars betalningsvillkor.`}
             </p>
             <div className="booking-grid">

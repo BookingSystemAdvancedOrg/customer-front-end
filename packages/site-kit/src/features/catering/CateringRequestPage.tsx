@@ -19,6 +19,8 @@ import {
 import type { CateringPayment, GuestRequest, Line, Totals } from './cateringApi'
 import { useSite } from '../../shared/SiteContext'
 import { PaidStamp, PaymentTicket } from '../../shared/payment/PaymentTicket'
+import type { PayOutcome } from '../../shared/payment/checkout'
+import { PaidWithNote } from '../../shared/payment/PaidWithNote'
 import { PhoneLink } from '../../shared/PhoneLink'
 import { BackButton } from '../../shared/BackButton'
 
@@ -27,6 +29,8 @@ export const SIGN_POLL_MS = 1_000
 /** Tillbaka från signeringstjänsten: så många statusfrågor, med så långt mellanrum. */
 export const RETURN_CHECKS = 5
 export const RETURN_CHECK_MS = 2_000
+/** Så länge sidan väntar på att Stripe bekräftar betalningen innan Betala visas igen. */
+export const PAYMENT_WAIT_MS = 3 * 60_000
 
 const HEADLINE: Record<GuestRequest['status'], string> = {
   requested: 'Tack! Din förfrågan är skickad.',
@@ -98,11 +102,19 @@ export default function CateringRequestPage() {
   const [returnCheck, setReturnCheck] = useState(0)
   const [signPending, setSignPending] = useState(false)
   // Betald här på sidan (eller tillbaka från Swish/Klarna): Stripes webhook bekräftar strax.
-  const [justPaid, setJustPaid] = useState(false)
-  const awaitingConfirm = (justPaid || params.get('betalning') === 'klar') && request?.status === 'signed'
-  const paid = useCallback(() => {
+  // 'paid' bara när Stripe sagt betald; tillbaka från en omdirigering vet sidan inte än.
+  const [justPaid, setJustPaid] = useState<PayOutcome | null>(null)
+  // Efter PAYMENT_WAIT_MS utan bekräftelse visas Betala igen (en nekad
+  // Swish- eller Klarnabetalning kommer också tillbaka med betalning=klar).
+  const [waitedOut, setWaitedOut] = useState(false)
+  const waitStart = useRef<number | null>(null)
+  const awaitingConfirm = (justPaid !== null || params.get('betalning') === 'klar') && request?.status === 'signed'
+    && !waitedOut
+  const paid = useCallback((outcome: PayOutcome) => {
     setPayment(null)
-    setJustPaid(true)
+    setJustPaid(outcome)
+    setWaitedOut(false)
+    waitStart.current = null
   }, [])
 
   const load = useCallback(async () => {
@@ -164,7 +176,11 @@ export default function CateringRequestPage() {
   // Tillbaka från betalningen: Stripe bekräftar via webhook - fråga några gånger.
   useEffect(() => {
     if (!awaitingConfirm) return
-    const t = window.setTimeout(() => void load(), 3000)
+    waitStart.current ??= Date.now()
+    const t = window.setTimeout(() => {
+      if (Date.now() - (waitStart.current ?? Date.now()) > PAYMENT_WAIT_MS) setWaitedOut(true)
+      else void load()
+    }, 3000)
     return () => window.clearTimeout(t)
   }, [request, load, awaitingConfirm])
 
@@ -325,8 +341,9 @@ export default function CateringRequestPage() {
                 Gäller till och med {request.offer.validUntil}.
                 {request.customerType === 'company'
                   ? ` Faktureras ${request.paymentTermsDays ?? 30} dagar netto efter signering.`
-                  : ' Betalas med kort eller Swish direkt efter signering.'}
+                  : request.paid || request.paidWith || awaitingConfirm ? '' : ' Betalas här på sidan direkt efter signering.'}
               </p>
+              {request.customerType === 'private' && <PaidWithNote paidWith={request.paidWith} />}
               {request.offer.terms && (
                 <details className="catering-terms">
                   <summary>Villkor</summary>
@@ -463,8 +480,9 @@ export default function CateringRequestPage() {
               {request.signedAt ? ` ${request.signedAt.slice(0, 10)}` : ''}.
             </p>
           )}
-          {awaitingConfirm && (
-            <PaidStamp text="Betalt" next="Tack! Vi bekräftar betalningen hos restaurangen - sidan uppdateras av sig själv." />
+          {awaitingConfirm && (justPaid === 'paid'
+            ? <PaidStamp text="Betalt" next="Tack! Vi bekräftar betalningen hos restaurangen - sidan uppdateras av sig själv." />
+            : <PaidStamp pending text="Betalningen behandlas" next="Sidan uppdateras av sig själv när den är klar." />
           )}
           {request.canPay && !awaitingConfirm && payment && (
             <PaymentTicket
@@ -488,6 +506,11 @@ export default function CateringRequestPage() {
             <div className="catering-actions">
               {params.get('betalning') === 'avbruten' && (
                 <p className="notice" role="status">Betalningen avbröts - inget har dragits. Signaturen gäller fortfarande.</p>
+              )}
+              {waitedOut && (
+                <p className="notice" role="status">
+                  Vi har inte fått någon bekräftelse på betalningen. Har inget dragits kan du betala igen.
+                </p>
               )}
               <button type="button" className={`btn-primary${busy ? ' is-busy' : ''}`} disabled={busy} onClick={() => void pay()}>
                 {busy

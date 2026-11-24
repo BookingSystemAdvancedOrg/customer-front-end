@@ -156,6 +156,30 @@
   font-size: 1.05rem;
 }
 
+/* Tagen emot men inte betald än (ett betalsätt som fortfarande behandlas):
+   en lugn stämpel i bläck, varken grönt klart eller rött fel. Den tonar in
+   i stället för att slå i (och en bred stämpel som skalas upp skulle göra
+   sidan bredare än telefonen medan den slår i). */
+.pay-done.is-pending .pay-stamp {
+  color: var(--ink);
+  font-size: 0.92rem;
+  animation: pay-pending-in 320ms var(--ease) both;
+}
+
+@keyframes pay-pending-in {
+  from { opacity: 0; transform: translateY(4px) rotate(-4deg); }
+  to { opacity: 1; transform: rotate(-4deg); }
+}
+
+/* Hur gästen betalade: en rad i kvittots typsnitt under summan. */
+.paid-with {
+  margin: 4px 0 0;
+  font: 500 0.75rem/1.5 var(--mono);
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  text-align: end;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pay-ticket,
   .pay-element.is-ready {

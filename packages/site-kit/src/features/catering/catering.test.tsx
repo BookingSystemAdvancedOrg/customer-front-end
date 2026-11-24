@@ -336,7 +336,7 @@ describe('CateringRequestPage', () => {
     const user = userEvent.setup()
     api.getRequest.mockResolvedValue(guest({ status: 'signed', canSign: false, canPay: true }))
     api.startCheckout.mockResolvedValue({ clientSecret: 'cs_cat_secret', stripeAccount: 'acct_1' })
-    confirm.mockResolvedValue({ type: 'success', session: {} })
+    confirm.mockResolvedValue({ type: 'success', session: { status: { type: 'complete', paymentStatus: 'paid' } } })
     renderGuest()
     await user.click(await screen.findByRole('button', { name: /^Betala 1\s350 kr$/ }))
     expect(api.startCheckout).toHaveBeenCalledWith('loc-1', 'req-1', 'tok-1')
@@ -345,6 +345,20 @@ describe('CateringRequestPage', () => {
     await user.click(await screen.findByRole('button', { name: /^Betala 1\s350 kr$/ }))
     expect(confirm).toHaveBeenCalledWith({ redirect: 'if_required' })
     expect(await screen.findByText(/Vi bekräftar betalningen/, {}, { timeout: 3000 })).toBeInTheDocument()
+    expect(screen.getAllByText('Betalt').length).toBeGreaterThan(0)
+  })
+
+  it('a private payment Stripe still processes says so, never Betalt', async () => {
+    const user = userEvent.setup()
+    api.getRequest.mockResolvedValue(guest({ status: 'signed', canSign: false, canPay: true }))
+    api.startCheckout.mockResolvedValue({ clientSecret: 'cs_cat_secret', stripeAccount: 'acct_1' })
+    confirm.mockResolvedValue({ type: 'success', session: { status: { type: 'complete', paymentStatus: 'unpaid' } } })
+    renderGuest()
+    await user.click(await screen.findByRole('button', { name: /^Betala 1\s350 kr$/ }))
+    await user.click(await screen.findByRole('button', { name: /^Betala 1\s350 kr$/ }))
+    expect(await screen.findByText('Sidan uppdateras av sig själv när den är klar.', {}, { timeout: 3000 })).toBeInTheDocument()
+    expect(screen.getByText('Betalningen behandlas')).toBeInTheDocument()
+    expect(screen.queryByText('Betalt')).toBeNull()
   })
 
   it('asks for changes', async () => {

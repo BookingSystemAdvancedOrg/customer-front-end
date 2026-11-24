@@ -4,6 +4,8 @@ import { CheckoutElementsProvider, PaymentElement, useCheckoutElements } from '@
 import { Celebrate } from '../Celebrate'
 import { useTheme } from '../theme'
 import { paymentAppearance, paymentFonts } from './appearance'
+import { payOutcome, paymentElementOptions } from './checkout'
+import type { PayOutcome } from './checkout'
 import { stripeFor } from './stripe'
 import { BackButton } from '../BackButton'
 
@@ -18,6 +20,9 @@ import { BackButton } from '../BackButton'
  * eller server (PCI SAQ A). Swish, Klarna och 3-D Secure som kräver en
  * omdirigering kommer tillbaka till sessionens return_url (status- eller
  * förfrågningssidan); allt annat bekräftas här och avslutas med en stämpel.
+ * "Betalt" stämplas bara när Stripe säger att sessionen är betald; ett
+ * betalsätt som fortfarande behandlas visar "Betalningen behandlas" och
+ * statussidan (som frågar tills den vet) tar över.
  */
 
 /** Så länge utskriften får pågå innan sidan säger att något inte laddar. */
@@ -39,12 +44,16 @@ export function PaymentPrinting({ label = 'Skriver ut betalningen' }: { label?: 
   )
 }
 
-/** Stämpeln när betalningen gick igenom. */
-export function PaidStamp({ text, next }: { text: string; next?: string }) {
+/**
+ * Stämpeln när betalningen gick igenom. `pending`: Stripe har tagit emot
+ * betalningen men den behandlas fortfarande (ingen grön stämpel, inget
+ * pappersregn).
+ */
+export function PaidStamp({ text, next, pending = false }: { text: string; next?: string; pending?: boolean }) {
   return (
-    <div className="pay-done" role="status">
-      <Celebrate />
-      <p className="booking-status stamp-ok pay-stamp">{text}</p>
+    <div className={`pay-done${pending ? ' is-pending' : ''}`} role="status">
+      {!pending && <Celebrate />}
+      <p className={`booking-status pay-stamp${pending ? '' : ' stamp-ok'}`}>{text}</p>
       {next && <p className="cell-muted">{next}</p>}
     </div>
   )
@@ -57,7 +66,7 @@ export function SecureNote({ children }: { children?: ReactNode }) {
         <rect x="3" y="7" width="10" height="7" rx="1" />
         <path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" />
       </svg>
-      <span>{children ?? 'Betalningen sker hos Stripe. Kortuppgifterna går direkt dit och sparas aldrig hos oss.'}</span>
+      <span>{children ?? 'Betalningen sker hos Stripe. Dina betaluppgifter går direkt dit och sparas aldrig hos oss.'}</span>
     </p>
   )
 }
@@ -66,7 +75,10 @@ export function SecureNote({ children }: { children?: ReactNode }) {
 export interface PayStatus {
   ready: boolean
   busy: boolean
+  /** Stripe säger att sessionen är betald. */
   paid: boolean
+  /** Stripe har tagit emot betalningen men den behandlas fortfarande (inte betald än). */
+  processing?: boolean
 }
 
 function CheckoutForm({
@@ -78,7 +90,7 @@ function CheckoutForm({
   onStatus,
 }: {
   payLabel: string
-  onPaid: () => void
+  onPaid: (outcome: PayOutcome) => void
   onBack?: () => void
   backLabel: string
   /** Knappen ligger utanför (form={formId}); formuläret ritar ingen egen. */
@@ -91,7 +103,9 @@ function CheckoutForm({
   const [slow, setSlow] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [paid, setPaid] = useState(false)
+  const [outcome, setOutcome] = useState<PayOutcome | null>(null)
+  // Väljs en gång när formuläret ritas (Stripe byter inte utseende i ett öppet formulär).
+  const [elementOptions] = useState(() => paymentElementOptions())
 
   useEffect(() => {
     if (ready) return
@@ -100,18 +114,23 @@ function CheckoutForm({
   }, [ready])
 
   useEffect(() => {
-    onStatus?.({ ready: ready && state.type === 'success' && !loadFailed, busy, paid })
-  }, [onStatus, ready, busy, paid, state.type, loadFailed])
+    onStatus?.({
+      ready: ready && state.type === 'success' && !loadFailed,
+      busy,
+      paid: outcome === 'paid',
+      processing: outcome === 'processing',
+    })
+  }, [onStatus, ready, busy, outcome, state.type, loadFailed])
 
   useEffect(() => {
-    if (!paid) return
-    const t = window.setTimeout(onPaid, reducedMotion() ? 0 : STAMP_MS)
+    if (!outcome) return
+    const t = window.setTimeout(() => onPaid(outcome), reducedMotion() ? 0 : STAMP_MS)
     return () => window.clearTimeout(t)
-  }, [paid, onPaid])
+  }, [outcome, onPaid])
 
   async function submit(e: FormEvent) {
     e.preventDefault()
-    if (state.type !== 'success' || busy || paid) return
+    if (state.type !== 'success' || busy || outcome) return
     setBusy(true)
     setError(null)
     try {
@@ -121,7 +140,7 @@ function CheckoutForm({
         setBusy(false)
         return
       }
-      setPaid(true)
+      setOutcome(payOutcome(result.session))
     } catch {
       setError('Betalningen kunde inte skickas. Kontrollera anslutningen och försök igen.')
       setBusy(false)
@@ -139,7 +158,8 @@ function CheckoutForm({
     )
   }
 
-  if (paid) return <PaidStamp text="Betalt" next="Skickar dig vidare…" />
+  if (outcome === 'paid') return <PaidStamp text="Betalt" next="Skickar dig vidare…" />
+  if (outcome === 'processing') return <PaidStamp pending text="Betalningen behandlas" next="Skickar dig vidare…" />
 
   return (
     <form className="pay-form" id={formId} onSubmit={submit} noValidate aria-busy={busy || undefined}>
@@ -153,7 +173,7 @@ function CheckoutForm({
         <PaymentElement
           onReady={() => setReady(true)}
           onLoadError={() => setLoadFailed(true)}
-          options={{ layout: { type: 'tabs' }, wallets: { link: 'never' } }}
+          options={elementOptions}
         />
       </div>
       {error && (
@@ -217,7 +237,8 @@ export function PaymentPanel({
   clientSecret: string
   formId: string
   onStatus: (status: PayStatus) => void
-  onPaid: () => void
+  /** Efter stämpeln: 'paid' när Stripe säger betald, 'processing' när betalningen fortfarande behandlas. */
+  onPaid: (outcome: PayOutcome) => void
   onBack?: () => void
   backLabel?: string
 }) {
@@ -257,7 +278,8 @@ export function PaymentTicket({
   title?: string
   summary?: ReactNode
   payLabel: string
-  onPaid: () => void
+  /** Efter stämpeln: 'paid' när Stripe säger betald, 'processing' när betalningen fortfarande behandlas. */
+  onPaid: (outcome: PayOutcome) => void
   onBack?: () => void
   backLabel?: string
 }) {

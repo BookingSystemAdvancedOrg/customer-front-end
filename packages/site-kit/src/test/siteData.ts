@@ -44,6 +44,7 @@ export function json(body: unknown, status = 200): Response {
 interface TestTable {
   tableId: string
   seats: number
+  label?: string
 }
 
 interface TestSlot {
@@ -51,7 +52,7 @@ interface TestSlot {
   endTime: string
   layoutVersion: number
   tables: TestTable[]
-  unavailable?: { tableId: string; reason: string; minParty?: number; maxParty?: number }[]
+  unavailable?: { tableId: string; reason: string; minParty?: number; maxParty?: number; label?: string }[]
 }
 
 /**
@@ -93,7 +94,10 @@ export function guestView(
         .filter((t) => !offered.has(t.tableId))
         .map((t) => {
           const minParty = Math.max(1, Math.ceil(t.seats / 2))
-          return { tableId: t.tableId, minParty, maxParty: t.seats, reason: partySize > t.seats ? 'too_small' : 'too_large' }
+          return {
+            tableId: t.tableId, minParty, maxParty: t.seats, reason: partySize > t.seats ? 'too_small' : 'too_large',
+            ...(t.label ? { label: t.label } : {}),
+          }
         }),
     ].sort((a, b) => a.tableId.localeCompare(b.tableId))
     return [{

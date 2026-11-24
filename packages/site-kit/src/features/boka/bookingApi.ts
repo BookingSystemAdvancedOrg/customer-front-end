@@ -2,6 +2,7 @@ import { apiDelete, apiGet, apiPost, ApiError } from '../../shared/api'
 import { botCheckMessage } from '../../shared/botCheckMessage'
 import { withAttribution } from '../../shared/visits'
 import { normalizePhone } from '../../shared/phone'
+import { tableTitle } from './tableNames'
 
 /**
  * Klient mot bokningsrutterna (backend docs/RESERVATIONS.md):
@@ -18,6 +19,8 @@ import { normalizePhone } from '../../shared/phone'
 export interface AvailableTable {
   tableId: string
   seats: number
+  /** Bordets namn i tidens layoutversion ("3" eller ett eget namn). */
+  label?: string
 }
 
 /** Ett sätt för sällskapet att boka tiden: ett bord eller en av
@@ -33,6 +36,8 @@ export type TableReason = 'booked' | 'blocked' | 'phone' | 'too_small' | 'too_la
 export interface TableUnavailable {
   tableId: string
   reason: TableReason
+  /** Bordets namn i tidens layoutversion ("3" eller ett eget namn). */
+  label?: string
   /** Sällskapsstorlekarna bordet tar online (bara vid too_small / too_large). */
   minParty?: number
   maxParty?: number
@@ -106,16 +111,24 @@ export function tableBadge(u: TableUnavailable): string {
 export function tableReasonText(
   u: TableUnavailable,
   { label, partySize, startTime, phone, hasCombinations }: {
-    label: string; partySize: number; startTime: string; phone?: string; hasCombinations: boolean
+    /** Bordets namn, null när det inte är känt ("Bordet ..."). */
+    label: string | null; partySize: number; startTime: string; phone?: string; hasCombinations: boolean
   },
 ): string {
-  const table = `Bord ${label}`
+  const table = label ? tableTitle(label) : 'Bordet'
+  // Ett eget namn ("Baren", "Terrassen") har inte alltid ett neutrum: de
+  // meningarna skrivs så att inget adjektiv ska böjas efter namnet.
+  const ownName = !!label?.trim() && !/^\d/.test(label.trim())
   const party = `Ni är ${people(partySize)}`
   switch (u.reason) {
     case 'booked':
-      return `${table} är redan bokat kl ${startTime}. Välj ett annat bord eller en annan tid.`
+      return ownName
+        ? `${table} har redan en bokning kl ${startTime}. Välj ett annat bord eller en annan tid.`
+        : `${table} är redan bokat kl ${startTime}. Välj ett annat bord eller en annan tid.`
     case 'blocked':
-      return `${table} är spärrat av restaurangen kl ${startTime} och kan inte bokas online.`
+      return ownName
+        ? `Restaurangen har spärrat ${table} kl ${startTime}, så det går inte att boka online.`
+        : `${table} är spärrat av restaurangen kl ${startTime} och kan inte bokas online.`
     case 'phone':
       return `${table} bokas bara via telefon${phone ? ` - ring ${phone}` : ''}.`
     case 'too_small':
@@ -173,6 +186,8 @@ export interface TableHold {
   startTime: string
   endTime: string
   tableIds: string[]
+  /** Bordens namn när de hölls, i samma ordning som tableIds. */
+  tableLabels?: string[]
   partySize: number
   cardRequired: boolean
   durationMinutes?: number
@@ -196,6 +211,8 @@ export interface GuestReservation {
   timezone?: string
   partySize: number
   tableIds: string[]
+  /** Bordens namn när de bokades eller senast flyttades, i samma ordning som tableIds. */
+  tableLabels?: string[]
   customerName?: string
   cancellable: boolean
   durationMinutes?: number

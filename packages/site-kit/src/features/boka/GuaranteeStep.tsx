@@ -21,10 +21,11 @@ import type { GuestReservation } from './bookingApi'
  * Kortuppgifterna går direkt från webbläsaren till Stripe i en iframe -
  * de passerar aldrig vår server.
  *
- * Stripe Link är avstängt här (wallets.link = 'never'): Link skickar en
- * sms-kod till numret på gästens Link-konto - inte till numret i
- * bokningen - vilket bara förvirrar när det enda som händer är att ett kort
- * sparas. Namn, e-post och telefon från bokningsformuläret fylls i hos
+ * Apple Pay och Google Pay visas där enheten har dem (wallets 'auto'):
+ * de sparar ett kort som vilket annat. Stripe Link är avstängt här
+ * (wallets.link = 'never'): Link skickar en sms-kod till numret på
+ * gästens Link-konto - inte till numret i bokningen - vilket bara
+ * förvirrar när det enda som händer är att ett kort sparas. Namn, e-post och telefon från bokningsformuläret fylls i hos
  * Stripe (defaultValues), så kortet och en eventuell 3-D Secure-kontroll
  * hör till samma person och nummer som bokningen.
  */
@@ -142,7 +143,7 @@ function CardForm({
         onLoadError={() => setLoadFailed(true)}
         options={{
           layout: { type: 'tabs' },
-          wallets: { link: 'never' },
+          wallets: { applePay: 'auto', googlePay: 'auto', link: 'never' },
           defaultValues: guest
             ? {
                 billingDetails: {
@@ -210,8 +211,8 @@ export function GuaranteeStep({
       <p className="hero-kicker">Nästan klart</p>
       <h1>Kortgaranti</h1>
       <p>
-        Restaurangen tar kortgaranti för den här bokningen. Lägg in ditt kort så är bordet bokat -
-        det hålls åt dig {left > 0 ? `i ${left} min till` : 'en kort stund till'}.
+        Restaurangen tar kortgaranti för den här bokningen. Lägg in ditt kort (Apple Pay och Google Pay går
+        också) så är bordet bokat - det hålls åt dig {left > 0 ? `i ${left} min till` : 'en kort stund till'}.
       </p>
       {children}
       <GuaranteeTermsText booking={booking} />

@@ -59,6 +59,7 @@ import type { CodeTerms } from '../erbjudande/offerApi'
 import { useStickyCart } from '../../shared/useStickyCart'
 import { PaymentPanel, SecureNote } from '../../shared/payment/PaymentTicket'
 import type { PayStatus } from '../../shared/payment/PaymentTicket'
+import type { PayOutcome } from '../../shared/payment/checkout'
 import { GuestDataNotice } from '../../shared/GuestDataNotice'
 import { MarketingConsent, NO_CONSENT, consentFields } from '../../shared/MarketingConsent'
 import type { ConsentChoice } from '../../shared/MarketingConsent'
@@ -497,15 +498,22 @@ function PickupOrder() {
     }
   }
 
-  /** Betald: varukorgen töms och gästen följer beställningen på statussidan. */
-  const done = useCallback((order: OrderCreated) => {
-    clearCart(locationId)
-    setLineNotes({})
+  /**
+   * Betald: varukorgen töms och gästen följer beställningen på statussidan.
+   * Behandlas betalningen fortfarande ligger varukorgen kvar tills
+   * statussidan ser den betald (den tömmer då), så "Försök igen" efter ett
+   * nekat betalsätt har kvar maten.
+   */
+  const done = useCallback((order: OrderCreated, outcome: PayOutcome = 'paid') => {
+    if (outcome === 'paid') {
+      clearCart(locationId)
+      setLineNotes({})
+    }
     navigate(`/bestallning/${encodeURIComponent(order.locationId)}/${encodeURIComponent(order.orderId)}`)
   }, [locationId, navigate])
 
-  const paid = useCallback(() => {
-    if (payment) done(payment)
+  const paid = useCallback((outcome: PayOutcome) => {
+    if (payment) done(payment, outcome)
   }, [payment, done])
 
   /** Tillbaka till varukorgen: beställningen som inte betalades går ut av sig själv. */
@@ -555,6 +563,8 @@ function PickupOrder() {
   if (payment || step !== 'cart') {
     const formId = payment ? 'order-pay' : 'order-checkout'
     const title = payment ? 'Betala' : STEP_TITLE[step]
+    // Stripe har tagit emot betalningen (betald eller behandlas): ingen knapp, ingen väg tillbaka.
+    const payDone = payStatus.paid || Boolean(payStatus.processing)
     const ctaDisabled = payment ? !payStatus.ready || payStatus.busy : !open || busy || tooLarge
     const cta = payment
       ? payStatus.busy ? <><span className="spinner" aria-hidden="true" />Betalar…</> : `Betala ${kronor(payTotal)}`
@@ -587,7 +597,7 @@ function PickupOrder() {
         <div className="checkout-grid">
           <div className="checkout-main">
             {payment
-              ? <BackButton className="checkout-back" disabled={payStatus.busy || payStatus.paid} onClick={back}>Ändra beställningen</BackButton>
+              ? <BackButton className="checkout-back" disabled={payStatus.busy || payDone} onClick={back}>Ändra beställningen</BackButton>
               : <BackButton className="checkout-back" disabled={busy} onClick={previous} />}
             <h1 className="checkout-title" ref={titleRef} tabIndex={-1}>{title}</h1>
 
@@ -614,8 +624,8 @@ function PickupOrder() {
                     backLabel="Ändra beställningen"
                   />
                   <SecureNote>
-                    Betalningen sker hos Stripe. Kortuppgifterna går direkt dit och sparas aldrig hos oss. Med Swish
-                    eller Klarna kan du skickas vidare en kort stund för att godkänna.
+                    Betalningen sker hos Stripe. Dina betaluppgifter går direkt dit och sparas aldrig hos oss. Med
+                    Swish eller Klarna kan du skickas vidare en kort stund för att godkänna.
                   </SecureNote>
                 </section>
               </>
@@ -705,7 +715,7 @@ function PickupOrder() {
               {summary}
               {editCart}
             </div>
-            {!payStatus.paid && (
+            {!payDone && (
               <div className="checkout-cta">
                 <button type="submit" form={formId} disabled={ctaDisabled}
                   className={`btn-primary checkout-next${busy || payStatus.busy ? ' is-busy' : ''}`}>
