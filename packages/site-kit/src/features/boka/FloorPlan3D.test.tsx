@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { FloorPlan3D } from './FloorPlan3D'
+import { FloorPlanSvg } from './FloorPlanSvg'
 import type { FloorGroup } from '../../shared/layoutApi'
 
 const GROUP: FloorGroup = {
@@ -59,5 +60,38 @@ describe('FloorPlan3D - table choice', () => {
     fireEvent.pointerUp(table, { clientX: 103, pointerId: 1 })
     fireEvent.click(table)
     expect(onToggle).toHaveBeenCalledWith('t1')
+  })
+})
+
+describe('floor plans - names over all floors', () => {
+  const labels = new Map([['t1', '5'], ['t2', 'Bar']])
+  const props = {
+    group: GROUP,
+    free: new Map([['t1', 4], ['t2', 2]]),
+    selected: new Set<string>(),
+    onToggle: () => {},
+    labels,
+  }
+
+  it('the 3D plan uses the given labels in titles, aria-labels and on the table', () => {
+    render(<FloorPlan3D {...props} />)
+    const t1 = screen.getByRole('button', { name: 'Bord 5, 4 platser, ledigt' })
+    expect(t1.querySelector('.f3d-table-label')).toHaveTextContent(/^5$/)
+    // An own name is shown as it is, never "Bord Bar".
+    expect(screen.getByRole('button', { name: 'Bar, 2 platser, ledigt' })).toBeInTheDocument()
+  })
+
+  it('the 2D plan uses the given labels in titles, aria-labels and on the table', () => {
+    render(<FloorPlanSvg {...props} />)
+    const t1 = screen.getByRole('button', { name: 'Bord 5, 4 platser, ledigt' })
+    expect(t1.querySelector('title')).toHaveTextContent('Bord 5, 4 platser, ledigt')
+    expect(t1.querySelector('.floor-svg-table-label')).toHaveTextContent(/^5$/)
+    expect(screen.getByRole('button', { name: 'Bar, 2 platser, ledigt' })).toBeInTheDocument()
+  })
+
+  it('without labels each floor counts its own tables', () => {
+    render(<FloorPlanSvg {...props} labels={undefined} />)
+    expect(screen.getByRole('button', { name: 'Bord 1, 4 platser, ledigt' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Bord 2, 2 platser, ledigt' })).toBeInTheDocument()
   })
 })

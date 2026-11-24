@@ -25,8 +25,12 @@ export function FloorPlanSvg({
   unavailable,
   onExplain,
   partySize,
+  labels: allLabels,
 }: {
   group: FloorGroup
+  /** tableId -> bordets namn över alla våningar (samma som listan och kvittot).
+   * Utan den räknas borden på den här våningen. */
+  labels?: Map<string, string>
   /** Sällskapets storlek, för "för litet/stort bord för 6". */
   partySize?: number
   /** Restaurangens andra våningar: ritas svagt under den valda, som om man
@@ -53,7 +57,7 @@ export function FloorPlanSvg({
     width: base.width + pad * 2 + extra,
     height: base.height + pad * 2 + extra,
   }
-  const labels = labelTables(tables)
+  const labels = allLabels ?? labelTables(tables)
   const wrapRef = useRef<HTMLDivElement>(null)
   // Lediga bord andas i takt, även efter ett nytt val.
   useLayoutEffect(() => syncBreathing(wrapRef.current))

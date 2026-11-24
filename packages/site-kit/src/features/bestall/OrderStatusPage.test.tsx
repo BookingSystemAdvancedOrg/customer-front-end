@@ -81,6 +81,19 @@ describe('OrderStatusPage', () => {
     expect(await screen.findByText('Avhämtning')).toHaveClass('order-place')
   })
 
+  it('names the table in the sentences: "bord 3", an own name as is, else "ditt bord"', async () => {
+    sessionStorage.setItem(`order-token:${ID}`, 'tok')
+    const cases: [string | undefined, string][] = [['3', 'bord 3'], ['Bar', 'Bar'], ['Bord 7', 'Bord 7'], [undefined, 'ditt bord']]
+    for (const [tableLabel, table] of cases) {
+      statuses = [order({ status: 'confirmed', mode: 'table', ...(tableLabel ? { tableLabel } : {}) })]
+      const view = renderAt()
+      expect(await screen.findByText(`Tack! Vi serverar vid ${table}.`)).toBeInTheDocument()
+      expect(screen.getByText(`Köket har fått beställningen. Vi sms:ar när maten lagas och kommer till ${table}.`)).toBeInTheDocument()
+      expect(document.body.textContent).not.toMatch(/bord Bar|bord bord/i)
+      view.unmount()
+    }
+  })
+
   it('tells the guest a failed payment cost nothing', async () => {
     sessionStorage.setItem(`order-token:${ID}`, 'tok')
     statuses = [order({ status: 'failed' })]

@@ -1,4 +1,5 @@
 import { tableBadge } from './bookingApi'
+import { tableTitle } from './tableNames'
 import type { TableUnavailable } from './bookingApi'
 
 /** Det 2D- och 3D-planen behöver om ett bord i bordsvalet. */
@@ -65,6 +66,6 @@ export function tableChoice(opts: {
     isSelected,
     state,
     badge,
-    title: `Bord ${label}, ${seats} platser${status}`,
+    title: `${tableTitle(label)}, ${seats} platser${status}`,
   }
 }

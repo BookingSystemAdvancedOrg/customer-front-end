@@ -34,10 +34,15 @@ function placeTitle(order: GuestOrder): string {
   return /^\d/.test(label) ? `Bord ${label}` : label
 }
 
+/** Bordet inne i en mening: "bord 7", ett eget namn som det är, annars "ditt bord". */
+function tableInText(order: GuestOrder): string {
+  const label = order.tableLabel?.trim() ?? ''
+  if (!label) return 'ditt bord'
+  return /^\d/.test(label) ? `bord ${label}` : label
+}
+
 function headline(order: GuestOrder): string {
-  const table = order.tableLabel
-    ? /^bord/i.test(order.tableLabel) ? order.tableLabel : `bord ${order.tableLabel}`
-    : 'ditt bord'
+  const table = tableInText(order)
   switch (order.status) {
     case 'pending_payment':
       return 'Väntar på betalningen…'
@@ -65,9 +70,7 @@ const STEPS: { status: GuestOrder['status']; label: string }[] = [
 
 /** Vad som händer härnäst, under rubriken. */
 function nextUp(order: GuestOrder): string | null {
-  const table = order.tableLabel
-    ? /^bord/i.test(order.tableLabel) ? order.tableLabel : `bord ${order.tableLabel}`
-    : 'ditt bord'
+  const table = tableInText(order)
   switch (order.status) {
     case 'pending_payment':
       return 'Oftast några sekunder, ibland längre. Sidan uppdateras av sig själv.'

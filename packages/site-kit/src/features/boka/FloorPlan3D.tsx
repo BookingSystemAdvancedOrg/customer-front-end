@@ -87,8 +87,12 @@ export function FloorPlan3D({
   unavailable,
   onExplain,
   partySize,
+  labels: allLabels,
 }: {
   group: FloorGroup
+  /** tableId -> bordets namn över alla våningar (samma som listan och kvittot).
+   * Utan den räknas borden på den här våningen. */
+  labels?: Map<string, string>
   /** Sällskapets storlek, för "för litet/stort bord för 6". */
   partySize?: number
   /** tableId -> platser, för bord som är lediga vid den valda tiden. */
@@ -101,7 +105,7 @@ export function FloorPlan3D({
 }) {
   const { elements } = group
   const tables = elements.filter((el): el is LayoutTableElement => el.type === 'table')
-  const labels = labelTables(tables)
+  const labels = allLabels ?? labelTables(tables)
   const box = layoutViewBox(elements)
   const originX = box.minX + box.width / 2
   const originZ = box.minZ + box.height / 2

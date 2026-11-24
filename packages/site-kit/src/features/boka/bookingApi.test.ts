@@ -13,6 +13,7 @@ import {
   manageLink,
   normalizePhone,
   staleSelection,
+  tableReasonText,
   todayIn,
   validEmail,
 } from './bookingApi'
@@ -220,6 +221,32 @@ describe('table rules, special days and the bot check', () => {
       .toContain('Säkerhetskontrollen gick inte igenom')
     expect(bookingErrorMessage(new ApiError(400, 'x', { code: 'bot_check_failed' })))
       .toContain('Säkerhetskontrollen gick inte igenom')
+  })
+
+  it('names the table by its label, an own name as is, or "Bordet" without one', () => {
+    const opts = { partySize: 2, startTime: '18:00', hasCombinations: false }
+    const u = { tableId: '8ed5290e-8b84-49cc-ac46-dc5438db5181', reason: 'booked' as const }
+    expect(tableReasonText(u, { ...opts, label: '3' })).toBe('Bord 3 är redan bokat kl 18:00. Välj ett annat bord eller en annan tid.')
+    expect(tableReasonText(u, { ...opts, label: null })).toBe('Bordet är redan bokat kl 18:00. Välj ett annat bord eller en annan tid.')
+  })
+
+  it('writes own names so no adjective has to agree with them', () => {
+    const opts = { partySize: 2, startTime: '18:00', hasCombinations: false }
+    const booked = { tableId: 't1', reason: 'booked' as const }
+    const blocked = { tableId: 't1', reason: 'blocked' as const }
+    expect(tableReasonText(booked, { ...opts, label: 'Terrassen' }))
+      .toBe('Terrassen har redan en bokning kl 18:00. Välj ett annat bord eller en annan tid.')
+    expect(tableReasonText(blocked, { ...opts, label: 'Terrassen' }))
+      .toBe('Restaurangen har spärrat Terrassen kl 18:00, så det går inte att boka online.')
+    expect(tableReasonText(blocked, { ...opts, label: '3' }))
+      .toBe('Bord 3 är spärrat av restaurangen kl 18:00 och kan inte bokas online.')
+    expect(tableReasonText(blocked, { ...opts, label: null }))
+      .toBe('Bordet är spärrat av restaurangen kl 18:00 och kan inte bokas online.')
+    for (const reason of ['booked', 'blocked'] as const) {
+      const text = tableReasonText({ tableId: 't1', reason }, { ...opts, label: 'Baren' })
+      expect(text).not.toMatch(/Baren är (redan bokat|spärrat)/)
+      expect(text).not.toContain('Bord Baren')
+    }
   })
 
   it('describes special days for guests', () => {

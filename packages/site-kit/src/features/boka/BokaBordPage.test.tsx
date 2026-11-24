@@ -27,6 +27,7 @@ function availability(tables = [{ tableId: 'table-a', seats: 2 }, { tableId: 'ta
 let fetchMock: ReturnType<typeof vi.fn>
 let bookingResponse: () => Response
 let holdResponse: () => Response
+let layoutResponse: () => Response
 let availabilityBody: ReturnType<typeof availability> & { day?: unknown }
 let combos: { tableIds: string[]; minParty: number; maxParty: number }[] = []
 const availabilityCalls = () => fetchMock.mock.calls.filter(([url]) => String(url).includes('/availability')).length
@@ -45,11 +46,12 @@ beforeEach(() => {
       date: '2026-09-20', startTime: '18:00', endTime: '20:00', tableIds: ['table-b'], partySize: 3,
       cardRequired: false,
     }, 201)
+  layoutResponse = () => json(LAYOUT)
   availabilityBody = availability()
   combos = []
   fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
     if (url.includes('/availability')) return json(guestView(availabilityBody, partyOf(url), combos))
-    if (url.includes('/layout/active')) return json(LAYOUT)
+    if (url.includes('/layout/active')) return layoutResponse()
     if (url.endsWith('/reservations') && init?.method === 'POST') return bookingResponse()
     if (url.endsWith('/holds') && init?.method === 'POST') return holdResponse()
     if (url.includes('/holds/') && init?.method === 'DELETE') return json({ released: true })
@@ -636,5 +638,213 @@ describe('BokaBordPage - why a table cannot be chosen', () => {
     expect(combo).toHaveTextContent('Bord 1 + 2 · 6 platser · ställs ihop')
     await user.click(combo)
     expect(screen.getByText('Borden 1 och 2 ställs ihop för ert sällskap.')).toBeInTheDocument()
+  })
+})
+
+describe('BokaBordPage - a table id is never shown', () => {
+  const ID_A = '8ed5290e-8b84-49cc-ac46-dc5438db5181'
+  const ID_B = '3f9a1c22-7d41-4c0e-9b6a-0a1b2c3d4e5f'
+  const ID_C = 'c0ffee00-1111-4222-8333-444455556666'
+  const noIds = () => {
+    const text = document.body.textContent ?? ''
+    for (const id of [ID_A, ID_B, ID_C]) {
+      expect(text).not.toContain(id)
+      expect(text).not.toContain(id.slice(0, 6))
+    }
+    for (const el of document.querySelectorAll('[aria-label], [title]')) {
+      for (const id of [ID_A, ID_B, ID_C]) {
+        expect(el.getAttribute('aria-label') ?? '').not.toContain(id)
+        expect(el.getAttribute('title') ?? '').not.toContain(id)
+      }
+    }
+  }
+  const slots = (labelled: boolean) => ({
+    ...availability(),
+    slots: [{
+      startTime: '18:00', endTime: '20:00', layoutVersion: 1,
+      tables: [
+        { tableId: ID_A, seats: 2, ...(labelled ? { label: '1' } : {}) },
+        { tableId: ID_B, seats: 4, ...(labelled ? { label: '2' } : {}) },
+      ],
+    }],
+  }) as unknown as typeof availabilityBody
+  const held = (extra: Record<string, unknown> = {}) => () =>
+    json({
+      holdId: 'h'.repeat(32), manageToken: 'tok123', expiresAt: '2026-09-08T12:15:00Z', holdMinutes: 15,
+      date: '2026-09-20', startTime: '18:00', endTime: '20:00', tableIds: [ID_B], partySize: 3,
+      cardRequired: false, ...extra,
+    }, 201)
+  const reservation = (extra: Record<string, unknown> = {}) => () =>
+    json({
+      reservationId: 'r1', status: 'reserved', date: '2026-09-20', startTime: '18:00', endTime: '20:00',
+      partySize: 3, tableIds: [ID_B], customerName: 'Anna', cancellable: true, manageToken: 'tok123', ...extra,
+    }, 201)
+
+  async function book(user: ReturnType<typeof userEvent.setup>, chip: RegExp) {
+    await user.click(screen.getByRole('button', { name: chip }))
+    await user.click(screen.getByRole('button', { name: 'Bekräfta bord' }))
+    await user.type(await screen.findByLabelText('Namn'), 'Anna')
+    await user.type(screen.getByLabelText('E-post'), 'anna@example.se')
+    await user.type(screen.getByLabelText('Telefon'), '0701234567')
+    await user.click(screen.getByRole('checkbox', { name: /bokningsvillkoren/ }))
+  }
+
+  it.each([500, 404])('uses the availability labels when the layout request fails (%i)', async (status) => {
+    layoutResponse = () => json({ error: 'nope' }, status)
+    availabilityBody = slots(true)
+    const user = userEvent.setup()
+    render(<WithSite><BokaBordPage /></WithSite>)
+    await pickOption(user, screen.getByLabelText('Antal personer'), '3 personer')
+    await user.click(await screen.findByRole('button', { name: '18:00' }))
+    expect(await screen.findByText(/Planritningen kan inte visas just nu/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Bord 2 · 4 platser/ })).toBeInTheDocument()
+    expect(screen.getByText(/För litet bord för 3\. Bord 1 tar 1-2 personer/)).toBeInTheDocument()
+    noIds()
+    holdResponse = held()
+    bookingResponse = reservation()
+    await book(user, /^Bord 2 · 4 platser/)
+    noIds()
+    expect(screen.getByRole('timer')).toHaveTextContent('Bord 2 hålls åt dig: 15:00')
+    expect(screen.getByText(/personer · bord 2$/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Boka bordet' }))
+    await screen.findByRole('heading', { name: 'Ditt bord är bokat' })
+    expect(screen.getByText('Bord', { selector: 'dt' }).nextElementSibling).toHaveTextContent(/^2$/)
+    noIds()
+  })
+
+  it('names a table without any label "Ett bord" and leaves the receipt row out', async () => {
+    layoutResponse = () => json({ error: 'boom' }, 500)
+    availabilityBody = slots(false)
+    const user = userEvent.setup()
+    render(<WithSite><BokaBordPage /></WithSite>)
+    await pickOption(user, screen.getByLabelText('Antal personer'), '3 personer')
+    await user.click(await screen.findByRole('button', { name: '18:00' }))
+    await screen.findByText(/Planritningen kan inte visas just nu/)
+    expect(screen.getByRole('button', { name: /^Ett bord · 4 platser/ })).toBeInTheDocument()
+    expect(screen.getByText(/För litet bord för 3\. Bordet tar 1-2 personer/)).toBeInTheDocument()
+    noIds()
+    holdResponse = held()
+    bookingResponse = reservation()
+    await book(user, /^Ett bord · 4 platser/)
+    expect(screen.getByRole('timer')).toHaveTextContent('Ett bord hålls åt dig: 15:00')
+    expect(screen.getByText(/personer · ett bord$/)).toBeInTheDocument()
+    noIds()
+    await user.click(screen.getByRole('button', { name: 'Boka bordet' }))
+    await screen.findByRole('heading', { name: 'Ditt bord är bokat' })
+    expect(screen.queryByText('Bord', { selector: 'dt' })).toBeNull()
+    noIds()
+  })
+
+  it('uses the hold and booking tableLabels when nothing else names the table', async () => {
+    layoutResponse = () => json({ error: 'boom' }, 500)
+    availabilityBody = slots(false)
+    holdResponse = held({ tableLabels: ['2'] })
+    bookingResponse = reservation({ tableLabels: ['2'] })
+    const user = userEvent.setup()
+    render(<WithSite><BokaBordPage /></WithSite>)
+    await pickOption(user, screen.getByLabelText('Antal personer'), '3 personer')
+    await user.click(await screen.findByRole('button', { name: '18:00' }))
+    await screen.findByText(/Planritningen kan inte visas just nu/)
+    await book(user, /^Ett bord · 4 platser/)
+    expect(screen.getByRole('timer')).toHaveTextContent('Bord 2 hålls åt dig: 15:00')
+    expect(screen.getByText(/personer · bord 2$/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Boka bordet' }))
+    await screen.findByRole('heading', { name: 'Ditt bord är bokat' })
+    expect(screen.getByText('Bord', { selector: 'dt' }).nextElementSibling).toHaveTextContent(/^2$/)
+    noIds()
+  })
+
+  it('says only "Borden ställs ihop" when a combined table has no name', async () => {
+    layoutResponse = () => json({ error: 'boom' }, 500)
+    availabilityBody = slots(false)
+    combos = [{ tableIds: [ID_A, ID_B], minParty: 5, maxParty: 6 }]
+    const user = userEvent.setup()
+    render(<WithSite><BokaBordPage /></WithSite>)
+    await pickOption(user, screen.getByLabelText('Antal personer'), '5 personer')
+    await user.click(await screen.findByRole('button', { name: '18:00' }))
+    await screen.findByText(/Planritningen kan inte visas just nu/)
+    await user.click(screen.getByRole('button', { name: /^2 bord · 6 platser/ }))
+    expect(screen.getByText('Borden ställs ihop för ert sällskap.')).toBeInTheDocument()
+    expect(screen.getByText(/personer · 2 bord$/)).toBeInTheDocument()
+    noIds()
+  })
+
+  it("uses the slot's own layout version before today's layout", async () => {
+    // Today's layout numbers A, B, C as 1, 2, 3. The booked date falls after a
+    // scheduled cutover that removed A, so in that version C is table 2: the
+    // chip, the plan, the hold banner and the receipt must all say 2, like
+    // the staff mail and admin do.
+    const el = (id: string, x: number) => ({
+      elementId: id, type: 'table', x, y: 0, z: 1, width: 1, height: 0.75, depth: 1, rotationY: 0, shape: 'rect', seats: 4, zone: 'main',
+    })
+    layoutResponse = () => json({ floors: [], elements: [el(ID_A, 1), el(ID_B, 3), el(ID_C, 5)] })
+    availabilityBody = {
+      ...availability(),
+      slots: [{
+        startTime: '18:00', endTime: '20:00', layoutVersion: 2,
+        tables: [{ tableId: ID_B, seats: 4, label: '1' }, { tableId: ID_C, seats: 4, label: '2' }],
+      }],
+    } as unknown as typeof availabilityBody
+    holdResponse = held({ tableIds: [ID_C], tableLabels: ['2'] })
+    bookingResponse = reservation({ tableIds: [ID_C], tableLabels: ['2'] })
+    const user = userEvent.setup()
+    render(<WithSite><BokaBordPage /></WithSite>)
+    await pickOption(user, screen.getByLabelText('Antal personer'), '3 personer')
+    await user.click(await screen.findByRole('button', { name: '18:00' }))
+    expect(await screen.findByRole('button', { name: /^Bord 2 · 4 platser/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Bord 1 · 4 platser/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Bord 3 · / })).toBeNull()
+    const in3d = document.querySelector(`[data-table-id="${ID_C}"]`)!
+    expect(in3d).toHaveAttribute('aria-label', 'Bord 2, 4 platser, ledigt')
+    expect(in3d.querySelector('.f3d-table-label')).toHaveTextContent(/^2$/)
+    await user.click(screen.getByRole('button', { name: '2D' }))
+    const in2d = document.querySelector(`[data-table-id="${ID_C}"]`)!
+    expect(in2d).toHaveAttribute('aria-label', 'Bord 2, 4 platser, ledigt')
+    expect(in2d.querySelector('.floor-svg-table-label')).toHaveTextContent(/^2$/)
+    await book(user, /^Bord 2 · 4 platser/)
+    expect(screen.getByRole('timer')).toHaveTextContent('Bord 2 hålls åt dig: 15:00')
+    expect(screen.getByText(/personer · bord 2$/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Boka bordet' }))
+    await screen.findByRole('heading', { name: 'Ditt bord är bokat' })
+    expect(screen.getByText('Bord', { selector: 'dt' }).nextElementSibling).toHaveTextContent(/^2$/)
+    noIds()
+  })
+
+  it('numbers the tables over all floors, on the plan as in the list', async () => {
+    // The upper floor is drawn first; floors still count by level, and an
+    // own name takes its place in the count (Entré: 1, Bar; Övervåning: 3).
+    layoutResponse = () => json({
+      floors: [{ floorId: 'f2', name: 'Övervåning', level: 1 }, { floorId: 'f1', name: 'Entré', level: 0 }],
+      elements: [
+        { elementId: ID_C, floorId: 'f2', type: 'table', x: 1, y: 0, z: 1, width: 1, height: 0.75, depth: 1, rotationY: 0, shape: 'rect', seats: 4, zone: 'main' },
+        { elementId: ID_A, floorId: 'f1', type: 'table', x: 1, y: 0, z: 1, width: 1, height: 0.75, depth: 1, rotationY: 0, shape: 'rect', seats: 2, zone: 'main' },
+        { elementId: ID_B, floorId: 'f1', type: 'table', x: 3, y: 0, z: 1, width: 1, height: 0.75, depth: 1, rotationY: 0, shape: 'rect', seats: 4, label: 'Bar', zone: 'main' },
+      ],
+    })
+    availabilityBody = {
+      ...availability(),
+      slots: [{
+        startTime: '18:00', endTime: '20:00', layoutVersion: 1,
+        tables: [{ tableId: ID_A, seats: 2 }, { tableId: ID_B, seats: 4 }, { tableId: ID_C, seats: 4 }],
+      }],
+    } as unknown as typeof availabilityBody
+    const user = userEvent.setup()
+    render(<WithSite><BokaBordPage /></WithSite>)
+    await pickOption(user, screen.getByLabelText('Antal personer'), '3 personer')
+    await user.click(await screen.findByRole('button', { name: '18:00' }))
+    expect(await screen.findByRole('button', { name: /^Bord 3 · 4 platser/ })).toBeInTheDocument()
+    // An own name is shown as it is, never "Bord Bar".
+    expect(screen.getByRole('button', { name: /^Bar · 4 platser/ })).toBeInTheDocument()
+    expect(document.body.textContent).not.toContain('Bord Bar')
+    await user.click(screen.getByRole('button', { name: 'Övervåning' }))
+    // 3D (the default) and 2D both draw the upper table as Bord 3, like its chip (not Bord 1).
+    const in3d = document.querySelector(`[data-table-id="${ID_C}"]`)!
+    expect(in3d).toHaveAttribute('aria-label', 'Bord 3, 4 platser, ledigt')
+    expect(in3d.querySelector('.f3d-table-label')).toHaveTextContent(/^3$/)
+    await user.click(screen.getByRole('button', { name: '2D' }))
+    const in2d = document.querySelector(`[data-table-id="${ID_C}"]`)!
+    expect(in2d).toHaveAttribute('aria-label', 'Bord 3, 4 platser, ledigt')
+    expect(in2d.querySelector('.floor-svg-table-label')).toHaveTextContent(/^3$/)
+    noIds()
   })
 })

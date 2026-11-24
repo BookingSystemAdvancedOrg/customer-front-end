@@ -39,6 +39,7 @@ import { ApiError } from '../../shared/api'
 import { FloorPlanSvg } from './FloorPlanSvg'
 import { FloorPlan3D } from './FloorPlan3D'
 import { PICK_EFFECT_MS, playPickEffect } from './pickEffect'
+import { tableNames, tableTitle } from './tableNames'
 import { glideTo, prefersReducedMotion } from '../../shared/glide'
 import { FlowSteps } from '../../shared/FlowSteps'
 import { currentLang, language } from '../../shared/lang/languages'
@@ -106,7 +107,7 @@ function HoldBanner({ secondsLeft, totalSeconds, tables, onChange }: {
         <span className="hold-kicker">{urgent ? 'Snart släpps bordet' : 'Bordet är ditt'}</span>
         {/* Hela meningar per textnod (översätts som meningar); klockan för sig. */}
         <span>
-          {`Bord ${tables} hålls åt dig:`} <strong className="hold-clock" translate="no">{clockText(secondsLeft)}</strong>
+          {`${tables} hålls åt dig:`} <strong className="hold-clock" translate="no">{clockText(secondsLeft)}</strong>
           {urgent ? ' Slutför bokningen nu.' : null}
         </span>
       </div>
@@ -387,6 +388,25 @@ export default function BokaBordPage() {
     [floors],
   )
   const labels = useMemo(() => labelTables(allTables), [allTables])
+  // Serverns namn på borden vid tiden, ur tidens layoutversion. De går före
+  // planritningens (dagens layout): efter ett schemalagt byte av planritning
+  // kan ett bord ha ett annat nummer den dagen gästen bokar.
+  const serverLabels = useMemo(() => {
+    const m = new Map<string, string>()
+    for (const t of [...(slot?.tables ?? []), ...(slot?.unavailable ?? [])]) {
+      const l = t.label?.trim()
+      if (l && !m.has(t.tableId)) m.set(t.tableId, l)
+    }
+    return m
+  }, [slot])
+  /** Bordets namn ("3", "Bar") eller null. Aldrig bordets id. */
+  const nameOf = (id: string): string | null => serverLabels.get(id) ?? labels.get(id) ?? null
+  /** Numren som ritas i planen: samma som i listan. */
+  const planLabels = useMemo(
+    () => (serverLabels.size > 0 ? new Map([...labels, ...serverLabels]) : labels),
+    [labels, serverLabels],
+  )
+  const optionLabels = option ? option.tableIds.map(nameOf) : []
   const activeFloor = floors?.find((g) => g.floor?.floorId === floorId) ?? floors?.[0] ?? null
   const nextDate = dates[dates.indexOf(date) + 1] ?? null
 
@@ -445,7 +465,7 @@ export default function BokaBordPage() {
 
   function reasonText(u: TableUnavailable): string {
     return tableReasonText(u, {
-      label: labels.get(u.tableId) ?? u.tableId,
+      label: nameOf(u.tableId),
       partySize,
       startTime: slot?.startTime ?? '',
       phone: formatPhoneNational(info.phone),
@@ -456,8 +476,8 @@ export default function BokaBordPage() {
   /** Ett tryck på ett bord som inte går att välja: förklara varför. */
   function explainTable(tableId: string) {
     const u = unavailable.get(tableId)
-    const label = labels.get(tableId) ?? tableId
-    setTableInfo(u ? reasonText(u) : `Bord ${label} går inte att välja vid den här tiden.`)
+    const label = nameOf(tableId)
+    setTableInfo(u ? reasonText(u) : `${label ? tableTitle(label) : 'Bordet'} går inte att välja vid den här tiden.`)
   }
 
   function chooseDate(d: string) {
@@ -638,7 +658,10 @@ export default function BokaBordPage() {
     )
   }
 
-  const heldTables = hold ? hold.tableIds.map((id) => labels.get(id) ?? id).join(' + ') : ''
+  const heldLabels = hold
+    ? hold.tableIds.map((id, i) => hold.tableLabels?.[i]?.trim() || nameOf(id))
+    : []
+  const heldTables = tableNames(heldLabels)
 
   if (pending && !booked) {
     return (
@@ -668,6 +691,7 @@ export default function BokaBordPage() {
   }
 
   if (booked) {
+    const bookedLabels = booked.tableIds.map((id, i) => booked.tableLabels?.[i]?.trim() || nameOf(id))
     const link = booked.manageToken
       ? manageLink(window.location.origin, booked, location.locationId, booked.manageToken)
       : null
@@ -688,10 +712,12 @@ export default function BokaBordPage() {
           <div><dt>Tid</dt><dd>{booked.startTime}-{booked.endTime}</dd></div>
           {lengthText(booked) && <div><dt>Bokningstid</dt><dd>{lengthText(booked)}</dd></div>}
           <div><dt>Antal</dt><dd>{`${booked.partySize} personer`}</dd></div>
-          <div>
-            <dt>Bord</dt>
-            <dd>{booked.tableIds.map((id) => labels.get(id) ?? id).join(', ')}</dd>
-          </div>
+          {bookedLabels.every(Boolean) && bookedLabels.length > 0 && (
+            <div>
+              <dt>Bord</dt>
+              <dd>{bookedLabels.join(', ')}</dd>
+            </div>
+          )}
           {booked.location?.address && <div><dt>Adress</dt><dd translate="no">{booked.location.address}</dd></div>}
         </dl>
         <AddToCalendar
@@ -896,6 +922,7 @@ export default function BokaBordPage() {
                     unavailable={unavailable}
                     onExplain={explainTable}
                     partySize={partySize}
+                    labels={planLabels}
                   />
                 ) : (
                   <FloorPlan3D
@@ -906,6 +933,7 @@ export default function BokaBordPage() {
                     unavailable={unavailable}
                     onExplain={explainTable}
                     partySize={partySize}
+                    labels={planLabels}
                   />
                 )}
                 <FloorLegend />
@@ -922,7 +950,7 @@ export default function BokaBordPage() {
                   aria-pressed={sameTables(o, option)}
                   onClick={() => pickOption(o)}
                 >
-                  Bord {o.tableIds.map((id) => labels.get(id) ?? id).join(' + ')} · {o.seats} platser
+                  {tableNames(o.tableIds.map(nameOf))} · {o.seats} platser
                   {o.tableIds.length > 1 && <span className="pill-note"> · ställs ihop</span>}
                 </button>
               ))}
@@ -942,13 +970,15 @@ export default function BokaBordPage() {
                 <p className="booking-summary-line" aria-live="polite">
                   <span className="summary-kicker">Ditt val</span>
                   <span>
-                    {`${formatDate(date)} kl ${slot.startTime}-${slot.endTime} · ${partySize} personer · bord ${option.tableIds.map((id) => labels.get(id) ?? id).join(' + ')}`}
+                    {`${formatDate(date)} kl ${slot.startTime}-${slot.endTime} · ${partySize} personer · ${tableNames(option.tableIds.map(nameOf), { word: 'bord' })}`}
                   </span>
                 </p>
                 {lengthText(slot) && <p className="cell-muted booking-length">{`Bokningstid: ${lengthText(slot)}.`}</p>}
                 {option.tableIds.length > 1 && (
                   <p className="cell-muted">
-                    {`Borden ${option.tableIds.map((id) => labels.get(id) ?? id).join(' och ')} ställs ihop för ert sällskap.`}
+                    {optionLabels.every(Boolean)
+                      ? `Borden ${optionLabels.join(' och ')} ställs ihop för ert sällskap.`
+                      : 'Borden ställs ihop för ert sällskap.'}
                   </p>
                 )}
                 <p className="cell-muted">
@@ -980,7 +1010,7 @@ export default function BokaBordPage() {
             <div className="booking-summary-line" aria-live="polite">
               <span className="summary-kicker">Ditt bord</span>
               <span>
-                {`${formatDate(hold.date)} kl ${hold.startTime}-${hold.endTime} · ${hold.partySize} personer · bord ${heldTables}`}
+                {`${formatDate(hold.date)} kl ${hold.startTime}-${hold.endTime} · ${hold.partySize} personer · ${tableNames(heldLabels, { word: 'bord' })}`}
               </span>
             </div>
             {lengthText(hold) && <p className="cell-muted booking-length">{`Bokningstid: ${lengthText(hold)}.`}</p>}
