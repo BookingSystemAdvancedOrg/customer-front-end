@@ -49,7 +49,7 @@ beforeEach(() => {
   ordering = { open: true, pickup: true, prepMinutes: 20, lastOrderAt: '21:45' }
   orderResponse = () => json({ orderId: 'o'.repeat(32), locationId: 'loc-1', clientSecret: 'cs_test_secret',
     stripeAccount: 'acct_1', statusToken: 'tok', totalAmount: 28550 }, 201)
-  stripe.confirm.mockReset().mockResolvedValue({ type: 'success', session: {} })
+  stripe.confirm.mockReset().mockResolvedValue({ type: 'success', session: { status: { type: 'complete', paymentStatus: 'paid' } } })
   stripe.provider.mockReset()
   fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
     if (url.includes('/ordering')) return json(ordering)
@@ -193,6 +193,28 @@ describe('BestallPage', () => {
     expect(await screen.findByText('Betalt')).toBeInTheDocument()
     expect(await screen.findByText('Statussidan', {}, { timeout: 3000 })).toBeInTheDocument()
     expect(sessionStorage.getItem('order-cart:loc-1')).toBeNull()
+  })
+
+  it('a payment Stripe still processes is not stamped Betalt: the status page takes over', async () => {
+    const user = userEvent.setup()
+    stripe.confirm.mockResolvedValue({ type: 'success', session: { status: { type: 'complete', paymentStatus: 'unpaid' } } })
+    render(
+      <WithSite config={config()} path="/bestall">
+        <Routes>
+          <Route path="bestall" element={<BestallPage />} />
+          <Route path="bestallning/:locationId/:orderId" element={<p>Statussidan</p>} />
+        </Routes>
+      </WithSite>,
+    )
+    await user.click(await screen.findByRole('button', { name: 'Lägg till Cola' }))
+    await fill(user)
+    await user.click(screen.getByRole('button', { name: /Till betalning/ }))
+    await user.click(await screen.findByRole('button', { name: 'Betala 285,50 kr' }))
+    expect(await screen.findByText('Betalningen behandlas')).toBeInTheDocument()
+    expect(screen.queryByText('Betalt')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Betala 285,50 kr' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Ändra beställningen' })).toBeDisabled()
+    expect(await screen.findByText('Statussidan', {}, { timeout: 3000 })).toBeInTheDocument()
   })
 
   it('shows a declined card on the payment ticket and keeps the cart for going back', async () => {

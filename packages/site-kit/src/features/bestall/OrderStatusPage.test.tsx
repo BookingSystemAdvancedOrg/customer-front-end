@@ -89,6 +89,53 @@ describe('OrderStatusPage', () => {
     expect(screen.getByRole('link', { name: 'Försök igen' })).toHaveAttribute('href', '/bestall')
   })
 
+  it('shows how the guest paid under the total, the brand left to the translator alone', async () => {
+    sessionStorage.setItem(`order-token:${ID}`, 'tok')
+    statuses = [order({ paymentStatus: 'paid', paidWith: { method: 'card', brand: 'visa', last4: '4242' } })]
+    const card = renderAt()
+    const line = await screen.findByText(/Betald med/)
+    expect(line).toHaveTextContent('Betald med Visa ****4242')
+    expect(line).toHaveClass('paid-with')
+    expect(screen.getByText('Visa ****4242')).toHaveAttribute('translate', 'no')
+    card.unmount()
+    statuses = [order({ status: 'ready', paymentStatus: 'paid', paidWith: { method: 'swish' } })]
+    const swish = renderAt()
+    expect(await screen.findByText(/Betald med/)).toHaveTextContent('Betald med Swish')
+    swish.unmount()
+    statuses = [order({ paymentStatus: 'paid', paidWith: { method: 'apple_pay', brand: 'visa', last4: '4242' } })]
+    const wallet = renderAt()
+    expect(await screen.findByText(/Betald med/)).toHaveTextContent('Betald med Apple Pay')
+    wallet.unmount()
+    statuses = [order({ paymentStatus: 'paid' })]
+    renderAt()
+    expect(await screen.findByText('Tack! Beställningen är mottagen.')).toBeInTheDocument()
+    expect(screen.queryByText(/Betald med/)).toBeNull()
+  })
+
+  it('while the payment is pending: a hint true for every method and no paid line', async () => {
+    sessionStorage.setItem(`order-token:${ID}`, 'tok')
+    statuses = [order({ status: 'pending_payment', number: undefined, paymentStatus: 'processing', paidWith: { method: 'klarna' } })]
+    renderAt()
+    expect(await screen.findByText('Väntar på betalningen…')).toBeInTheDocument()
+    expect(screen.getByText('Oftast några sekunder, ibland längre. Sidan uppdateras av sig själv.')).toBeInTheDocument()
+    expect(screen.queryByText(/Betald med/)).toBeNull()
+  })
+
+  it('a cancelled order: the refund goes back the way it was paid', async () => {
+    sessionStorage.setItem(`order-token:${ID}`, 'tok')
+    statuses = [order({ status: 'cancelled', paymentStatus: 'refunded', paidWith: { method: 'card', brand: 'visa', last4: '4242' } })]
+    const card = renderAt()
+    expect(await screen.findByText(/betalas tillbaka/)).toHaveTextContent(
+      'Hela beloppet, 250 kr, betalas tillbaka till ditt kort inom några bankdagar.',
+    )
+    card.unmount()
+    statuses = [order({ status: 'cancelled', paymentStatus: 'refunded', paidWith: { method: 'swish' } })]
+    renderAt()
+    expect(await screen.findByText(/betalas tillbaka/)).toHaveTextContent(
+      'Hela beloppet, 250 kr, betalas tillbaka via Swish, oftast inom några minuter.',
+    )
+  })
+
   it('without any token it asks for the link', () => {
     renderAt()
     expect(screen.getByRole('alert')).toHaveTextContent('Länken är ofullständig')

@@ -2,6 +2,7 @@ import { apiGet, apiPost, ApiError } from '../../shared/api'
 import { botCheckMessage } from '../../shared/botCheckMessage'
 import { withAttribution } from '../../shared/visits'
 import { CART_KEY_PREFIX, ORDER_TOKEN_PREFIX } from '../../shared/storageRegistry'
+import type { PaidWith } from '../../shared/payment/paidWith'
 
 /**
  * Matbeställning (backend payment-intent / get-order, docs/ORDERS.md).
@@ -101,6 +102,8 @@ export interface GuestOrder {
   readyEstimate?: string
   readyAt?: string
   location?: { name?: string; address?: string; phoneNumber?: string | null }
+  /** Hur gästen betalade (sätts när betalningen gått igenom). */
+  paidWith?: PaidWith
 }
 
 const path = (locationId: string) => `/locations/${encodeURIComponent(locationId)}`

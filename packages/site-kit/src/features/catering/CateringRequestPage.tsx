@@ -19,6 +19,8 @@ import {
 import type { CateringPayment, GuestRequest, Line, Totals } from './cateringApi'
 import { useSite } from '../../shared/SiteContext'
 import { PaidStamp, PaymentTicket } from '../../shared/payment/PaymentTicket'
+import type { PayOutcome } from '../../shared/payment/checkout'
+import { PaidWithNote } from '../../shared/payment/PaidWithNote'
 import { PhoneLink } from '../../shared/PhoneLink'
 import { BackButton } from '../../shared/BackButton'
 
@@ -98,11 +100,12 @@ export default function CateringRequestPage() {
   const [returnCheck, setReturnCheck] = useState(0)
   const [signPending, setSignPending] = useState(false)
   // Betald här på sidan (eller tillbaka från Swish/Klarna): Stripes webhook bekräftar strax.
-  const [justPaid, setJustPaid] = useState(false)
-  const awaitingConfirm = (justPaid || params.get('betalning') === 'klar') && request?.status === 'signed'
-  const paid = useCallback(() => {
+  // 'paid' bara när Stripe sagt betald; tillbaka från en omdirigering vet sidan inte än.
+  const [justPaid, setJustPaid] = useState<PayOutcome | null>(null)
+  const awaitingConfirm = (justPaid !== null || params.get('betalning') === 'klar') && request?.status === 'signed'
+  const paid = useCallback((outcome: PayOutcome) => {
     setPayment(null)
-    setJustPaid(true)
+    setJustPaid(outcome)
   }, [])
 
   const load = useCallback(async () => {
@@ -325,8 +328,9 @@ export default function CateringRequestPage() {
                 Gäller till och med {request.offer.validUntil}.
                 {request.customerType === 'company'
                   ? ` Faktureras ${request.paymentTermsDays ?? 30} dagar netto efter signering.`
-                  : ' Betalas med kort eller Swish direkt efter signering.'}
+                  : request.paid || request.paidWith || awaitingConfirm ? '' : ' Betalas här på sidan direkt efter signering.'}
               </p>
+              {request.customerType === 'private' && <PaidWithNote paidWith={request.paidWith} />}
               {request.offer.terms && (
                 <details className="catering-terms">
                   <summary>Villkor</summary>
@@ -463,8 +467,9 @@ export default function CateringRequestPage() {
               {request.signedAt ? ` ${request.signedAt.slice(0, 10)}` : ''}.
             </p>
           )}
-          {awaitingConfirm && (
-            <PaidStamp text="Betalt" next="Tack! Vi bekräftar betalningen hos restaurangen - sidan uppdateras av sig själv." />
+          {awaitingConfirm && (justPaid === 'paid'
+            ? <PaidStamp text="Betalt" next="Tack! Vi bekräftar betalningen hos restaurangen - sidan uppdateras av sig själv." />
+            : <PaidStamp pending text="Betalningen behandlas" next="Sidan uppdateras av sig själv när den är klar." />
           )}
           {request.canPay && !awaitingConfirm && payment && (
             <PaymentTicket

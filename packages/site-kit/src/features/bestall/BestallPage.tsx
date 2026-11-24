@@ -555,6 +555,8 @@ function PickupOrder() {
   if (payment || step !== 'cart') {
     const formId = payment ? 'order-pay' : 'order-checkout'
     const title = payment ? 'Betala' : STEP_TITLE[step]
+    // Stripe har tagit emot betalningen (betald eller behandlas): ingen knapp, ingen väg tillbaka.
+    const payDone = payStatus.paid || Boolean(payStatus.processing)
     const ctaDisabled = payment ? !payStatus.ready || payStatus.busy : !open || busy || tooLarge
     const cta = payment
       ? payStatus.busy ? <><span className="spinner" aria-hidden="true" />Betalar…</> : `Betala ${kronor(payTotal)}`
@@ -587,7 +589,7 @@ function PickupOrder() {
         <div className="checkout-grid">
           <div className="checkout-main">
             {payment
-              ? <BackButton className="checkout-back" disabled={payStatus.busy || payStatus.paid} onClick={back}>Ändra beställningen</BackButton>
+              ? <BackButton className="checkout-back" disabled={payStatus.busy || payDone} onClick={back}>Ändra beställningen</BackButton>
               : <BackButton className="checkout-back" disabled={busy} onClick={previous} />}
             <h1 className="checkout-title" ref={titleRef} tabIndex={-1}>{title}</h1>
 
@@ -614,8 +616,8 @@ function PickupOrder() {
                     backLabel="Ändra beställningen"
                   />
                   <SecureNote>
-                    Betalningen sker hos Stripe. Kortuppgifterna går direkt dit och sparas aldrig hos oss. Med Swish
-                    eller Klarna kan du skickas vidare en kort stund för att godkänna.
+                    Betalningen sker hos Stripe. Dina betaluppgifter går direkt dit och sparas aldrig hos oss. Med
+                    Swish eller Klarna kan du skickas vidare en kort stund för att godkänna.
                   </SecureNote>
                 </section>
               </>
@@ -705,7 +707,7 @@ function PickupOrder() {
               {summary}
               {editCart}
             </div>
-            {!payStatus.paid && (
+            {!payDone && (
               <div className="checkout-cta">
                 <button type="submit" form={formId} disabled={ctaDisabled}
                   className={`btn-primary checkout-next${busy || payStatus.busy ? ' is-busy' : ''}`}>

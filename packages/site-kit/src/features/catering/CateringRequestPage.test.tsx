@@ -117,3 +117,28 @@ describe('CateringRequestPage and the page translator', () => {
     expect(leaked(sent, ['Örjan'])).toEqual([])
   })
 })
+
+describe('CateringRequestPage after payment', () => {
+  it('a paid private request shows how it was paid, and no longer asks for payment', async () => {
+    api.getRequest.mockResolvedValue(guest({ status: 'confirmed', canSign: false, paid: true, paidWith: { method: 'klarna' } }))
+    renderGuest()
+    expect(await screen.findByText('Din catering är bekräftad')).toBeInTheDocument()
+    expect(screen.getByText(/Betald med/)).toHaveTextContent('Betald med Klarna')
+    expect(screen.getByText('Klarna')).toHaveAttribute('translate', 'no')
+    expect(screen.queryByText(/Betalas här på sidan/)).toBeNull()
+  })
+
+  it('back from Swish or Klarna before the webhook: processing, never Betalt', async () => {
+    api.getRequest.mockResolvedValue(guest({ status: 'signed', canSign: false, canPay: true }))
+    renderGuest('?betalning=klar#t=tok-1')
+    expect(await screen.findByText('Betalningen behandlas')).toBeInTheDocument()
+    expect(screen.queryByText('Betalt')).toBeNull()
+  })
+
+  it('an unpaid private offer says it is paid on the page after signing', async () => {
+    api.getRequest.mockResolvedValue(guest())
+    renderGuest()
+    expect(await screen.findByText(/Betalas här på sidan direkt efter signering/)).toBeInTheDocument()
+    expect(screen.queryByText(/Betald med/)).toBeNull()
+  })
+})

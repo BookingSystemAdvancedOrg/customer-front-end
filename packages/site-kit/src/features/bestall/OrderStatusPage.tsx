@@ -5,6 +5,8 @@ import type { GuestOrder } from './orderApi'
 import { FlowSteps } from '../../shared/FlowSteps'
 import { Celebrate } from '../../shared/Celebrate'
 import { PhoneLink } from '../../shared/PhoneLink'
+import { PaidWithNote } from '../../shared/payment/PaidWithNote'
+import { refundWay } from '../../shared/payment/paidWith'
 
 /** Hur ofta sidan frågar om beställningen medan gästen väntar. */
 export const STATUS_POLL_MS = 5_000
@@ -68,7 +70,7 @@ function nextUp(order: GuestOrder): string | null {
     : 'ditt bord'
   switch (order.status) {
     case 'pending_payment':
-      return 'Det brukar ta några sekunder. Sidan uppdateras av sig själv.'
+      return 'Oftast några sekunder, ibland längre. Sidan uppdateras av sig själv.'
     case 'confirmed':
       return order.mode === 'pickup'
         ? 'Köket har fått beställningen. Vi sms:ar när maten lagas och när den är klar att hämta.'
@@ -174,13 +176,13 @@ export default function OrderStatusPage() {
           )}
           {order.status === 'failed' && (
             <p className="notice error" role="status">
-              Banken godkände inte betalningen, så inget har dragits från ditt kort. Varukorgen finns kvar:{' '}
+              Betalningen godkändes inte, så inget har dragits. Varukorgen finns kvar:{' '}
               <Link to="/bestall">Försök igen</Link>.
             </p>
           )}
           {order.status === 'cancelled' && (
             <p className="notice" role="status">
-              {`Hela beloppet, ${kronor(order.totalAmount)}, betalas tillbaka till ditt kort inom några bankdagar.`}
+              {`Hela beloppet, ${kronor(order.totalAmount)}, betalas tillbaka${refundWay(order.paidWith)}.`}
             </p>
           )}
           <ul className="cart-list order-status-lines">
@@ -207,6 +209,7 @@ export default function OrderStatusPage() {
             <span>Totalt</span>
             <span>{kronor(order.totalAmount)}</span>
           </div>
+          {!['pending_payment', 'failed'].includes(order.status) && <PaidWithNote paidWith={order.paidWith} />}
           {order.location?.phoneNumber && (
             <p className="cell-muted">Frågor? Ring <PhoneLink phone={order.location.phoneNumber} />.</p>
           )}

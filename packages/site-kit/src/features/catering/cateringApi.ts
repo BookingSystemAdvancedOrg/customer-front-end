@@ -3,6 +3,7 @@ import { botCheckMessage } from '../../shared/botCheckMessage'
 import { prefetchTexts } from '../../shared/lang/loads'
 import { withAttribution } from '../../shared/visits'
 import { CATERING_TOKEN_PREFIX } from '../../shared/storageRegistry'
+import type { PaidWith } from '../../shared/payment/paidWith'
 
 /**
  * Catering för gäster (backend: catering-settings, catering-discount-tiers,
@@ -158,6 +159,8 @@ export interface GuestRequest {
   signedAt?: string
   signedBy?: string
   paid?: boolean
+  /** Hur en privatperson betalade (sätts när betalningen gått igenom). */
+  paidWith?: PaidWith
   invoiceNumber?: string
   invoiceUrl?: string
   declineReason?: string

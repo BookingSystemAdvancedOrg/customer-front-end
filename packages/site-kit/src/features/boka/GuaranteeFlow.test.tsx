@@ -112,14 +112,14 @@ describe('card guarantee', () => {
     expect(screen.getByRole('link', { name: /\/bokning\/loc-1\/r1#tok$/ })).toBeInTheDocument()
   })
 
-  it('turns Stripe Link off and gives Stripe the booking\'s name, email and phone', async () => {
+  it('keeps Apple Pay and Google Pay on, turns Stripe Link off and gives Stripe the booking\'s name, email and phone', async () => {
     const user = userEvent.setup()
     await bookThree(user)
     await user.click(screen.getByRole('button', { name: 'Fortsätt till kortgaranti' }))
     await screen.findByRole('button', { name: 'Spara kortet och boka' })
 
     expect(paymentElementOptions).toHaveBeenLastCalledWith(expect.objectContaining({
-      wallets: { link: 'never' },
+      wallets: { applePay: 'auto', googlePay: 'auto', link: 'never' },
       defaultValues: { billingDetails: { name: 'Anna', email: 'anna@example.se', phone: '+46701234567' } },
     }))
   })
