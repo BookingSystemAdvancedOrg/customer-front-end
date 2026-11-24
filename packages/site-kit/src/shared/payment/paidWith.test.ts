@@ -24,6 +24,11 @@ describe('paidWithLabel', () => {
     expect(paidWithLabel({ method: 'klarna' })).toBe('Klarna')
     expect(paidWithLabel({ method: 'paypal' })).toBe('PayPal')
     expect(paidWithLabel({ method: 'link' })).toBe('Link')
+    // No longer offered; an older payment still reads right.
+    expect(paidWithLabel({ method: 'amazon_pay' })).toBe('Amazon Pay')
+    expect(paidWithLabel({ method: 'revolut_pay' })).toBe('Revolut Pay')
+    expect(paidWithLabel({ method: 'mobilepay' })).toBe('MobilePay')
+    expect(refundWay({ method: 'amazon_pay' })).toBe(' inom några bankdagar')
     expect(paidWithLabel({ method: 'other' })).toBe('Stripe')
   })
 

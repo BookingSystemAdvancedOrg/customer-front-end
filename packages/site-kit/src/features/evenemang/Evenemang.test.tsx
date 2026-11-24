@@ -16,7 +16,14 @@ vi.mock('./eventsApi', async (orig) => ({
   listEvents: vi.fn(), getEvent: vi.fn(), checkout: vi.fn(), getTickets: vi.fn(),
   giveTicket: vi.fn(), cancelGift: vi.fn(), acceptGift: vi.fn(), listForResale: vi.fn(),
 }))
-vi.mock('../../shared/payment/stripe', () => ({ stripeFor: () => null }))
+const pay = vi.hoisted(() => ({ stripe: null as Promise<object> | null, confirmPayment: vi.fn() }))
+vi.mock('../../shared/payment/stripe', () => ({ stripeFor: () => pay.stripe }))
+vi.mock('@stripe/react-stripe-js', () => ({
+  Elements: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  PaymentElement: () => <div>Stripes betalformulär</div>,
+  useStripe: () => ({ confirmPayment: pay.confirmPayment }),
+  useElements: () => ({}),
+}))
 vi.mock('qrcode', () => ({ default: { toDataURL: vi.fn(async (data: string) => `data:image/png;base64,${btoa(data)}`) } }))
 
 const FEATURES = { reservations: true, ordering: false, catering: false, terminal: false, events: true }
@@ -71,6 +78,7 @@ const fillBuyer = () => {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  pay.stripe = null
   window.sessionStorage.clear()
   window.history.replaceState(null, '', '/')
   vi.mocked(api.getEvent).mockResolvedValue(EVENT)
@@ -148,7 +156,7 @@ describe('EvenemangDetaljPage', () => {
       buyerName: 'Sara Ek', buyerEmail: 'sara@example.se' })
     expect(body.orderId).toMatch(/^[0-9a-f]{32}$/)
     expect(await screen.findByText(/Platserna hålls till kl. 13:15/)).toBeInTheDocument()
-    expect(screen.getByText('Kortbetalningen är inte tillgänglig just nu.')).toBeInTheDocument()
+    expect(screen.getByText('Betalningen är inte tillgänglig just nu.')).toBeInTheDocument()
     expect(window.sessionStorage.getItem('booqy-ticket-purchase')).toContain(body.orderId)
   })
 
@@ -299,8 +307,23 @@ describe('EvenemangDetaljPage', () => {
   it('never thanks for a payment Stripe reports as failed', async () => {
     window.history.replaceState(null, '', '/evenemang/ev1abcdef?klart=1&redirect_status=failed')
     open()
-    expect(await screen.findByText(/Betalningen gick inte igenom och inget har dragits/)).toBeInTheDocument()
+    expect(await screen.findByText(/Betalningen gick inte igenom och inget har dragits/)).toHaveTextContent('gärna med ett annat betalsätt.')
     expect(screen.queryByRole('heading', { name: 'Tack för köpet!' })).not.toBeInTheDocument()
+  })
+
+  it('names no single method on the pay step: Swish and Klarna can be offered too', async () => {
+    pay.stripe = Promise.resolve({})
+    pay.confirmPayment.mockResolvedValue({ paymentIntent: { status: 'requires_payment_method' } })
+    vi.mocked(api.checkout).mockResolvedValue({ clientSecret: 'pi_1_secret', amountSek: 450, expiresAt: '2026-11-05T12:15:00Z', stripeAccount: 'acct_1' })
+    site('/evenemang/ev1abcdef', '/evenemang/:eventId', <EvenemangDetaljPage />,
+      { ...siteConfig({ features: FEATURES }), stripe: { publishableKey: 'pk_test_1', accountId: null } })
+    fireEvent.click(await screen.findByRole('button', { name: 'En Vuxen till' }))
+    fillBuyer()
+    fireEvent.click(screen.getByRole('button', { name: 'Till betalning, 450 kr' }))
+    expect(await screen.findByText('Betalningen sker hos Stripe. Dina betaluppgifter går direkt dit och sparas aldrig hos oss.')).toBeInTheDocument()
+    expect(screen.queryByText(/Kortuppgifterna/)).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Betala 450 kr' }))
+    expect(await screen.findByText('Betalningen gick inte igenom. Försök igen, gärna med ett annat betalsätt.')).toBeInTheDocument()
   })
 })
 

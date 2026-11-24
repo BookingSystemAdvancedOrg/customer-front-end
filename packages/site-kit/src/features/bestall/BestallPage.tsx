@@ -59,6 +59,7 @@ import type { CodeTerms } from '../erbjudande/offerApi'
 import { useStickyCart } from '../../shared/useStickyCart'
 import { PaymentPanel, SecureNote } from '../../shared/payment/PaymentTicket'
 import type { PayStatus } from '../../shared/payment/PaymentTicket'
+import { offeredMethods, redirectNote } from '../../shared/payment/checkout'
 import type { PayOutcome } from '../../shared/payment/checkout'
 import { GuestDataNotice } from '../../shared/GuestDataNotice'
 import { MarketingConsent, NO_CONSENT, consentFields } from '../../shared/MarketingConsent'
@@ -624,8 +625,8 @@ function PickupOrder() {
                     backLabel="Ändra beställningen"
                   />
                   <SecureNote>
-                    Betalningen sker hos Stripe. Dina betaluppgifter går direkt dit och sparas aldrig hos oss. Med
-                    Swish eller Klarna kan du skickas vidare en kort stund för att godkänna.
+                    {`Betalningen sker hos Stripe. Dina betaluppgifter går direkt dit och sparas aldrig hos oss. ${
+                      redirectNote(offeredMethods(payment.methods))}`}
                   </SecureNote>
                 </section>
               </>

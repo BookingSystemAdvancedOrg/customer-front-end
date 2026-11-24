@@ -219,6 +219,35 @@ describe('BestallPage', () => {
     expect(loadCart('loc-1')).toEqual({ cola: 1 })
   })
 
+  async function toPayment() {
+    const user = userEvent.setup()
+    render(<WithSite config={config()} path="/bestall"><BestallPage /></WithSite>)
+    await user.click(await screen.findByRole('button', { name: 'Lägg till Cola' }))
+    await fill(user)
+    await user.click(screen.getByRole('button', { name: /Till betalning/ }))
+    await screen.findByRole('button', { name: 'Betala 285,50 kr' })
+  }
+
+  it('names only the methods the payment offers in the redirect hint', async () => {
+    orderResponse = () => json({ orderId: 'o'.repeat(32), locationId: 'loc-1', clientSecret: 'cs_test_secret',
+      stripeAccount: 'acct_1', statusToken: 'tok', totalAmount: 28550, methods: ['card', 'swish', 'amazon_pay'] }, 201)
+    await toPayment()
+    expect(screen.getByText(/Betalningen sker hos Stripe/)).toHaveTextContent(
+      'Betalningen sker hos Stripe. Dina betaluppgifter går direkt dit och sparas aldrig hos oss. '
+      + 'Med Swish kan du skickas vidare en kort stund för att godkänna.',
+    )
+    expect(screen.queryByText(/Klarna|Amazon/)).toBeNull()
+  })
+
+  it('names no method in the redirect hint when the server does not say which are offered', async () => {
+    await toPayment()
+    expect(screen.getByText(/Betalningen sker hos Stripe/)).toHaveTextContent(
+      'Betalningen sker hos Stripe. Dina betaluppgifter går direkt dit och sparas aldrig hos oss. '
+      + 'Ibland skickas du vidare en kort stund för att godkänna betalningen.',
+    )
+    expect(screen.queryByText(/Swish|Klarna/)).toBeNull()
+  })
+
   it('shows a declined card on the payment ticket and keeps the cart for going back', async () => {
     const user = userEvent.setup()
     stripe.confirm.mockResolvedValue({ type: 'error', error: { message: 'Kortet nekades.' } })

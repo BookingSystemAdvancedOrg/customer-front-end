@@ -45,7 +45,7 @@ const ERRORS: Record<string, string> = {
   invalid_amount: 'Välj ett av beloppen eller ett eget belopp inom gränserna.',
   invalid_email: 'Kontrollera e-postadressen.',
   message_too_long: 'Hälsningen får vara högst 300 tecken.',
-  stripe_unavailable: 'Kortbetalningen svarar inte just nu. Försök igen om en stund.',
+  stripe_unavailable: 'Betalningen svarar inte just nu. Försök igen om en stund.',
   no_stripe_account: 'Restaurangen kan inte ta emot kortbetalningar just nu.',
   too_many_requests: 'För många försök. Vänta en stund och försök igen.',
 }

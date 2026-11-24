@@ -101,7 +101,7 @@ export default function PresentkortPage() {
     <section className="page-hero page-prose presentkort-page" data-bq-theme="restaurant">
       <h1>Presentkort</h1>
       {returned.failed && !checkout ? (
-        <Bar variant="banner" tone="danger">Betalningen gick inte igenom och inget har dragits. Försök igen, gärna med ett annat kort.</Bar>
+        <Bar variant="banner" tone="danger">Betalningen gick inte igenom och inget har dragits. Försök igen, gärna med ett annat betalsätt.</Bar>
       ) : null}
       <p>{`Ge bort en middag hos ${config.tenant.name}. Presentkortet gäller i ${offer.validityMonths} månader och kan användas både i restaurangen och när man beställer här på hemsidan.`}</p>
       {checkout ? (
@@ -238,14 +238,14 @@ function PayStep({ checkout, onPaid }: { checkout: Checkout; onPaid: (status: Pa
   const fonts = useMemo(() => paymentFonts(), [])
   const appearance = useMemo(() => paymentAppearance(theme), [theme])
   if (!stripePromise) {
-    return <Bar variant="banner" tone="danger">Kortbetalningen är inte tillgänglig just nu.</Bar>
+    return <Bar variant="banner" tone="danger">Betalningen är inte tillgänglig just nu.</Bar>
   }
   return (
     <>
       <Elements key={theme} stripe={stripePromise} options={{ clientSecret: checkout.clientSecret, appearance, fonts, loader: 'never' }}>
         <PayForm amountSek={checkout.amountSek} onPaid={onPaid} />
       </Elements>
-      <SecureNote>Kortuppgifterna går direkt till Stripe och sparas aldrig hos oss.</SecureNote>
+      <SecureNote />
     </>
   )
 }
@@ -273,7 +273,7 @@ function PayForm({ amountSek, onPaid }: { amountSek: number; onPaid: (status: Pa
       onPaid(status)
       return
     }
-    setError('Betalningen gick inte igenom. Försök igen, gärna med ett annat kort.')
+    setError('Betalningen gick inte igenom. Försök igen, gärna med ett annat betalsätt.')
     setBusy(false)
   }
 

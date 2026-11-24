@@ -5,7 +5,10 @@
  * shared/payment_methods.py).
  */
 
-export type PaidWithMethod = 'card' | 'apple_pay' | 'google_pay' | 'swish' | 'klarna' | 'paypal' | 'link' | 'other'
+/** PayPal, Link, Amazon Pay, Revolut Pay och MobilePay erbjuds inte längre; namnen finns kvar för äldre betalningar. */
+export type PaidWithMethod =
+  | 'card' | 'apple_pay' | 'google_pay' | 'swish' | 'klarna'
+  | 'paypal' | 'link' | 'amazon_pay' | 'revolut_pay' | 'mobilepay' | 'other'
 
 export interface PaidWith {
   method: PaidWithMethod
@@ -23,6 +26,9 @@ const LABELS: Record<PaidWithMethod, string> = {
   klarna: 'Klarna',
   paypal: 'PayPal',
   link: 'Link',
+  amazon_pay: 'Amazon Pay',
+  revolut_pay: 'Revolut Pay',
+  mobilepay: 'MobilePay',
   other: 'Stripe',
 }
 

@@ -12,7 +12,8 @@ import { BackButton } from '../BackButton'
 /**
  * Betalningen på sajtens egen sida: ett kvitto som skrivs ut, Stripes
  * Payment Element (kort, Apple Pay/Google Pay, Swish, Klarna - det
- * restaurangens konto har) i sajtens tryck, och betala-knappen. Bakom
+ * restaurangens konto har; servern stänger av allt annat, som Amazon Pay
+ * och Link) i sajtens tryck, och betala-knappen. Bakom
  * ligger en Checkout Session (ui_mode "elements") på restaurangens
  * Stripe-konto; samma session och webhookar som Stripes egna sida.
  *
