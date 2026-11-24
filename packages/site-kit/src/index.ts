@@ -96,6 +96,8 @@ export { GuaranteeConfirmation, GuaranteeNotice, GuaranteeStep, GuaranteeTermsTe
 /* --- Betalning (Stripe Elements) ------------------------------------------ */
 export { PaidStamp, PaymentPanel, PaymentPrinting, PaymentTicket, SecureNote } from './shared/payment/PaymentTicket'
 export type { PayStatus } from './shared/payment/PaymentTicket'
+export type { PayOutcome } from './shared/payment/checkout'
+export type { PaidWith } from './shared/payment/paidWith'
 export { paymentAppearance, paymentFonts } from './shared/payment/appearance'
 export { stripeFor } from './shared/payment/stripe'
 

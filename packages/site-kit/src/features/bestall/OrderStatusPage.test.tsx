@@ -149,6 +149,16 @@ describe('OrderStatusPage', () => {
     )
   })
 
+  it('a refund that came back: the restaurant pays back another way, no method promise', async () => {
+    sessionStorage.setItem(`order-token:${ID}`, 'tok')
+    statuses = [order({ status: 'cancelled', paymentStatus: 'refunded', paidWith: { method: 'swish' }, refundIssue: true })]
+    renderAt()
+    expect(await screen.findByText(/Återbetalningen gick inte fram/)).toHaveTextContent(
+      'Återbetalningen gick inte fram. Restaurangen betalar tillbaka på annat sätt och hör av sig.',
+    )
+    expect(screen.queryByText(/via Swish/)).toBeNull()
+  })
+
   it('without any token it asks for the link', () => {
     renderAt()
     expect(screen.getByRole('alert')).toHaveTextContent('Länken är ofullständig')

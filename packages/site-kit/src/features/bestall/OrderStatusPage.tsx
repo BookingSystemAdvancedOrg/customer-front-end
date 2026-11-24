@@ -185,7 +185,9 @@ export default function OrderStatusPage() {
           )}
           {order.status === 'cancelled' && (
             <p className="notice" role="status">
-              {`Hela beloppet, ${kronor(order.totalAmount)}, betalas tillbaka${refundWay(order.paidWith)}.`}
+              {order.refundIssue
+                ? 'Återbetalningen gick inte fram. Restaurangen betalar tillbaka på annat sätt och hör av sig.'
+                : `Hela beloppet, ${kronor(order.totalAmount)}, betalas tillbaka${refundWay(order.paidWith)}.`}
             </p>
           )}
           <ul className="cart-list order-status-lines">

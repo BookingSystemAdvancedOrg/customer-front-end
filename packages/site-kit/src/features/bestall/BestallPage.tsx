@@ -59,6 +59,7 @@ import type { CodeTerms } from '../erbjudande/offerApi'
 import { useStickyCart } from '../../shared/useStickyCart'
 import { PaymentPanel, SecureNote } from '../../shared/payment/PaymentTicket'
 import type { PayStatus } from '../../shared/payment/PaymentTicket'
+import type { PayOutcome } from '../../shared/payment/checkout'
 import { GuestDataNotice } from '../../shared/GuestDataNotice'
 import { MarketingConsent, NO_CONSENT, consentFields } from '../../shared/MarketingConsent'
 import type { ConsentChoice } from '../../shared/MarketingConsent'
@@ -497,15 +498,22 @@ function PickupOrder() {
     }
   }
 
-  /** Betald: varukorgen töms och gästen följer beställningen på statussidan. */
-  const done = useCallback((order: OrderCreated) => {
-    clearCart(locationId)
-    setLineNotes({})
+  /**
+   * Betald: varukorgen töms och gästen följer beställningen på statussidan.
+   * Behandlas betalningen fortfarande ligger varukorgen kvar tills
+   * statussidan ser den betald (den tömmer då), så "Försök igen" efter ett
+   * nekat betalsätt har kvar maten.
+   */
+  const done = useCallback((order: OrderCreated, outcome: PayOutcome = 'paid') => {
+    if (outcome === 'paid') {
+      clearCart(locationId)
+      setLineNotes({})
+    }
     navigate(`/bestallning/${encodeURIComponent(order.locationId)}/${encodeURIComponent(order.orderId)}`)
   }, [locationId, navigate])
 
-  const paid = useCallback(() => {
-    if (payment) done(payment)
+  const paid = useCallback((outcome: PayOutcome) => {
+    if (payment) done(payment, outcome)
   }, [payment, done])
 
   /** Tillbaka till varukorgen: beställningen som inte betalades går ut av sig själv. */

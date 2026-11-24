@@ -104,6 +104,8 @@ export interface GuestOrder {
   location?: { name?: string; address?: string; phoneNumber?: string | null }
   /** Hur gästen betalade (sätts när betalningen gått igenom). */
   paidWith?: PaidWith
+  /** En återbetalning kom tillbaka till restaurangen (Swish nekade): restaurangen betalar tillbaka på annat sätt. */
+  refundIssue?: boolean
 }
 
 const path = (locationId: string) => `/locations/${encodeURIComponent(locationId)}`

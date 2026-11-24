@@ -7,8 +7,15 @@ export function PaidWithNote({ paidWith }: { paidWith?: PaidWith | null }) {
   if (!parts) return null
   return (
     <p className="paid-with">
-      {`${parts.lead} `}
-      {parts.properName ? <span translate="no" dir="ltr">{parts.name}</span> : parts.name}
+      {parts.properName ? (
+        <>
+          {`${parts.lead} `}
+          <span translate="no" dir="ltr">{parts.name}</span>
+        </>
+      ) : (
+        // En enda textnod: sidans översättare får "Betald med kort" i ett stycke, inte "kort" ensamt.
+        `${parts.lead} ${parts.name}`
+      )}
     </p>
   )
 }

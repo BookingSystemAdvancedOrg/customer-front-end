@@ -215,6 +215,8 @@ describe('BestallPage', () => {
     expect(screen.queryByRole('button', { name: 'Betala 285,50 kr' })).toBeNull()
     expect(screen.getByRole('button', { name: 'Ändra beställningen' })).toBeDisabled()
     expect(await screen.findByText('Statussidan', {}, { timeout: 3000 })).toBeInTheDocument()
+    // Not paid yet: the cart stays until the status page sees it paid.
+    expect(loadCart('loc-1')).toEqual({ cola: 1 })
   })
 
   it('shows a declined card on the payment ticket and keeps the cart for going back', async () => {

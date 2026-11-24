@@ -3,7 +3,7 @@ import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import CateringRequestPage, { RETURN_CHECK_MS, RETURN_CHECKS } from './CateringRequestPage'
+import CateringRequestPage, { PAYMENT_WAIT_MS, RETURN_CHECK_MS, RETURN_CHECKS } from './CateringRequestPage'
 import type { GuestRequest } from './cateringApi'
 import { ApiError } from '../../shared/api'
 import { SiteContext } from '../../shared/SiteContext'
@@ -133,6 +133,22 @@ describe('CateringRequestPage after payment', () => {
     renderGuest('?betalning=klar#t=tok-1')
     expect(await screen.findByText('Betalningen behandlas')).toBeInTheDocument()
     expect(screen.queryByText('Betalt')).toBeNull()
+  })
+
+  it('no confirmation within the wait: Betala again, with a plain note', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      // A new object per poll, as from the API.
+      api.getRequest.mockImplementation(async () => guest({ status: 'signed', canSign: false, canPay: true }))
+      renderGuest('?betalning=klar#t=tok-1')
+      expect(await screen.findByText('Betalningen behandlas')).toBeInTheDocument()
+      for (let i = 0; i < PAYMENT_WAIT_MS / 3000 + 2; i++) await act(async () => { vi.advanceTimersByTime(3000) })
+      expect(await screen.findByText(/Vi har inte fått någon bekräftelse på betalningen/)).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /^Betala/ })).toBeInTheDocument()
+      expect(screen.queryByText('Betalningen behandlas')).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('an unpaid private offer says it is paid on the page after signing', async () => {
