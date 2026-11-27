@@ -305,7 +305,11 @@ body::before {
   box-shadow: none;
 }
 .site .site-header-inner {
-  max-width: 1180px;
+  /* 1180 px, wider on big screens only when the tabs need it (headerFit.ts
+     measures against the header's own width, so the pill fills it: the same
+     edges as the page content, --panel-gutter) */
+  width: auto;
+  max-width: var(--header-pill, 1180px);
   margin: 0 auto;
   min-height: 64px;
   padding-block: 8px 8px;
@@ -323,7 +327,8 @@ body::before {
 }
 .site .site-header-nav a {
   min-height: 40px;
-  padding: 0 14px;
+  padding: 0 11px;
+  white-space: nowrap;
   border-radius: var(--r-pill);
   font: 600 0.95rem/1 var(--font);
   color: var(--muted);
@@ -704,13 +709,8 @@ body::before {
   color: var(--ink);
 }
 
-/* telefon: namnet får plats; öppettiderna finns i heron och i menyn */
-@media (max-width: 520px) {
-  .site .site-header-inner > .open-chip,
-  .site .site-header-inner .open-chip {
-    display: none;
-  }
-}
+/* telefon: öppet-knappen flyttar in i menyn av sig själv när namnet inte
+   får plats (data-fit i src/shared/headerFit.ts), ingen brytpunkt här */
 
 /* antal personer: en rund stegare som i admin */
 .party-stepper {
@@ -1382,4 +1382,13 @@ body::before {
   .site .bq-btn--sm {
     min-height: 44px;
   }
+}
+
+/* The owner 2026-11-27: the pointer never changes on the guest site, whatever
+   it hovers (links, buttons, fields, disabled or busy states, drag areas). */
+html,
+html *,
+html *::before,
+html *::after {
+  cursor: default !important;
 }
