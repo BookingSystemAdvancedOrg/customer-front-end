@@ -3944,4 +3944,25 @@ a,
     letter-spacing: 0.02em;
     text-align: end;
   }
+
+  /* "Ej för avhämtning" on one line beside the text left the name and
+     description a few pixels wide at 320 px: on phones it goes under the
+     text, as the price does on the menu. */
+  .dish--order:has(> .dish-action .order-no-pickup) {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .dish--order:has(> .dish-action .order-no-pickup) > .plate {
+    grid-row: span 2;
+  }
+
+  .dish--order:has(> .dish-action .order-no-pickup) > .dish-action {
+    grid-column: 2;
+    justify-self: start;
+    margin-top: -8px;
+  }
+
+  .dish--order:has(> .dish-action .order-no-pickup) > .dish-action .order-no-pickup {
+    text-align: start;
+  }
 }

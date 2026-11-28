@@ -114,6 +114,43 @@ export function pickHeaderFit(s: HeaderSizes, current: HeaderFit = 0, slack = FI
   return atBase
 }
 
+const PART_KEYS = ['gap', 'brand', 'brandMin', 'nav', 'chipFull', 'chipShort', 'tools', 'burger'] as const
+
+/** True when any part (not only the room) differs from the last decision, beyond 1 px of rounding. */
+export function partsChanged(last: HeaderSizes | null, s: HeaderSizes): boolean {
+  if (!last) return true
+  return PART_KEYS.some((k) => Math.abs((last[k] ?? 0) - (s[k] ?? 0)) > 1)
+}
+
+/**
+ * The next level after a measurement. The slack (no flip-flop at an edge)
+ * only applies when only the room changed (window width). When a part
+ * changed (web font arrived, language switched, new status, new tabs) the
+ * level is decided afresh, so the same width and content always give the
+ * same level, whatever came before.
+ */
+export function nextHeaderFit(s: HeaderSizes, last: HeaderSizes | null, current: HeaderFit): HeaderFit {
+  return pickHeaderFit(s, current, partsChanged(last, s) ? 0 : FIT_SLACK)
+}
+
+/**
+ * The next level for sizes measured while `applied` was on screen. Some
+ * parts measure a little differently per level (a hidden menu button, the nav
+ * in a wider pill), so a part only counts as changed against a measurement
+ * taken at the same level. A real change (web font, language, status, tabs)
+ * clears what is remembered and is decided afresh; a level change alone keeps
+ * the slack, so a level-dependent measurement cannot flip-flop at an edge.
+ */
+export function decideHeaderFit(s: HeaderSizes, applied: HeaderFit, memory: Map<HeaderFit, HeaderSizes>): HeaderFit {
+  if (!(s.available > 0)) return applied
+  const same = memory.get(applied)
+  // first measurement ever: fresh; first at this level: compare with itself (slack kept)
+  const last = same ?? (memory.size > 0 ? s : null)
+  if (partsChanged(last, s)) memory.clear()
+  memory.set(applied, s)
+  return nextHeaderFit(s, last, applied)
+}
+
 /**
  * Pill width for a level: the base width, wider (up to the room there is)
  * only when level 1 needs it, with the name at its minimum and the short status.
@@ -210,14 +247,21 @@ export function measureHeader(r: HeaderFitRefs): HeaderSizes {
  * Keeps the header's level in step with its real sizes: decided before the
  * first paint (layout effect), and again whenever the row or any part changes
  * size (window width, fonts, a translated label, a new status text).
- * Every part is always measurable, so a level change does not change the
- * measurements and cannot loop.
+ * Every part stays measurable, and a part change that only follows a level
+ * change keeps the slack (decideHeaderFit), so it cannot loop.
  */
 export function useHeaderFit(refs: HeaderFitRefs, contentKey: string): HeaderFit {
   const [fit, setFit] = useState<HeaderFit>(0)
   const fitRef = useRef<HeaderFit>(0)
   const refsRef = useRef(refs)
   refsRef.current = refs
+  const memoryRef = useRef(new Map<HeaderFit, HeaderSizes>())
+
+  const decide = () => {
+    const s = measureHeader(refsRef.current)
+    const next = decideHeaderFit(s, fitRef.current, memoryRef.current)
+    return { s, next }
+  }
 
   // content changed (tabs, name, status): decide again before paint
   const applyPill = (level: HeaderFit, s: HeaderSizes) => {
@@ -230,8 +274,7 @@ export function useHeaderFit(refs: HeaderFitRefs, contentKey: string): HeaderFit
   }
 
   useLayoutEffect(() => {
-    const s = measureHeader(refsRef.current)
-    const next = pickHeaderFit(s, fitRef.current)
+    const { s, next } = decide()
     applyPill(next, s)
     if (next !== fitRef.current) {
       fitRef.current = next
@@ -247,8 +290,7 @@ export function useHeaderFit(refs: HeaderFitRefs, contentKey: string): HeaderFit
     let mounted = true
     const update = () => {
       if (!mounted) return
-      const s = measureHeader(refsRef.current)
-      const next = pickHeaderFit(s, fitRef.current)
+      const { s, next } = decide()
       applyPill(next, s)
       if (next === fitRef.current) return
       fitRef.current = next
@@ -257,9 +299,17 @@ export function useHeaderFit(refs: HeaderFitRefs, contentKey: string): HeaderFit
     }
     const ro = new ResizeObserver(update)
     els.forEach((el) => ro.observe(el))
+    // web fonts change every part's width: measure again once they are in
+    // (the observer usually sees it too). Only parts that really changed
+    // reset the slack, so a later font for a drawer or modal moves nothing.
+    const fonts = typeof document !== 'undefined' ? document.fonts : undefined
+    const onFonts = () => update()
+    fonts?.addEventListener?.('loadingdone', onFonts)
+    fonts?.ready?.then(onFonts).catch(() => {})
     return () => {
       mounted = false
       ro.disconnect()
+      fonts?.removeEventListener?.('loadingdone', onFonts)
     }
   }, [])
 
