@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { BRAND_MIN_TEXT, FIT_SLACK, PILL_BASE, PILL_MAX, measureHeader, pickHeaderFit, pillWidth, requiredWidth, type HeaderSizes } from './headerFit'
+import { BRAND_MIN_TEXT, FIT_SLACK, PILL_BASE, PILL_MAX, measureHeader, nextHeaderFit, partsChanged, pickHeaderFit, pillWidth, requiredWidth, type HeaderSizes } from './headerFit'
 
 // Restaurant 1 with seven tabs, roughly the sizes in the owner's screenshot
 const sizes = (available: number, over: Partial<HeaderSizes> = {}): HeaderSizes => ({
@@ -84,6 +84,33 @@ describe('pickHeaderFit', () => {
       expect(fits).toBe(true)
       if (level >= 2) expect(requiredWidth(1, sizes(1148, { nav }))).toBeGreaterThan(1148)
     }
+  })
+})
+
+describe('nextHeaderFit', () => {
+  // level 0 needs 170 + 640 + 190 + 120 + 60 = 1180; 1184 leaves 4 px, less than the slack
+  const edge = 1184
+
+  it('keeps the slack when only the width changed', () => {
+    const last = sizes(1170)
+    expect(nextHeaderFit(sizes(edge), last, 1)).toBe(1)
+  })
+
+  it('decides afresh when the parts got narrower at the same width (web font, language back)', () => {
+    const wide = sizes(edge, { nav: 660 })
+    const narrow = sizes(edge)
+    expect(partsChanged(wide, narrow)).toBe(true)
+    expect(nextHeaderFit(narrow, wide, 1)).toBe(0)
+  })
+
+  it('gives the same level for the same width and parts, whatever came before', () => {
+    const direct = nextHeaderFit(sizes(edge), null, 0)
+    const viaWider = nextHeaderFit(sizes(edge), sizes(edge, { nav: 700, chipFull: 230 }), 2)
+    expect(viaWider).toBe(direct)
+  })
+
+  it('ignores 1 px of rounding in a part', () => {
+    expect(partsChanged(sizes(edge), sizes(edge, { nav: 641 }))).toBe(false)
   })
 })
 
